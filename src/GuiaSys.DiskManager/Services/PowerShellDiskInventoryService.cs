@@ -132,6 +132,8 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
             throw new InvalidDataException("Inventário contém número de disco negativo ou tamanho de disco não positivo.");
         if (disks.GroupBy(d => d.Number).Any(group => group.Count() != 1))
             throw new InvalidDataException("Inventário contém números de disco duplicados.");
+        if (disks.Where(d => d.HasStrongIdentity).GroupBy(d => d.Identity, StringComparer.Ordinal).Any(group => group.Count() != 1))
+            throw new InvalidDataException("Inventário contém identidades fortes de disco duplicadas.");
 
         var diskNumbers = disks.Select(d => d.Number).ToHashSet();
         if (partitions.Any(p => p.DiskNumber < 0 || p.PartitionNumber <= 0 || p.Offset < 0 || p.Size <= 0))
