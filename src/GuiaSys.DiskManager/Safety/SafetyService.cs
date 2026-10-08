@@ -19,12 +19,13 @@ public sealed class SafetyService : ISafetyService
         if (!string.Equals(disk.Identity, operation.ExpectedDiskIdentity, StringComparison.Ordinal))
             return SafetyDecision.Deny("A identidade do disco mudou desde a seleção. Atualize o inventário antes de continuar.");
 
-        if (operation.DiskNumber == 0 && operation.IsDestructive)
-            return SafetyDecision.Deny("Operações destrutivas no Disco 0 são bloqueadas por política de segurança.");
+        // 0.1.0 policy: Disk 0 is inventory-only. No mutation is permitted, regardless of risk category.
+        if (operation.DiskNumber == 0 && operation.IsMutation)
+            return SafetyDecision.Deny("O Disco 0 é somente leitura por política de segurança e não aceita nenhuma alteração.");
 
         var diskPartitions = currentSnapshot.Partitions.Where(p => p.DiskNumber == disk.Number).ToArray();
         var containsProtectedPartition = disk.IsBoot || disk.IsSystem || diskPartitions.Any(partition => IsProtected(partition) || ContainsRunningExecutable(partition));
-        if (containsProtectedPartition && AffectsWholeDisk(operation.Type))
+        if (containsProtectedPartition && AffectsWholeDisk(operation))
             return SafetyDecision.Deny("O disco contém Windows, boot, sistema, EFI ou recuperação e está protegido.");
 
         PartitionInfo? partition = null;
@@ -68,7 +69,7 @@ public sealed class SafetyService : ISafetyService
         if (operation.AllocationUnitSize is int allocation && (allocation < 512 || allocation > 2_097_152 || !IsPowerOfTwo(allocation)))
             return SafetyDecision.Deny("O tamanho da unidade de alocação deve ser uma potência de 2 entre 512 bytes e 2 MiB.");
 
-        return SafetyDecision.Permit(operation.IsDestructive);
+        return SafetyDecision.Permit(operation.RequiresReinforcedConfirmation);
     }
 
     public static bool IsProtected(PartitionInfo partition)
@@ -78,8 +79,7 @@ public sealed class SafetyService : ISafetyService
             || type.Contains("SYSTEM") || type.Contains("EFI") || type.Contains("RESERVED") || type.Contains("RECOVERY");
     }
 
-    private static bool AffectsWholeDisk(StorageOperationType type) => type is StorageOperationType.SetDiskOffline or StorageOperationType.SetDiskReadOnly
-        or StorageOperationType.InitializeGpt or StorageOperationType.InitializeMbr;
+    private static bool AffectsWholeDisk(StorageOperation operation) => operation.Risk.HasFlag(StorageOperationRisk.WholeDiskStateChange);
     private static bool RequiresPartition(StorageOperationType type) => type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition
         or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
     private static bool IsPowerOfTwo(int value) => (value & (value - 1)) == 0;
