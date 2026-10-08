@@ -1,0 +1,18 @@
+name: Windows build
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj
+      - name: Build
+        run: dotnet build src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj --configuration Release --no-restore --warnaserror
