@@ -29,4 +29,4 @@ Documentação: [arquitetura](docs/ARCHITECTURE.md), [segurança](docs/SECURITY.
 
 ## Segurança
 
-Os testes automatizados não escrevem em hardware. O script de integração destrutiva aceita somente um VHDX temporário criado por ele próprio, valida o alvo em várias camadas e sempre tenta desmontá-lo no bloco `finally`. Não execute operações de armazenamento sem backup verificado.
+Os testes automatizados não escrevem em hardware. O gate de integração administrativa aceita somente VHDX temporários criados pelo próprio runner, valida o alvo em várias camadas e sempre os desmonta e exclui no bloco `finally`. Não execute operações de armazenamento sem backup verificado.

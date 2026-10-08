@@ -77,6 +77,8 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger) : ISto
     {
         if (error.Contains("DEVICE_IDENTITY_CHANGED", StringComparison.Ordinal)) return "A identidade do disco mudou. A operação foi cancelada.";
         if (error.Contains("Access is denied", StringComparison.OrdinalIgnoreCase) || error.Contains("Acesso negado", StringComparison.OrdinalIgnoreCase)) return "Acesso negado. Execute o aplicativo como administrador.";
+        if (error.Contains("access path is already in use", StringComparison.OrdinalIgnoreCase) || error.Contains("caminho de acesso solicitado já está em uso", StringComparison.OrdinalIgnoreCase))
+            return "A letra ou o caminho de acesso selecionado já está em uso.";
         if (error.Contains("in use", StringComparison.OrdinalIgnoreCase) || error.Contains("em uso", StringComparison.OrdinalIgnoreCase)) return "O volume está em uso e o Windows recusou a operação.";
         if (error.Contains("not supported", StringComparison.OrdinalIgnoreCase)) return "A operação ou sistema de arquivos não é suportado neste dispositivo.";
         return "O Windows recusou a operação. Consulte o log técnico para detalhes.";

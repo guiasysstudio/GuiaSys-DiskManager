@@ -16,13 +16,19 @@ A branch completa reutilizou a ideia segura de script fixo e substituiu a UI mon
 - ausência de logs, rotação, timeouts e confirmação reforçada;
 - versão e branding incompletos;
 - bindings WPF de propriedades somente leitura detectados e corrigidos durante teste real de abertura.
+- criação de partição em disco RAW e escritas em disco/partição offline ou somente leitura agora são recusadas pelo `SafetyService`;
+- letra de partição ausente é normalizada para string vazia, sem caractere NUL;
+- conflito de caminho/letra recebe mensagem específica, e o runner considera volumes, drives PowerShell, discos lógicos e `DriveInfo` ao escolher letras livres.
+- temperatura ausente (`null`) retornada pelo Windows agora é aceita pelo parser do inventário, com teste de regressão.
 
 ## Revisão de risco
 
-Scripts são constantes e recebem parâmetros via JSON/stdin. Chamadas de processo usam `ArgumentList`, timeout e cancelamento. Não há `diskpart`, `clean`, escrita bruta, clonagem ou recuperação incompleta na aplicação. Operações de formato/exclusão existem somente no executor protegido e no teste VHDX isolado.
+Scripts da aplicação são constantes e recebem parâmetros via JSON/stdin. Chamadas de processo usam `ArgumentList`, timeout e cancelamento. Não há `diskpart`, `clean`, escrita bruta, clonagem ou recuperação incompleta na aplicação. O runner usa `diskpart` exclusivamente para criar, anexar e desanexar VHDX por caminho controlado; as operações testadas passam pelo executor real da aplicação.
 
 ## Gates concluídos
 
-Debug e Release compilaram sem warnings; 41 testes passaram em ambas as configurações. O executável self-contained abriu, inventariou o armazenamento e permaneceu responsivo. O instalador compilou, instalou silenciosamente em escopo de usuário, abriu o aplicativo instalado e desinstalou sem resíduos do executável. O teste VHDX permaneceu corretamente pendente porque a sessão não tem elevação nem cmdlets Hyper-V.
+Debug e Release compilaram sem warnings; 45 testes passaram em ambas as configurações. O executável self-contained abriu, inventariou o armazenamento e permaneceu responsivo. O instalador compilou, instalou silenciosamente em escopo de usuário, abriu o aplicativo instalado e desinstalou sem resíduos do executável.
+
+O gate administrativo VHDX de 08/10/2026 passou em 32 etapas. Uma primeira rodada revelou que `H:` era um drive mapeado não retornado por `Get-Volume`; a seleção de letra e a mensagem de conflito foram corrigidas, e a execução completa seguinte aprovou GPT e MBR, todos os sistemas de arquivos suportados e todo o ciclo de letras/redimensionamento/exclusão. Consultas independentes do Windows registraram o estado antes/depois. Nenhum SSD, HDD, NVMe, pendrive ou outro disco físico recebeu escrita. Os dois VHDX e seus diretórios individuais foram removidos no `finally`; a consulta final encontrou zero discos virtuais anexados.
 
 O GitHub Actions reproduziu restore, builds, testes, publish, compilação Inno e upload dos dois artefatos em runner Windows limpo. As actions oficiais usam versões com runtime Node.js 24.

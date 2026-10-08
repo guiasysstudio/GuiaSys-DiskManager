@@ -4,5 +4,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GuiaSys.DiskManager.Tests/GuiaSys.DiskManager.Tests.csproj" />
+    <Project Path="tests/GuiaSys.DiskManager.IntegrationRunner/GuiaSys.DiskManager.IntegrationRunner.csproj" />
   </Folder>
 </Solution>

@@ -63,6 +63,39 @@ public sealed class SafetyServiceTests
         Assert.False(_service.Evaluate(Operation(StorageOperationType.InitializeGpt), snapshot).Allowed);
     }
 
+    [Fact]
+    public void Initialize_requires_online_writable_disk()
+    {
+        var offline = Snapshot() with { Disks = [Disk(2) with { IsOffline = true }] };
+        var readOnly = Snapshot() with { Disks = [Disk(2) with { IsReadOnly = true }] };
+        Assert.False(_service.Evaluate(Operation(StorageOperationType.InitializeGpt), offline).Allowed);
+        Assert.False(_service.Evaluate(Operation(StorageOperationType.InitializeGpt), readOnly).Allowed);
+        Assert.True(_service.Evaluate(Operation(StorageOperationType.InitializeGpt), Snapshot()).Allowed);
+    }
+
+    [Fact]
+    public void Create_partition_requires_initialized_writable_disk()
+    {
+        Assert.False(_service.Evaluate(Operation(StorageOperationType.CreatePartition), Snapshot()).Allowed);
+        var offline = Snapshot() with { Disks = [Disk(2) with { PartitionStyle = "GPT", IsOffline = true }] };
+        Assert.False(_service.Evaluate(Operation(StorageOperationType.CreatePartition), offline).Allowed);
+        var ready = Snapshot() with { Disks = [Disk(2) with { PartitionStyle = "GPT" }] };
+        Assert.True(_service.Evaluate(Operation(StorageOperationType.CreatePartition), ready).Allowed);
+    }
+
+    [Fact]
+    public void Partition_change_requires_online_writable_disk_and_partition()
+    {
+        var operation = Operation(StorageOperationType.FormatPartition);
+        var diskReadOnly = Snapshot(Partition()) with { Disks = [Disk(2) with { IsReadOnly = true }] };
+        var partitionOffline = Snapshot(Partition() with { IsOffline = true });
+        var partitionReadOnly = Snapshot(Partition() with { IsReadOnly = true });
+        Assert.False(_service.Evaluate(operation, diskReadOnly).Allowed);
+        Assert.False(_service.Evaluate(operation, partitionOffline).Allowed);
+        Assert.False(_service.Evaluate(operation, partitionReadOnly).Allowed);
+        Assert.True(_service.Evaluate(operation, Snapshot(Partition())).Allowed);
+    }
+
     [Theory]
     [InlineData("NTFS", true)]
     [InlineData("FAT32", true)]

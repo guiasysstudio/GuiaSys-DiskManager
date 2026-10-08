@@ -1,6 +1,8 @@
 using GuiaSys.DiskManager.Models;
 using GuiaSys.DiskManager.Operations;
+using GuiaSys.DiskManager.Services;
 using GuiaSys.DiskManager.ViewModels;
+using System.Text.Json;
 
 namespace GuiaSys.DiskManager.Tests;
 
@@ -55,6 +57,13 @@ public sealed class ModelAndQueueTests
     {
         var operation = Operation(StorageOperationType.DeletePartition) with { PartitionNumber = 3 };
         Assert.Contains("Partição 3", operation.Description); Assert.Contains("Disco 2", operation.Description);
+    }
+
+    [Fact]
+    public void Inventory_accepts_null_temperature()
+    {
+        using var document = JsonDocument.Parse("""{"TemperatureC":null}""");
+        Assert.Null(PowerShellDiskInventoryService.ReadNullableInt(document.RootElement, "TemperatureC"));
     }
 
     private static StorageOperation Operation(StorageOperationType type) => new() { Type = type, DiskNumber = 2, ExpectedDiskIdentity = "disk-2" };

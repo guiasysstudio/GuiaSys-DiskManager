@@ -30,7 +30,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
           try { $volume = $partition | Get-Volume -ErrorAction Stop } catch { }
           [pscustomobject]@{
             DiskNumber=[int]$partition.DiskNumber; PartitionNumber=[int]$partition.PartitionNumber
-            AccessPaths=[string]($partition.AccessPaths -join ';'); DriveLetter=[string]$partition.DriveLetter
+            AccessPaths=[string]($partition.AccessPaths -join ';'); DriveLetter=if ($partition.DriveLetter) {[string]$partition.DriveLetter} else {''}
             Type=[string]$partition.Type; Offset=[int64]$partition.Offset; Size=[int64]$partition.Size
             IsBoot=[bool]$partition.IsBoot; IsSystem=[bool]$partition.IsSystem
             IsHidden=[bool]$partition.IsHidden; IsReadOnly=[bool]$partition.IsReadOnly; IsOffline=[bool]$partition.IsOffline
@@ -79,7 +79,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     internal static IEnumerable<JsonElement> Elements(JsonElement element) => element.ValueKind switch { JsonValueKind.Array => element.EnumerateArray(), JsonValueKind.Object => [element], _ => [] };
     private static string ReadString(JsonElement item, string key, string fallback = "") => item.TryGetProperty(key, out var value) && value.ValueKind is not JsonValueKind.Null ? value.ToString().Trim() : fallback;
     private static int ReadInt(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt32(out var result) ? result : 0;
-    private static int? ReadNullableInt(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt32(out var result) ? result : null;
+    internal static int? ReadNullableInt(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var result) ? result : null;
     private static long ReadLong(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt64(out var result) ? result : 0;
     private static bool ReadBool(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.True;
     private static string ToFriendlyError(string error) => error.Contains("Access is denied", StringComparison.OrdinalIgnoreCase) || error.Contains("Acesso negado", StringComparison.OrdinalIgnoreCase)

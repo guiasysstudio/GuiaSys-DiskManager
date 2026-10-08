@@ -38,9 +38,20 @@ public sealed class SafetyService : ISafetyService
 
         if (operation.Type is StorageOperationType.InitializeGpt or StorageOperationType.InitializeMbr)
         {
+            if (disk.IsOffline || disk.IsReadOnly)
+                return SafetyDecision.Deny("O disco precisa estar online e com gravação liberada para ser inicializado.");
             if (!string.Equals(disk.PartitionStyle, "RAW", StringComparison.OrdinalIgnoreCase) || diskPartitions.Length > 0)
                 return SafetyDecision.Deny("Somente discos RAW sem partições podem ser inicializados. A conversão com dados exige limpeza e não é oferecida.");
         }
+
+        if (operation.Type == StorageOperationType.CreatePartition)
+        {
+            if (disk.IsOffline || disk.IsReadOnly) return SafetyDecision.Deny("O disco precisa estar online e com gravação liberada para criar uma partição.");
+            if (string.Equals(disk.PartitionStyle, "RAW", StringComparison.OrdinalIgnoreCase)) return SafetyDecision.Deny("Inicialize o disco como GPT ou MBR antes de criar uma partição.");
+        }
+
+        if (partition is not null && (disk.IsOffline || disk.IsReadOnly || partition.IsOffline || partition.IsReadOnly))
+            return SafetyDecision.Deny("O disco e a partição precisam estar online e com gravação liberada.");
 
         if (operation.Type == StorageOperationType.FormatPartition && !SupportedFileSystems.Contains(operation.FileSystem))
             return SafetyDecision.Deny("Sistema de arquivos inválido. Use NTFS, FAT32 ou exFAT.");

@@ -21,4 +21,7 @@
     <Resource Include="Assets\Branding\*.png" />
     <Resource Include="Assets\Branding\*.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="GuiaSys.DiskManager.Tests" />
+  </ItemGroup>
 </Project>
