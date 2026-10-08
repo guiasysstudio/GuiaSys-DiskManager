@@ -1,57 +1,35 @@
-using System.Collections.ObjectModel;
+using System.Text;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using GuiaSys.DiskManager.Models;
-using GuiaSys.DiskManager.Services;
+using GuiaSys.DiskManager.ViewModels;
 
 namespace GuiaSys.DiskManager;
 
 public partial class MainWindow : Window
 {
-    private readonly IDiskInventoryService _inventory = new PowerShellDiskInventoryService();
-    private IReadOnlyList<PartitionRecord> _allPartitions = Array.Empty<PartitionRecord>();
-    public ObservableCollection<DiskRecord> Disks { get; } = new();
-    public ObservableCollection<PartitionRecord> Partitions { get; } = new();
-
-    public MainWindow()
+    private readonly MainViewModel _viewModel;
+    public MainWindow(MainViewModel viewModel)
     {
-        InitializeComponent();
-        DataContext = this;
-        Loaded += async (_, _) => await RefreshAsync();
-        DisksGrid.SelectionChanged += (_, _) => FilterPartitions();
+        InitializeComponent(); _viewModel = viewModel; DataContext = viewModel;
+        viewModel.ShowError = (title, message) => MessageBox.Show(this, message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+        viewModel.ConfirmOperationsAsync = ConfirmOperationsAsync;
+        Loaded += async (_, _) => await viewModel.RefreshAsync();
     }
-
-    private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
-
-    private void FilterPartitions()
+    private Task<bool> ConfirmOperationsAsync(IReadOnlyList<StorageOperation> operations, bool reinforced)
     {
-        Partitions.Clear();
-        int? selected = (DisksGrid.SelectedItem as DiskRecord)?.Number;
-        foreach (var partition in _allPartitions.Where(p => selected is null || p.DiskNumber == selected.Value).OrderBy(p => p.DiskNumber).ThenBy(p => p.PartitionNumber))
-            Partitions.Add(partition);
+        var summary = new StringBuilder("As operações abaixo serão executadas na ordem:\n\n");
+        for (var index = 0; index < operations.Count; index++) summary.AppendLine($"{index + 1}. {operations[index].Description}");
+        summary.AppendLine("\nO estado do disco será revalidado antes de cada etapa.");
+        if (!reinforced) return Task.FromResult(MessageBox.Show(this, summary.ToString(), "Confirmar operações", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes);
+        var dialog = new ReinforcedConfirmationWindow(summary.ToString(), operations[0].DiskNumber.ToString()) { Owner = this };
+        return Task.FromResult(dialog.ShowDialog() == true);
     }
-
-    private async Task RefreshAsync()
+    private void QueuePreset_Click(object sender, RoutedEventArgs e)
     {
-        RefreshButton.IsEnabled = false;
-        StatusText.Text = "Consultando armazenamento...";
-        try
-        {
-            var result = await _inventory.ReadAsync(CancellationToken.None);
-            Disks.Clear();
-            _allPartitions = result.Partitions;
-            Partitions.Clear();
-            foreach (var disk in result.Disks.OrderBy(d => d.Number)) Disks.Add(disk);
-            FilterPartitions();
-            StatusText.Text = $"{Disks.Count} disco(s), {Partitions.Count} partição(ões). Sem alterações realizadas.";
-        }
-        catch (Exception ex)
-        {
-            StatusText.Text = "Não foi possível consultar o armazenamento.";
-            MessageBox.Show(this, ex.Message, "Erro no inventário", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            RefreshButton.IsEnabled = true;
-        }
+        if (sender is MenuItem { Tag: string tag } && Enum.TryParse<StorageOperationType>(tag, out var type)) { _viewModel.SelectedOperationType = type; if (_viewModel.QueueCommand.CanExecute(null)) _viewModel.QueueCommand.Execute(null); }
     }
+    private void PartitionSegment_Click(object sender, MouseButtonEventArgs e) { if ((sender as FrameworkElement)?.DataContext is PartitionSegmentViewModel { Partition: not null } segment) _viewModel.SelectedPartition = segment.Partition; }
+    private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
 }

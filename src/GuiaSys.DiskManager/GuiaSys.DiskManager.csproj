@@ -6,5 +6,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>GuiaSys.DiskManager</AssemblyName>
+    <RootNamespace>GuiaSys.DiskManager</RootNamespace>
+    <ApplicationIcon>Assets\Branding\GuiaSys-DiskManager.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Branding\*.png" />
+    <Resource Include="Assets\Branding\*.ico" />
+  </ItemGroup>
 </Project>

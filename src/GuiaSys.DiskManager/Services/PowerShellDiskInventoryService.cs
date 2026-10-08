@@ -1,89 +1,82 @@
-using System;
-using System.IO;
-using System.Diagnostics;
 using System.Text.Json;
 using GuiaSys.DiskManager.Models;
 
 namespace GuiaSys.DiskManager.Services;
 
-/// <summary>Executes fixed, read-only Windows Storage cmdlets; no user input is interpolated into scripts.</summary>
-public sealed class PowerShellDiskInventoryService : IDiskInventoryService
+/// <summary>Runs a constant read-only script. No user-controlled value is interpolated into PowerShell.</summary>
+public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInventoryService
 {
     private const string Script = """
         $ErrorActionPreference = 'Stop'
-        $disks = @(Get-Disk | Select-Object Number,FriendlyName,SerialNumber,PartitionStyle,Size,IsBoot,IsSystem,IsOffline,IsReadOnly)
-        $parts = @(Get-Partition | Select-Object DiskNumber,PartitionNumber,DriveLetter,Type,Size,IsBoot,IsSystem)
-        [pscustomobject]@{ Disks = $disks; Partitions = $parts } | ConvertTo-Json -Depth 5 -Compress
+        [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        $disks = @(Get-Disk | ForEach-Object {
+          [pscustomobject]@{
+            Number=[int]$_.Number; UniqueId=[string]$_.UniqueId; FriendlyName=[string]$_.FriendlyName
+            Manufacturer=[string]$_.Manufacturer; SerialNumber=[string]$_.SerialNumber
+            PartitionStyle=[string]$_.PartitionStyle; BusType=[string]$_.BusType
+            HealthStatus=[string]$_.HealthStatus; OperationalStatus=[string]($_.OperationalStatus -join ', ')
+            Size=[int64]$_.Size; IsBoot=[bool]$_.IsBoot; IsSystem=[bool]$_.IsSystem
+            IsOffline=[bool]$_.IsOffline; IsReadOnly=[bool]$_.IsReadOnly
+          }
+        })
+        $parts = @(Get-Partition | ForEach-Object {
+          $partition = $_
+          $volume = $null
+          try { $volume = $partition | Get-Volume -ErrorAction Stop } catch { }
+          [pscustomobject]@{
+            DiskNumber=[int]$partition.DiskNumber; PartitionNumber=[int]$partition.PartitionNumber
+            AccessPaths=[string]($partition.AccessPaths -join ';'); DriveLetter=[string]$partition.DriveLetter
+            Type=[string]$partition.Type; Offset=[int64]$partition.Offset; Size=[int64]$partition.Size
+            IsBoot=[bool]$partition.IsBoot; IsSystem=[bool]$partition.IsSystem
+            IsHidden=[bool]$partition.IsHidden; IsReadOnly=[bool]$partition.IsReadOnly; IsOffline=[bool]$partition.IsOffline
+            FileSystem=if ($volume) {[string]$volume.FileSystem} else {''}
+            Label=if ($volume) {[string]$volume.FileSystemLabel} else {''}
+            VolumeSizeRemaining=if ($volume) {[int64]$volume.SizeRemaining} else {[int64]0}
+            HealthStatus=if ($volume) {[string]$volume.HealthStatus} else {'Unknown'}
+          }
+        })
+        [pscustomobject]@{ Disks=$disks; Partitions=$parts } | ConvertTo-Json -Depth 6 -Compress
         """;
 
-    public async Task<(IReadOnlyList<DiskRecord> Disks, IReadOnlyList<PartitionRecord> Partitions)> ReadAsync(CancellationToken cancellationToken)
+    public async Task<StorageSnapshot> ReadAsync(CancellationToken cancellationToken)
     {
-        if (!OperatingSystem.IsWindows())
-            throw new PlatformNotSupportedException("O inventário requer Windows.");
-
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe"),
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        startInfo.ArgumentList.Add("-NoProfile");
-        startInfo.ArgumentList.Add("-NonInteractive");
-        startInfo.ArgumentList.Add("-ExecutionPolicy");
-        startInfo.ArgumentList.Add("Bypass");
-        startInfo.ArgumentList.Add("-EncodedCommand");
-        startInfo.ArgumentList.Add(Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(Script)));
-
-        using var process = new Process { StartInfo = startInfo };
-        process.Start();
-        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+        var started = DateTimeOffset.UtcNow;
+        var output = await PowerShellProcessRunner.RunEncodedAsync(Script, null, TimeSpan.FromSeconds(30), cancellationToken);
+        if (output.ExitCode != 0) throw new InvalidOperationException(ToFriendlyError(output.StandardError));
         try
         {
-            await process.WaitForExitAsync(cancellationToken);
+            using var document = JsonDocument.Parse(output.StandardOutput);
+            var root = document.RootElement;
+            var disks = Elements(root.GetProperty("Disks")).Select(ParseDisk).OrderBy(x => x.Number).ToArray();
+            var partitions = Elements(root.GetProperty("Partitions")).Select(ParsePartition).OrderBy(x => x.DiskNumber).ThenBy(x => x.Offset).ToArray();
+            logger.Information("storage.inventory.completed", new { disks = disks.Length, partitions = partitions.Length, durationMs = (DateTimeOffset.UtcNow - started).TotalMilliseconds });
+            return new StorageSnapshot(disks, partitions, DateTimeOffset.Now);
         }
-        catch (OperationCanceledException)
-        {
-            if (!process.HasExited) process.Kill(entireProcessTree: true);
-            throw;
-        }
-        var json = await stdout;
-        var error = await stderr;
-        if (process.ExitCode != 0)
-            throw new InvalidOperationException($"Falha ao consultar os discos: {error}");
-
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
-        return (ParseDisks(root.GetProperty("Disks")), ParsePartitions(root.GetProperty("Partitions")));
+        catch (JsonException exception) { throw new InvalidOperationException("O Windows retornou dados de armazenamento em formato inesperado. Consulte os logs.", exception); }
     }
 
-    private static IReadOnlyList<DiskRecord> ParseDisks(JsonElement value) =>
-        Elements(value).Select(item => new DiskRecord(
-            ReadInt(item, "Number"), ReadString(item, "FriendlyName"), ReadString(item, "SerialNumber"),
-            ReadString(item, "PartitionStyle"), ReadLong(item, "Size"), ReadBool(item, "IsBoot"),
-            ReadBool(item, "IsSystem"), ReadBool(item, "IsOffline"), ReadBool(item, "IsReadOnly"))).ToArray();
-
-    private static IReadOnlyList<PartitionRecord> ParsePartitions(JsonElement value) =>
-        Elements(value).Select(item => new PartitionRecord(
-            ReadInt(item, "DiskNumber"), ReadInt(item, "PartitionNumber"), ReadString(item, "DriveLetter"),
-            ReadString(item, "Type"), ReadLong(item, "Size"), ReadBool(item, "IsBoot"),
-            ReadBool(item, "IsSystem"))).ToArray();
-
-    private static IEnumerable<JsonElement> Elements(JsonElement element) => element.ValueKind switch
+    private static DiskInfo ParseDisk(JsonElement item) => new()
     {
-        JsonValueKind.Array => element.EnumerateArray(),
-        JsonValueKind.Object => new[] { element },
-        _ => Array.Empty<JsonElement>()
+        Number = ReadInt(item, "Number"), UniqueId = ReadString(item, "UniqueId"), FriendlyName = ReadString(item, "FriendlyName", "Dispositivo sem nome"),
+        Manufacturer = ReadString(item, "Manufacturer"), SerialNumber = ReadString(item, "SerialNumber"), PartitionStyle = ReadString(item, "PartitionStyle", "RAW"),
+        BusType = ReadString(item, "BusType", "Unknown"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"),
+        Size = ReadLong(item, "Size"), IsBoot = ReadBool(item, "IsBoot"), IsSystem = ReadBool(item, "IsSystem"), IsOffline = ReadBool(item, "IsOffline"), IsReadOnly = ReadBool(item, "IsReadOnly")
     };
 
-    private static string ReadString(JsonElement item, string key) =>
-        item.TryGetProperty(key, out var v) && v.ValueKind != JsonValueKind.Null ? v.ToString() : "";
-    private static int ReadInt(JsonElement item, string key) =>
-        item.TryGetProperty(key, out var v) && v.TryGetInt32(out var x) ? x : 0;
-    private static long ReadLong(JsonElement item, string key) =>
-        item.TryGetProperty(key, out var v) && v.TryGetInt64(out var x) ? x : 0;
-    private static bool ReadBool(JsonElement item, string key) =>
-        item.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.True;
+    private static PartitionInfo ParsePartition(JsonElement item) => new()
+    {
+        DiskNumber = ReadInt(item, "DiskNumber"), PartitionNumber = ReadInt(item, "PartitionNumber"), AccessPaths = ReadString(item, "AccessPaths"), DriveLetter = ReadString(item, "DriveLetter"),
+        Type = ReadString(item, "Type", "Unknown"), Offset = ReadLong(item, "Offset"), Size = ReadLong(item, "Size"), IsBoot = ReadBool(item, "IsBoot"), IsSystem = ReadBool(item, "IsSystem"),
+        IsHidden = ReadBool(item, "IsHidden"), IsReadOnly = ReadBool(item, "IsReadOnly"), IsOffline = ReadBool(item, "IsOffline"), FileSystem = ReadString(item, "FileSystem"),
+        Label = ReadString(item, "Label"), VolumeSizeRemaining = ReadLong(item, "VolumeSizeRemaining"), HealthStatus = ReadString(item, "HealthStatus", "Unknown")
+    };
+
+    internal static IEnumerable<JsonElement> Elements(JsonElement element) => element.ValueKind switch { JsonValueKind.Array => element.EnumerateArray(), JsonValueKind.Object => [element], _ => [] };
+    private static string ReadString(JsonElement item, string key, string fallback = "") => item.TryGetProperty(key, out var value) && value.ValueKind is not JsonValueKind.Null ? value.ToString().Trim() : fallback;
+    private static int ReadInt(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt32(out var result) ? result : 0;
+    private static long ReadLong(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt64(out var result) ? result : 0;
+    private static bool ReadBool(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.True;
+    private static string ToFriendlyError(string error) => error.Contains("Access is denied", StringComparison.OrdinalIgnoreCase) || error.Contains("Acesso negado", StringComparison.OrdinalIgnoreCase)
+        ? "Acesso negado ao consultar o armazenamento. Tente executar como administrador."
+        : "Não foi possível consultar o armazenamento do Windows. Consulte os logs para detalhes.";
 }
