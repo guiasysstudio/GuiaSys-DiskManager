@@ -5,7 +5,7 @@ namespace GuiaSys.DiskManager.Tests;
 
 public sealed class SafetyServiceTests
 {
-    private readonly SafetyService _service = new();
+    private readonly SafetyService _service = new('X');
 
     [Fact]
     public void Allows_non_destructive_change_on_external_disk() => Assert.True(_service.Evaluate(Operation(StorageOperationType.SetDiskOnline), Snapshot()).Allowed);
@@ -97,6 +97,15 @@ public sealed class SafetyServiceTests
     {
         var decision = _service.Evaluate(Operation(StorageOperationType.DeletePartition), Snapshot(Partition()));
         Assert.True(decision.Allowed); Assert.True(decision.RequiresReinforcedConfirmation);
+    }
+
+    [Fact]
+    public void Blocks_partition_that_hosts_the_running_executable()
+    {
+        var service = new SafetyService('D');
+        var decision = service.Evaluate(Operation(StorageOperationType.FormatPartition), Snapshot(Partition() with { DriveLetter = "D" }));
+        Assert.False(decision.Allowed);
+        Assert.Contains("aplicativo", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     private static StorageOperation Operation(StorageOperationType type) => new() { Type = type, DiskNumber = 2, PartitionNumber = RequiresPartition(type) ? 1 : null, ExpectedDiskIdentity = "disk-2" };

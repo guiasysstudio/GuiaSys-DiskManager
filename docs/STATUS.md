@@ -9,7 +9,7 @@
 
 ## TESTADO
 
-- build e suíte xUnit em Debug e Release: 40/40 testes aprovados, zero warnings;
+- build e suíte xUnit em Debug e Release: 41/41 testes aprovados, zero warnings;
 - abertura real sem elevação e inventário do Windows registrado em log;
 - publicação Release self-contained `win-x64` em arquivo único;
 - instalador Inno Setup 6.7.3 compilado, instalação silenciosa por usuário, abertura do app instalado e desinstalação silenciosa aprovadas.

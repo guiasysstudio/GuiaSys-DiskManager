@@ -7,6 +7,10 @@ namespace GuiaSys.DiskManager.Safety;
 public sealed class SafetyService : ISafetyService
 {
     private static readonly HashSet<string> SupportedFileSystems = new(StringComparer.OrdinalIgnoreCase) { "NTFS", "FAT32", "exFAT" };
+    private readonly char? _executableDriveLetter;
+
+    public SafetyService() : this(GetExecutableDriveLetter()) { }
+    public SafetyService(char? executableDriveLetter) => _executableDriveLetter = executableDriveLetter is char value ? char.ToUpperInvariant(value) : null;
 
     public SafetyDecision Evaluate(StorageOperation operation, StorageSnapshot currentSnapshot)
     {
@@ -68,11 +72,12 @@ public sealed class SafetyService : ISafetyService
     private static bool RequiresPartition(StorageOperationType type) => type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition
         or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
     private static bool IsPowerOfTwo(int value) => (value & (value - 1)) == 0;
-    private static bool ContainsRunningExecutable(PartitionInfo partition)
+    private bool ContainsRunningExecutable(PartitionInfo partition) => _executableDriveLetter is char protectedDrive && partition.DriveLetter.Length == 1 && protectedDrive == char.ToUpperInvariant(partition.DriveLetter[0]);
+    private static char? GetExecutableDriveLetter()
     {
         var executablePath = Environment.ProcessPath;
-        if (string.IsNullOrWhiteSpace(executablePath) || partition.DriveLetter.Length != 1) return false;
+        if (string.IsNullOrWhiteSpace(executablePath)) return null;
         var root = Path.GetPathRoot(executablePath);
-        return root is { Length: >= 1 } && char.ToUpperInvariant(root[0]) == char.ToUpperInvariant(partition.DriveLetter[0]);
+        return root is { Length: >= 1 } && char.IsLetter(root[0]) ? char.ToUpperInvariant(root[0]) : null;
     }
 }
