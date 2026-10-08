@@ -1,19 +1,28 @@
-# Status verificável
+# Status verificável — 0.1.0-dev
 
-## M01 - Aplicação inicial de inventário
-- Código WPF e serviço somente leitura publicados em branch de funcionalidade.
-- CI: build e publicação portátil para Windows x64 configurados.
-- Artefatos são gerados pelo GitHub Actions e disponibilizados no run em **Artifacts**, não como GitHub Release.
-- Instalador Inno Setup 6 disponível como script; sua compilação depende de uma instalação do Inno Setup.
-- Nenhuma rotina de exclusão, formatação, redimensionamento, conversão ou recuperação foi implementada.
-- **Não usar como ferramenta de manutenção destrutiva**.
+## IMPLEMENTADO
 
-## Gates obrigatórios antes de liberar operações de escrita
-1. Teste em Windows 10 e 11 em máquinas virtuais.
-2. Identificação segura por dispositivo e número de série.
-3. Testes automatizados de seleção do disco e recusas de operações perigosas.
-4. Testes em discos virtuais descartáveis VHDX para todas as operações.
-5. Testes manuais em hardware não crítico e restauração de backup.
-6. Revisão de código e evidências de auditoria.
+- inventário, seleção sincronizada, detalhes e mapa proporcional;
+- fila e operações allow-listed de disco/partição/volume;
+- `SafetyService`, confirmação reforçada, revalidação e logs;
+- branding, About, publish x64, instalador, CI e integração VHDX opt-in.
 
-O resultado de build não comprova operação correta com hardware real.
+## TESTADO
+
+- build Debug e suíte xUnit;
+- abertura real sem elevação e inventário do Windows registrado em log;
+- build/publish Release e instalador: registrar no relatório final da branch.
+
+## VALIDADO
+
+- regras puras de segurança, fila, parsing, classificação e identidade por testes automatizados;
+- inventário somente leitura em Windows local.
+
+## PENDENTE
+
+- integração destrutiva VHDX em sessão administrativa com Hyper-V;
+- instalação/desinstalação silenciosa após disponibilidade do Inno Setup;
+- matriz física Windows 10/11, DPI e USB descartável;
+- clonagem, recuperação avançada e telemetria SMART proprietária.
+
+Nenhuma função pendente é apresentada na interface como suporte disponível.

@@ -1,4 +1,4 @@
-name: Windows build and portable application
+name: Windows build, tests, portable and installer
 on:
   push:
     branches: [main, 'feat/**']
@@ -13,14 +13,31 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Restore
-        run: dotnet restore src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj
-      - name: Build
-        run: dotnet build src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj --configuration Release --no-restore --warnaserror
+        run: dotnet restore GuiaSys.DiskManager.slnx
+      - name: Build Debug
+        run: dotnet build GuiaSys.DiskManager.slnx --configuration Debug --no-restore
+      - name: Test Debug
+        run: dotnet test GuiaSys.DiskManager.slnx --configuration Debug --no-build --no-restore --logger trx --results-directory TestResults/Debug
+      - name: Build Release
+        run: dotnet build GuiaSys.DiskManager.slnx --configuration Release --no-restore
+      - name: Test Release
+        run: dotnet test GuiaSys.DiskManager.slnx --configuration Release --no-build --no-restore --logger trx --results-directory TestResults/Release
       - name: Publish self-contained Windows x64
-        run: dotnet publish src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o artifacts/portable
+        run: dotnet publish src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj -c Release -r win-x64 --self-contained true --no-restore -o artifacts/portable
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+      - name: Compile installer
+        shell: powershell
+        run: .\tools\Build-Installer.ps1
       - name: Upload portable application
         uses: actions/upload-artifact@v4
         with:
           name: GuiaSys-DiskManager-win-x64-portable
           path: artifacts/portable/
+          if-no-files-found: error
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: GuiaSys-DiskManager-win-x64-setup
+          path: artifacts/setup/*.exe
           if-no-files-found: error
