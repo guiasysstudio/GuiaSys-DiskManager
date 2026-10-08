@@ -16,7 +16,8 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger) : ISto
         [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
         $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
         $disk = Get-Disk -Number ([int]$request.DiskNumber) -ErrorAction Stop
-        $actualIdentity = if ([string]::IsNullOrWhiteSpace([string]$disk.UniqueId)) { "number:$($disk.Number)|serial:$($disk.SerialNumber)|size:$($disk.Size)" } else { ([string]$disk.UniqueId).Trim() }
+        if ([string]::IsNullOrWhiteSpace([string]$disk.UniqueId)) { throw 'DEVICE_STRONG_IDENTITY_UNAVAILABLE' }
+        $actualIdentity = "uid:$(([string]$disk.UniqueId).Trim())"
         if ($actualIdentity -cne [string]$request.ExpectedDiskIdentity) { throw 'DEVICE_IDENTITY_CHANGED' }
         $partition = $null
         if ($null -ne $request.PartitionNumber) { $partition = Get-Partition -DiskNumber $disk.Number -PartitionNumber ([int]$request.PartitionNumber) -ErrorAction Stop }
