@@ -47,10 +47,19 @@ public sealed class ModelAndQueueTests
     }
 
     [Fact]
-    public void Disk_fallback_identity_is_stable()
+    public void Disk_fallback_identity_is_explicitly_weak()
     {
         var disk = new DiskInfo { Number = 4, UniqueId = "", FriendlyName = "USB", SerialNumber = "ABC", Size = 32_000_000_000 };
-        Assert.Equal("number:4|serial:ABC|size:32000000000", disk.Identity);
+        Assert.False(disk.HasStrongIdentity);
+        Assert.Equal("weak:number:4|serial:ABC|size:32000000000", disk.Identity);
+    }
+
+    [Fact]
+    public void Disk_unique_id_is_normalized_as_strong_identity()
+    {
+        var disk = new DiskInfo { Number = 4, UniqueId = "  ABC-123  ", FriendlyName = "USB", Size = 32_000_000_000 };
+        Assert.True(disk.HasStrongIdentity);
+        Assert.Equal("uid:ABC-123", disk.Identity);
     }
 
     [Fact]
