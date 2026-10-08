@@ -24,13 +24,19 @@ public sealed class SafetyServiceTests
         Assert.Contains("identidade", _service.Evaluate(operation, Snapshot()).Reason, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
-    public void Blocks_destructive_operation_on_disk_zero()
+    [Theory]
+    [MemberData(nameof(AllOperationTypes))]
+    public void Disk_zero_is_read_only_for_every_mutation(StorageOperationType type)
     {
-        var disk = Disk(0) with { UniqueId = "disk0" };
-        var snapshot = new StorageSnapshot([disk], [], DateTimeOffset.Now);
-        var operation = Operation(StorageOperationType.InitializeGpt) with { DiskNumber = 0, ExpectedDiskIdentity = "disk0" };
-        Assert.False(_service.Evaluate(operation, snapshot).Allowed);
+        var disk = Disk(0) with { UniqueId = "disk0", PartitionStyle = "GPT" };
+        var partition = Partition() with { DiskNumber = 0 };
+        var snapshot = new StorageSnapshot([disk], [partition], DateTimeOffset.Now);
+        var operation = Operation(type) with { DiskNumber = 0, ExpectedDiskIdentity = "disk0" };
+
+        var decision = _service.Evaluate(operation, snapshot);
+
+        Assert.False(decision.Allowed);
+        Assert.Contains("somente leitura", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
@@ -49,10 +55,14 @@ public sealed class SafetyServiceTests
     [InlineData("EFI System Partition")]
     public void Classifies_protected_partition_types(string type) => Assert.True(SafetyService.IsProtected(Partition() with { Type = type }));
 
-    [Fact]
-    public void Blocks_whole_disk_change_when_recovery_exists()
+    [Theory]
+    [InlineData(StorageOperationType.SetDiskOnline)]
+    [InlineData(StorageOperationType.SetDiskOffline)]
+    [InlineData(StorageOperationType.SetDiskReadOnly)]
+    [InlineData(StorageOperationType.ClearDiskReadOnly)]
+    public void Blocks_every_whole_disk_state_change_when_recovery_exists(StorageOperationType type)
     {
-        var decision = _service.Evaluate(Operation(StorageOperationType.SetDiskOffline), Snapshot(Partition() with { Type = "Recovery" }));
+        var decision = _service.Evaluate(Operation(type), Snapshot(Partition() with { Type = "Recovery" }));
         Assert.False(decision.Allowed);
     }
 
@@ -125,11 +135,40 @@ public sealed class SafetyServiceTests
         Assert.False(_service.Evaluate(operation, Snapshot(Partition())).Allowed);
     }
 
-    [Fact]
-    public void Destructive_operation_requires_reinforced_confirmation()
+    [Theory]
+    [InlineData(StorageOperationType.InitializeGpt)]
+    [InlineData(StorageOperationType.InitializeMbr)]
+    [InlineData(StorageOperationType.CreatePartition)]
+    [InlineData(StorageOperationType.DeletePartition)]
+    [InlineData(StorageOperationType.FormatPartition)]
+    [InlineData(StorageOperationType.ResizePartition)]
+    [InlineData(StorageOperationType.SetDiskReadOnly)]
+    [InlineData(StorageOperationType.ClearDiskReadOnly)]
+    public void High_risk_operations_require_reinforced_confirmation(StorageOperationType type)
     {
-        var decision = _service.Evaluate(Operation(StorageOperationType.DeletePartition), Snapshot(Partition()));
-        Assert.True(decision.Allowed); Assert.True(decision.RequiresReinforcedConfirmation);
+        var snapshot = type switch
+        {
+            StorageOperationType.CreatePartition => Snapshot() with { Disks = [Disk(2) with { PartitionStyle = "GPT" }] },
+            StorageOperationType.DeletePartition or StorageOperationType.FormatPartition or StorageOperationType.ResizePartition => Snapshot(Partition()),
+            _ => Snapshot()
+        };
+        var decision = _service.Evaluate(Operation(type), snapshot);
+        Assert.True(decision.Allowed);
+        Assert.True(decision.RequiresReinforcedConfirmation);
+    }
+
+    [Theory]
+    [InlineData(StorageOperationType.SetDiskOnline)]
+    [InlineData(StorageOperationType.SetDiskOffline)]
+    [InlineData(StorageOperationType.SetDriveLetter)]
+    [InlineData(StorageOperationType.RemoveDriveLetter)]
+    [InlineData(StorageOperationType.SetVolumeLabel)]
+    public void Lower_risk_mutations_do_not_require_reinforced_confirmation(StorageOperationType type)
+    {
+        var snapshot = RequiresPartition(type) ? Snapshot(Partition()) : Snapshot();
+        var decision = _service.Evaluate(Operation(type), snapshot);
+        Assert.True(decision.Allowed);
+        Assert.False(decision.RequiresReinforcedConfirmation);
     }
 
     [Fact]
@@ -141,7 +180,25 @@ public sealed class SafetyServiceTests
         Assert.Contains("aplicativo", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static StorageOperation Operation(StorageOperationType type) => new() { Type = type, DiskNumber = 2, PartitionNumber = RequiresPartition(type) ? 1 : null, ExpectedDiskIdentity = "disk-2" };
+    public static TheoryData<StorageOperationType> AllOperationTypes
+    {
+        get
+        {
+            var data = new TheoryData<StorageOperationType>();
+            foreach (var type in Enum.GetValues<StorageOperationType>()) data.Add(type);
+            return data;
+        }
+    }
+
+    private static StorageOperation Operation(StorageOperationType type) => new()
+    {
+        Type = type,
+        DiskNumber = 2,
+        PartitionNumber = RequiresPartition(type) ? 1 : null,
+        ExpectedDiskIdentity = "disk-2",
+        SizeBytes = type == StorageOperationType.ResizePartition ? 5_000_000_000 : null
+    };
+
     private static bool RequiresPartition(StorageOperationType type) => type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
     private static DiskInfo Disk(int number) => new() { Number = number, UniqueId = $"disk-{number}", FriendlyName = "Test disk", Size = 100_000_000_000, PartitionStyle = "RAW" };
     private static PartitionInfo Partition() => new() { DiskNumber = 2, PartitionNumber = 1, AccessPaths = "", DriveLetter = "D", Type = "Basic", Offset = 1_000_000, Size = 10_000_000_000, FileSystem = "NTFS" };
