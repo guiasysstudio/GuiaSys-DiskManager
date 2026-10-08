@@ -52,36 +52,101 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         {
             using var document = JsonDocument.Parse(output.StandardOutput);
             var root = document.RootElement;
-            var disks = Elements(root.GetProperty("Disks")).Select(ParseDisk).OrderBy(x => x.Number).ToArray();
-            var partitions = Elements(root.GetProperty("Partitions")).Select(ParsePartition).OrderBy(x => x.DiskNumber).ThenBy(x => x.Offset).ToArray();
+            var disks = ReadRequiredElements(root, "Disks").Select(ParseDisk).OrderBy(x => x.Number).ToArray();
+            var partitions = ReadRequiredElements(root, "Partitions").Select(ParsePartition).OrderBy(x => x.DiskNumber).ThenBy(x => x.Offset).ToArray();
+            ValidateSnapshot(disks, partitions);
             logger.Information("storage.inventory.completed", new { disks = disks.Length, partitions = partitions.Length, durationMs = (DateTimeOffset.UtcNow - started).TotalMilliseconds });
             return new StorageSnapshot(disks, partitions, DateTimeOffset.Now);
         }
         catch (JsonException exception) { throw new InvalidOperationException("O Windows retornou dados de armazenamento em formato inesperado. Consulte os logs.", exception); }
+        catch (InvalidDataException exception) { throw new InvalidOperationException("O Windows retornou dados de armazenamento incompletos ou inconsistentes. Nenhuma alteração será permitida até o inventário ser atualizado. Consulte os logs.", exception); }
     }
 
     private static DiskInfo ParseDisk(JsonElement item) => new()
     {
-        Number = ReadInt(item, "Number"), UniqueId = ReadString(item, "UniqueId"), FriendlyName = ReadString(item, "FriendlyName", "Dispositivo sem nome"),
-        Manufacturer = ReadString(item, "Manufacturer"), SerialNumber = ReadString(item, "SerialNumber"), PartitionStyle = ReadString(item, "PartitionStyle", "RAW"),
+        Number = ReadRequiredInt(item, "Number"), UniqueId = ReadString(item, "UniqueId"), FriendlyName = ReadString(item, "FriendlyName", "Dispositivo sem nome"),
+        Manufacturer = ReadString(item, "Manufacturer"), SerialNumber = ReadString(item, "SerialNumber"), PartitionStyle = ReadRequiredString(item, "PartitionStyle"),
         BusType = ReadString(item, "BusType", "Unknown"), MediaType = ReadString(item, "MediaType", "Unspecified"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"), TemperatureC = ReadNullableInt(item, "TemperatureC"),
-        Size = ReadLong(item, "Size"), IsBoot = ReadBool(item, "IsBoot"), IsSystem = ReadBool(item, "IsSystem"), IsOffline = ReadBool(item, "IsOffline"), IsReadOnly = ReadBool(item, "IsReadOnly")
+        Size = ReadRequiredLong(item, "Size"), IsBoot = ReadRequiredBool(item, "IsBoot"), IsSystem = ReadRequiredBool(item, "IsSystem"), IsOffline = ReadRequiredBool(item, "IsOffline"), IsReadOnly = ReadRequiredBool(item, "IsReadOnly")
     };
 
     private static PartitionInfo ParsePartition(JsonElement item) => new()
     {
-        DiskNumber = ReadInt(item, "DiskNumber"), PartitionNumber = ReadInt(item, "PartitionNumber"), AccessPaths = ReadString(item, "AccessPaths"), DriveLetter = ReadString(item, "DriveLetter"),
-        Type = ReadString(item, "Type", "Unknown"), Offset = ReadLong(item, "Offset"), Size = ReadLong(item, "Size"), IsBoot = ReadBool(item, "IsBoot"), IsSystem = ReadBool(item, "IsSystem"),
-        IsHidden = ReadBool(item, "IsHidden"), IsReadOnly = ReadBool(item, "IsReadOnly"), IsOffline = ReadBool(item, "IsOffline"), FileSystem = ReadString(item, "FileSystem"),
-        Label = ReadString(item, "Label"), VolumeSizeRemaining = ReadLong(item, "VolumeSizeRemaining"), HealthStatus = ReadString(item, "HealthStatus", "Unknown")
+        DiskNumber = ReadRequiredInt(item, "DiskNumber"), PartitionNumber = ReadRequiredInt(item, "PartitionNumber"), AccessPaths = ReadString(item, "AccessPaths"), DriveLetter = ReadString(item, "DriveLetter"),
+        Type = ReadRequiredString(item, "Type"), Offset = ReadRequiredLong(item, "Offset"), Size = ReadRequiredLong(item, "Size"), IsBoot = ReadRequiredBool(item, "IsBoot"), IsSystem = ReadRequiredBool(item, "IsSystem"),
+        IsHidden = ReadRequiredBool(item, "IsHidden"), IsReadOnly = ReadRequiredBool(item, "IsReadOnly"), IsOffline = ReadRequiredBool(item, "IsOffline"), FileSystem = ReadString(item, "FileSystem"),
+        Label = ReadString(item, "Label"), VolumeSizeRemaining = ReadLongOrDefault(item, "VolumeSizeRemaining"), HealthStatus = ReadString(item, "HealthStatus", "Unknown")
     };
 
     internal static IEnumerable<JsonElement> Elements(JsonElement element) => element.ValueKind switch { JsonValueKind.Array => element.EnumerateArray(), JsonValueKind.Object => [element], _ => [] };
+    internal static IEnumerable<JsonElement> ReadRequiredElements(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind is not (JsonValueKind.Array or JsonValueKind.Object))
+            throw InvalidField(key, "array ou objeto");
+        return Elements(value);
+    }
+
     private static string ReadString(JsonElement item, string key, string fallback = "") => item.TryGetProperty(key, out var value) && value.ValueKind is not JsonValueKind.Null ? value.ToString().Trim() : fallback;
-    private static int ReadInt(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt32(out var result) ? result : 0;
-    internal static int? ReadNullableInt(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var result) ? result : null;
-    private static long ReadLong(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt64(out var result) ? result : 0;
-    private static bool ReadBool(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.True;
+    internal static string ReadRequiredString(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.String)
+            throw InvalidField(key, "texto");
+        var result = value.GetString()?.Trim() ?? "";
+        if (result.Length == 0) throw InvalidField(key, "texto não vazio");
+        return result;
+    }
+
+    internal static int ReadRequiredInt(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var result))
+            throw InvalidField(key, "inteiro");
+        return result;
+    }
+
+    internal static long ReadRequiredLong(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var result))
+            throw InvalidField(key, "inteiro de 64 bits");
+        return result;
+    }
+
+    private static long ReadLongOrDefault(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var result) ? result : 0;
+
+    internal static bool ReadRequiredBool(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            throw InvalidField(key, "booleano");
+        return value.GetBoolean();
+    }
+
+    internal static int? ReadNullableInt(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null) return null;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var result)) return result;
+        throw InvalidField(key, "inteiro ou null");
+    }
+
+    internal static void ValidateSnapshot(IReadOnlyList<DiskInfo> disks, IReadOnlyList<PartitionInfo> partitions)
+    {
+        if (disks.Any(d => d.Number < 0 || d.Size <= 0))
+            throw new InvalidDataException("Inventário contém número de disco negativo ou tamanho de disco não positivo.");
+        if (disks.GroupBy(d => d.Number).Any(group => group.Count() != 1))
+            throw new InvalidDataException("Inventário contém números de disco duplicados.");
+
+        var diskNumbers = disks.Select(d => d.Number).ToHashSet();
+        if (partitions.Any(p => p.DiskNumber < 0 || p.PartitionNumber <= 0 || p.Offset < 0 || p.Size <= 0))
+            throw new InvalidDataException("Inventário contém número, offset ou tamanho de partição inválido.");
+        if (partitions.Any(p => !diskNumbers.Contains(p.DiskNumber)))
+            throw new InvalidDataException("Inventário contém partição órfã sem disco correspondente.");
+        if (partitions.GroupBy(p => (p.DiskNumber, p.PartitionNumber)).Any(group => group.Count() != 1))
+            throw new InvalidDataException("Inventário contém números de partição duplicados no mesmo disco.");
+        if (partitions.Any(p => p.Offset > long.MaxValue - p.Size))
+            throw new InvalidDataException("Inventário contém intervalo de partição que excede o limite numérico.");
+        if (partitions.Any(p => disks.First(d => d.Number == p.DiskNumber).Size < p.Offset + p.Size))
+            throw new InvalidDataException("Inventário contém partição fora dos limites do disco.");
+    }
+
+    private static InvalidDataException InvalidField(string key, string expected) => new($"Campo obrigatório '{key}' ausente ou inválido; esperado {expected}.");
     private static string ToFriendlyError(string error) => error.Contains("Access is denied", StringComparison.OrdinalIgnoreCase) || error.Contains("Acesso negado", StringComparison.OrdinalIgnoreCase)
         ? "Acesso negado ao consultar o armazenamento. Tente executar como administrador."
         : "Não foi possível consultar o armazenamento do Windows. Consulte os logs para detalhes.";
