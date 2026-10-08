@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GuiaSys.DiskManager.Tests/GuiaSys.DiskManager.Tests.csproj" />
+  </Folder>
+</Solution>
