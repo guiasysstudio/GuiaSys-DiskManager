@@ -1,0 +1,26 @@
+name: Windows build and portable application
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj
+      - name: Build
+        run: dotnet build src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj --configuration Release --no-restore --warnaserror
+      - name: Publish self-contained Windows x64
+        run: dotnet publish src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o artifacts/portable
+      - name: Upload portable application
+        uses: actions/upload-artifact@v4
+        with:
+          name: GuiaSys-DiskManager-win-x64-portable
+          path: artifacts/portable/
+          if-no-files-found: error
