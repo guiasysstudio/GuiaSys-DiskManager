@@ -122,6 +122,14 @@ public sealed class ModelAndQueueTests
     }
 
     [Fact]
+    public void Inventory_rejects_duplicate_strong_disk_identity()
+    {
+        var first = new DiskInfo { Number = 2, UniqueId = "SAME", FriendlyName = "A", Size = 1_000, PartitionStyle = "GPT" };
+        var second = new DiskInfo { Number = 3, UniqueId = "SAME", FriendlyName = "B", Size = 1_000, PartitionStyle = "GPT" };
+        Assert.Throws<InvalidDataException>(() => PowerShellDiskInventoryService.ValidateSnapshot([first, second], []));
+    }
+
+    [Fact]
     public void Inventory_accepts_consistent_snapshot()
     {
         var disk = new DiskInfo { Number = 2, UniqueId = "disk-2", FriendlyName = "Disk", Size = 1_000, PartitionStyle = "GPT" };
