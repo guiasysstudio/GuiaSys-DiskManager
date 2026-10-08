@@ -140,7 +140,7 @@ public sealed class MainViewModel : ObservableObject
         var operations = _queue.Snapshot();
         if (operations.Count == 0) return;
         if (!IsAdministrator) { ShowError?.Invoke("Elevação necessária", "Reabra o aplicativo como administrador para aplicar operações. O inventário permanece disponível sem elevação."); return; }
-        var reinforced = operations.Any(x => x.IsDestructive);
+        var reinforced = operations.Any(x => x.RequiresReinforcedConfirmation);
         if (!confirmationAlreadyGranted && ConfirmOperationsAsync is not null && !await ConfirmOperationsAsync(operations, reinforced)) { Status = "Aplicação cancelada."; return; }
 
         IsBusy = true;
