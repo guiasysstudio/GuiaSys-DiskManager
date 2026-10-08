@@ -9,11 +9,12 @@
 
 ## TESTADO
 
-- build e suíte xUnit em Debug e Release: 45/45 testes aprovados, zero warnings;
+- build e suíte xUnit: 45/45 testes aprovados em Debug e 45/45 em Release, zero warnings;
 - abertura real sem elevação e inventário do Windows registrado em log;
 - publicação Release self-contained `win-x64` em arquivo único;
 - instalador Inno Setup 6.7.3 compilado, instalação silenciosa por usuário, abertura do app instalado e desinstalação silenciosa aprovadas.
-- gate administrativo aprovado em 08/10/2026 com 32 etapas e dois VHDX descartáveis: GPT/MBR, online/offline, somente leitura, criação, NTFS/FAT32/exFAT, labels, letras, redução, expansão e exclusão.
+- gate administrativo aprovado em 08/10/2026: 32/32 etapas com dois VHDX descartáveis, cobrindo GPT/MBR, online/offline, somente leitura, criação, NTFS/FAT32/exFAT, labels, letras, redução, expansão e exclusão;
+- CI verde no HEAD funcional auditado `840cf2b49c1e714559e931e21b08eba74e445e7f`.
 
 ## VALIDADO
 
@@ -22,9 +23,9 @@
 - estado antes/depois de cada escrita confirmado por processos PowerShell independentes; ambos os VHDX foram desmontados e excluídos no `finally`.
 - pipeline GitHub Actions reproduzindo build/test Debug e Release, publish e instalador em runner limpo.
 
-## PENDENTE
+## FORA DO ESCOPO VALIDADO
 
 - matriz física Windows 10/11, DPI e USB descartável;
 - clonagem, recuperação avançada e telemetria SMART proprietária.
 
-Nenhuma função pendente é apresentada na interface como suporte disponível.
+Nenhuma função fora do escopo validado é apresentada na interface como suporte disponível. O gate VHDX não está pendente.

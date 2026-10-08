@@ -15,7 +15,9 @@
 
 ## Gate VHDX
 
-O runner elevado cria dois VHDX sob uma raiz temporária exclusiva. Antes de qualquer escrita, exige disco novo, tamanho esperado, barramento virtual, identidade estável, ausência de boot/system e número diferente de zero. Cada operação é verificada por uma consulta independente. O `finally` desmonta e exclui todos os VHDX, inclusive em falha. A execução aprovada em 08/10/2026 terminou com zero discos virtuais anexados.
+O runner elevado cria dois VHDX sob uma raiz temporária exclusiva. Antes de qualquer escrita, exige disco novo, tamanho esperado, barramento virtual, identidade estável, ausência de boot/system e número diferente de zero. Cada operação é verificada por uma consulta independente. O `finally` desmonta e exclui todos os VHDX, inclusive em falha.
+
+O gate foi concluído com 32/32 etapas aprovadas, acompanhado por 45/45 testes em Debug e 45/45 em Release. A execução aprovada em 08/10/2026 terminou com zero discos virtuais anexados, sem escrita em SSD, HDD, NVMe, pendrive ou outro disco físico. O CI ficou verde no HEAD funcional auditado `840cf2b49c1e714559e931e21b08eba74e445e7f`; não há gate VHDX pendente.
 
 ## Limites
 

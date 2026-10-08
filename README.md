@@ -27,6 +27,12 @@ dotnet publish .\src\GuiaSys.DiskManager\GuiaSys.DiskManager.csproj -c Release -
 
 Documentação: [arquitetura](docs/ARCHITECTURE.md), [segurança](docs/SECURITY.md), [build](docs/BUILD.md), [testes](docs/TESTING.md), [operações](docs/OPERATIONS.md), [auditoria](docs/AUDIT.md) e [status verificável](docs/STATUS.md).
 
+## Estado verificado
+
+- 45/45 testes aprovados em Debug e 45/45 em Release, sem warnings;
+- 32/32 etapas do gate administrativo VHDX aprovadas, usando somente discos virtuais descartáveis;
+- CI verde para o HEAD funcional auditado `840cf2b49c1e714559e931e21b08eba74e445e7f`.
+
 ## Segurança
 
-Os testes automatizados não escrevem em hardware. O gate de integração administrativa aceita somente VHDX temporários criados pelo próprio runner, valida o alvo em várias camadas e sempre os desmonta e exclui no bloco `finally`. Não execute operações de armazenamento sem backup verificado.
+Os testes automatizados não escrevem em hardware. O gate de integração administrativa está concluído e aceita somente VHDX temporários criados pelo próprio runner, valida o alvo em várias camadas e sempre os desmonta e exclui no bloco `finally`. Não execute operações de armazenamento sem backup verificado.
