@@ -23,7 +23,12 @@ public sealed record DiskInfo
     public string SizeLabel => ByteSize.Format(Size);
     public string DisplayName => $"Disco {Number} · {FriendlyName}";
     public string TemperatureLabel => TemperatureC is int value ? $"{value} °C" : "Não disponível";
-    public string Identity => string.IsNullOrWhiteSpace(UniqueId) ? $"number:{Number}|serial:{SerialNumber}|size:{Size}" : UniqueId.Trim();
+    public bool HasStrongIdentity => !string.IsNullOrWhiteSpace(UniqueId);
+    public string Identity => HasStrongIdentity ? $"uid:{UniqueId.Trim()}" : BuildWeakIdentity(Number, SerialNumber, Size);
+    public string IdentityStrengthLabel => HasStrongIdentity ? "Identidade forte" : "Identidade insuficiente para gravação";
+
+    public static string BuildWeakIdentity(int number, string serialNumber, long size) =>
+        $"weak:number:{number}|serial:{serialNumber.Trim()}|size:{size}";
 }
 
 public sealed record PartitionInfo
