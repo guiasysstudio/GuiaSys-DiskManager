@@ -39,6 +39,19 @@ public sealed class SafetyServiceTests
         Assert.Contains("somente leitura", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Blocks_mutation_when_disk_identity_is_weak()
+    {
+        var weakDisk = Disk(2) with { UniqueId = "", SerialNumber = "SERIAL" };
+        var operation = Operation(StorageOperationType.SetDiskOnline) with { ExpectedDiskIdentity = weakDisk.Identity };
+        var snapshot = new StorageSnapshot([weakDisk], [], DateTimeOffset.Now);
+
+        var decision = _service.Evaluate(operation, snapshot);
+
+        Assert.False(decision.Allowed);
+        Assert.Contains("identidade", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("C")]
     [InlineData("")]
