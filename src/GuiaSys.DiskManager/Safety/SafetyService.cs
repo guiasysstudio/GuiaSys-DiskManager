@@ -19,7 +19,10 @@ public sealed class SafetyService : ISafetyService
         if (!string.Equals(disk.Identity, operation.ExpectedDiskIdentity, StringComparison.Ordinal))
             return SafetyDecision.Deny("A identidade do disco mudou desde a seleção. Atualize o inventário antes de continuar.");
 
-        if (operation.IsMutation && !disk.HasStrongIdentity)\n            return SafetyDecision.Deny("Identidade do disco insuficiente para operacoes de gravacao.");\n\n        // 0.1.0 policy: Disk 0 is inventory-only. No mutation is permitted, regardless of risk category.
+        if (operation.IsMutation && !disk.HasStrongIdentity)
+            return SafetyDecision.Deny("Identidade do disco insuficiente para operações de gravação.");
+
+        // 0.1.0 policy: Disk 0 is inventory-only. No mutation is permitted, regardless of risk category.
         if (operation.DiskNumber == 0 && operation.IsMutation)
             return SafetyDecision.Deny("O Disco 0 é somente leitura por política de segurança e não aceita nenhuma alteração.");
 
