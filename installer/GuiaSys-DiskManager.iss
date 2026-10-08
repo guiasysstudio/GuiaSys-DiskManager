@@ -20,6 +20,7 @@ OutputBaseFilename=GuiaSys-DiskManager-Setup-{#AppVersion}-x64
 Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=dialog commandline
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#AppExeName}

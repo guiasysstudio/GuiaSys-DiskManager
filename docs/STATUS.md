@@ -9,9 +9,10 @@
 
 ## TESTADO
 
-- build Debug e suíte xUnit;
+- build e suíte xUnit em Debug e Release: 40/40 testes aprovados, zero warnings;
 - abertura real sem elevação e inventário do Windows registrado em log;
-- build/publish Release e instalador: registrar no relatório final da branch.
+- publicação Release self-contained `win-x64` em arquivo único;
+- instalador Inno Setup 6.7.3 compilado, instalação silenciosa por usuário, abertura do app instalado e desinstalação silenciosa aprovadas.
 
 ## VALIDADO
 
@@ -20,8 +21,7 @@
 
 ## PENDENTE
 
-- integração destrutiva VHDX em sessão administrativa com Hyper-V;
-- instalação/desinstalação silenciosa após disponibilidade do Inno Setup;
+- integração destrutiva VHDX em sessão administrativa com Hyper-V (a sessão atual não é administrativa e os cmdlets Hyper-V não estão disponíveis);
 - matriz física Windows 10/11, DPI e USB descartável;
 - clonagem, recuperação avançada e telemetria SMART proprietária.
 

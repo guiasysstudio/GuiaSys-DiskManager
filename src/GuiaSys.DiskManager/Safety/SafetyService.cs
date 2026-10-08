@@ -19,7 +19,7 @@ public sealed class SafetyService : ISafetyService
             return SafetyDecision.Deny("Operações destrutivas no Disco 0 são bloqueadas por política de segurança.");
 
         var diskPartitions = currentSnapshot.Partitions.Where(p => p.DiskNumber == disk.Number).ToArray();
-        var containsProtectedPartition = disk.IsBoot || disk.IsSystem || diskPartitions.Any(IsProtected);
+        var containsProtectedPartition = disk.IsBoot || disk.IsSystem || diskPartitions.Any(partition => IsProtected(partition) || ContainsRunningExecutable(partition));
         if (containsProtectedPartition && AffectsWholeDisk(operation.Type))
             return SafetyDecision.Deny("O disco contém Windows, boot, sistema, EFI ou recuperação e está protegido.");
 
@@ -29,7 +29,7 @@ public sealed class SafetyService : ISafetyService
             if (operation.PartitionNumber is null) return SafetyDecision.Deny("A operação exige uma partição explícita.");
             partition = currentSnapshot.FindPartition(operation.DiskNumber, operation.PartitionNumber.Value);
             if (partition is null) return SafetyDecision.Deny("A partição não existe mais. Atualize o inventário.");
-            if (IsProtected(partition)) return SafetyDecision.Deny("Partições de boot, sistema, EFI, MSR, Recovery, ocultas ou C: não podem ser alteradas.");
+            if (IsProtected(partition) || ContainsRunningExecutable(partition)) return SafetyDecision.Deny("Partições de boot, sistema, EFI, MSR, Recovery, ocultas, C: ou que hospedam o aplicativo não podem ser alteradas.");
         }
 
         if (operation.Type is StorageOperationType.InitializeGpt or StorageOperationType.InitializeMbr)
@@ -68,4 +68,11 @@ public sealed class SafetyService : ISafetyService
     private static bool RequiresPartition(StorageOperationType type) => type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition
         or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
     private static bool IsPowerOfTwo(int value) => (value & (value - 1)) == 0;
+    private static bool ContainsRunningExecutable(PartitionInfo partition)
+    {
+        var executablePath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(executablePath) || partition.DriveLetter.Length != 1) return false;
+        var root = Path.GetPathRoot(executablePath);
+        return root is { Length: >= 1 } && char.ToUpperInvariant(root[0]) == char.ToUpperInvariant(partition.DriveLetter[0]);
+    }
 }

@@ -14,6 +14,7 @@ public sealed record DiskInfo
     public string MediaType { get; init; } = "Unspecified";
     public string HealthStatus { get; init; } = "Unknown";
     public string OperationalStatus { get; init; } = "Unknown";
+    public int? TemperatureC { get; init; }
     public long Size { get; init; }
     public bool IsBoot { get; init; }
     public bool IsSystem { get; init; }
@@ -21,6 +22,7 @@ public sealed record DiskInfo
     public bool IsReadOnly { get; init; }
     public string SizeLabel => ByteSize.Format(Size);
     public string DisplayName => $"Disco {Number} · {FriendlyName}";
+    public string TemperatureLabel => TemperatureC is int value ? $"{value} °C" : "Não disponível";
     public string Identity => string.IsNullOrWhiteSpace(UniqueId) ? $"number:{Number}|serial:{SerialNumber}|size:{Size}" : UniqueId.Trim();
 }
 

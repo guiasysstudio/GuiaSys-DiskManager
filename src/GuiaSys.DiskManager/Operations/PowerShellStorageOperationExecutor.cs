@@ -61,7 +61,7 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger) : ISto
             var json = JsonSerializer.Serialize(operation, JsonOptions);
             var output = await PowerShellProcessRunner.RunEncodedAsync(Script, json, TimeSpan.FromMinutes(30), cancellationToken);
             timer.Stop();
-            if (output.ExitCode != 0) throw new InvalidOperationException(FriendlyError(output.StandardError));
+            if (output.ExitCode != 0) throw new InvalidOperationException(FriendlyError(output.StandardError), new InvalidOperationException(TrimTechnicalError(output.StandardError)));
             logger.Information("storage.operation.completed", new { operation.Id, durationMs = timer.Elapsed.TotalMilliseconds });
             return new OperationResult(operation.Id, true, "Operação concluída.", timer.Elapsed);
         }
@@ -81,4 +81,5 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger) : ISto
         if (error.Contains("not supported", StringComparison.OrdinalIgnoreCase)) return "A operação ou sistema de arquivos não é suportado neste dispositivo.";
         return "O Windows recusou a operação. Consulte o log técnico para detalhes.";
     }
+    private static string TrimTechnicalError(string error) => error.Trim().Length <= 4000 ? error.Trim() : error.Trim()[..4000];
 }

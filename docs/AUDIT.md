@@ -20,3 +20,7 @@ A branch completa reutilizou a ideia segura de script fixo e substituiu a UI mon
 ## Revisão de risco
 
 Scripts são constantes e recebem parâmetros via JSON/stdin. Chamadas de processo usam `ArgumentList`, timeout e cancelamento. Não há `diskpart`, `clean`, escrita bruta, clonagem ou recuperação incompleta na aplicação. Operações de formato/exclusão existem somente no executor protegido e no teste VHDX isolado.
+
+## Gates concluídos
+
+Debug e Release compilaram sem warnings; 40 testes passaram em ambas as configurações. O executável self-contained abriu, inventariou o armazenamento e permaneceu responsivo. O instalador compilou, instalou silenciosamente em escopo de usuário, abriu o aplicativo instalado e desinstalou sem resíduos do executável. O teste VHDX permaneceu corretamente pendente porque a sessão não tem elevação nem cmdlets Hyper-V.

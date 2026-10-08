@@ -6,7 +6,8 @@ $ErrorActionPreference = 'Stop'
 $required = @('New-VHD','Mount-VHD','Dismount-VHD','Get-Disk','Initialize-Disk','New-Partition','Format-Volume','Resize-Partition','Remove-Partition')
 foreach ($command in $required) { if (-not (Get-Command $command -ErrorAction SilentlyContinue)) { throw "Required command '$command' is unavailable. Enable Hyper-V management tools." } }
 
-$testRoot = Join-Path ([System.IO.Path]::GetTempPath()) (Join-Path 'GuiaSysDiskManager.Tests' ([guid]::NewGuid().ToString('N')))
+$baseTestRoot = [System.IO.Path]::GetFullPath((Join-Path ([System.IO.Path]::GetTempPath()) 'GuiaSysDiskManager.Tests'))
+$testRoot = Join-Path $baseTestRoot ([guid]::NewGuid().ToString('N'))
 $vhdxPath = Join-Path $testRoot 'integration-test.vhdx'
 $diskNumber = $null
 
@@ -39,7 +40,7 @@ try {
     if ([math]::Abs([int64]$resized.Size - 900MB) -gt 2MB) { throw 'Resize validation failed.' }
 
     Remove-Partition -DiskNumber $diskNumber -PartitionNumber $partition.PartitionNumber -Confirm:$false
-    if (Get-Partition -DiskNumber $diskNumber -ErrorAction SilentlyContinue) { throw 'Partition deletion validation failed.' }
+    if (Get-Partition -DiskNumber $diskNumber -PartitionNumber $partition.PartitionNumber -ErrorAction SilentlyContinue) { throw 'Partition deletion validation failed.' }
     $replacement = New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter
     $replacementVolume = $replacement | Format-Volume -FileSystem exFAT -NewFileSystemLabel 'GSDM_EXFAT' -Confirm:$false -Force
     if ($replacementVolume.FileSystem -ne 'exFAT') { throw 'exFAT recreation validation failed.' }
@@ -49,5 +50,8 @@ finally {
     if (Test-Path -LiteralPath $vhdxPath) {
         Dismount-VHD -Path $vhdxPath -ErrorAction SilentlyContinue
     }
-    if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue }
+    $resolvedTestRoot = [System.IO.Path]::GetFullPath($testRoot)
+    $safePrefix = $baseTestRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $resolvedTestRoot.StartsWith($safePrefix, [System.StringComparison]::OrdinalIgnoreCase)) { throw 'Cleanup safety refusal: temporary path escaped the test root.' }
+    if (Test-Path -LiteralPath $resolvedTestRoot) { Remove-Item -LiteralPath $resolvedTestRoot -Recurse -Force -ErrorAction SilentlyContinue }
 }

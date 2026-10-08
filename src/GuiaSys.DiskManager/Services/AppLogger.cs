@@ -22,7 +22,7 @@ public sealed class AppLogger : IAppLogger
 
     private void Write(string level, string eventName, object? data, Exception? exception)
     {
-        var entry = new { timestamp = DateTimeOffset.Now, level, eventName, data, exception = exception is null ? null : new { type = exception.GetType().FullName, exception.Message, exception.StackTrace } };
+        var entry = new { timestamp = DateTimeOffset.Now, level, eventName, data, exception = exception is null ? null : new { type = exception.GetType().FullName, exception.Message, innerMessage = exception.InnerException?.Message, exception.StackTrace } };
         lock (_gate) File.AppendAllText(_filePath, JsonSerializer.Serialize(entry) + Environment.NewLine);
     }
 

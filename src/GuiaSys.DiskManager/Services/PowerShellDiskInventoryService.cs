@@ -9,14 +9,19 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     private const string Script = """
         $ErrorActionPreference = 'Stop'
         [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        $physicalDisks = @(Get-PhysicalDisk -ErrorAction SilentlyContinue)
         $disks = @(Get-Disk | ForEach-Object {
+          $disk = $_
+          $physical = $physicalDisks | Where-Object { ([string]$_.DeviceId -eq [string]$disk.Number) -or ($disk.SerialNumber -and ([string]$_.SerialNumber).Trim() -eq ([string]$disk.SerialNumber).Trim()) } | Select-Object -First 1
+          $temperature = $null
+          if ($physical) { try { $temperature = ($physical | Get-StorageReliabilityCounter -ErrorAction Stop).Temperature } catch { } }
           [pscustomobject]@{
-            Number=[int]$_.Number; UniqueId=[string]$_.UniqueId; FriendlyName=[string]$_.FriendlyName
-            Manufacturer=[string]$_.Manufacturer; SerialNumber=[string]$_.SerialNumber
-            PartitionStyle=[string]$_.PartitionStyle; BusType=[string]$_.BusType
-            HealthStatus=[string]$_.HealthStatus; OperationalStatus=[string]($_.OperationalStatus -join ', ')
-            Size=[int64]$_.Size; IsBoot=[bool]$_.IsBoot; IsSystem=[bool]$_.IsSystem
-            IsOffline=[bool]$_.IsOffline; IsReadOnly=[bool]$_.IsReadOnly
+            Number=[int]$disk.Number; UniqueId=[string]$disk.UniqueId; FriendlyName=[string]$disk.FriendlyName
+            Manufacturer=[string]$disk.Manufacturer; SerialNumber=[string]$disk.SerialNumber
+            PartitionStyle=[string]$disk.PartitionStyle; BusType=[string]$disk.BusType; MediaType=if ($physical) {[string]$physical.MediaType} else {'Unspecified'}
+            HealthStatus=[string]$disk.HealthStatus; OperationalStatus=[string]($disk.OperationalStatus -join ', '); TemperatureC=$temperature
+            Size=[int64]$disk.Size; IsBoot=[bool]$disk.IsBoot; IsSystem=[bool]$disk.IsSystem
+            IsOffline=[bool]$disk.IsOffline; IsReadOnly=[bool]$disk.IsReadOnly
           }
         })
         $parts = @(Get-Partition | ForEach-Object {
@@ -42,7 +47,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     {
         var started = DateTimeOffset.UtcNow;
         var output = await PowerShellProcessRunner.RunEncodedAsync(Script, null, TimeSpan.FromSeconds(30), cancellationToken);
-        if (output.ExitCode != 0) throw new InvalidOperationException(ToFriendlyError(output.StandardError));
+        if (output.ExitCode != 0) throw new InvalidOperationException(ToFriendlyError(output.StandardError), new InvalidOperationException(TrimTechnicalError(output.StandardError)));
         try
         {
             using var document = JsonDocument.Parse(output.StandardOutput);
@@ -59,7 +64,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     {
         Number = ReadInt(item, "Number"), UniqueId = ReadString(item, "UniqueId"), FriendlyName = ReadString(item, "FriendlyName", "Dispositivo sem nome"),
         Manufacturer = ReadString(item, "Manufacturer"), SerialNumber = ReadString(item, "SerialNumber"), PartitionStyle = ReadString(item, "PartitionStyle", "RAW"),
-        BusType = ReadString(item, "BusType", "Unknown"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"),
+        BusType = ReadString(item, "BusType", "Unknown"), MediaType = ReadString(item, "MediaType", "Unspecified"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"), TemperatureC = ReadNullableInt(item, "TemperatureC"),
         Size = ReadLong(item, "Size"), IsBoot = ReadBool(item, "IsBoot"), IsSystem = ReadBool(item, "IsSystem"), IsOffline = ReadBool(item, "IsOffline"), IsReadOnly = ReadBool(item, "IsReadOnly")
     };
 
@@ -74,9 +79,11 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     internal static IEnumerable<JsonElement> Elements(JsonElement element) => element.ValueKind switch { JsonValueKind.Array => element.EnumerateArray(), JsonValueKind.Object => [element], _ => [] };
     private static string ReadString(JsonElement item, string key, string fallback = "") => item.TryGetProperty(key, out var value) && value.ValueKind is not JsonValueKind.Null ? value.ToString().Trim() : fallback;
     private static int ReadInt(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt32(out var result) ? result : 0;
+    private static int? ReadNullableInt(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt32(out var result) ? result : null;
     private static long ReadLong(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.TryGetInt64(out var result) ? result : 0;
     private static bool ReadBool(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.True;
     private static string ToFriendlyError(string error) => error.Contains("Access is denied", StringComparison.OrdinalIgnoreCase) || error.Contains("Acesso negado", StringComparison.OrdinalIgnoreCase)
         ? "Acesso negado ao consultar o armazenamento. Tente executar como administrador."
         : "Não foi possível consultar o armazenamento do Windows. Consulte os logs para detalhes.";
+    private static string TrimTechnicalError(string error) => error.Trim().Length <= 4000 ? error.Trim() : error.Trim()[..4000];
 }
