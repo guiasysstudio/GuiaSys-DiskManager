@@ -17,6 +17,17 @@ public enum StorageOperationType
     SetVolumeLabel
 }
 
+[Flags]
+public enum StorageOperationRisk
+{
+    None = 0,
+    MetadataMutation = 1 << 0,
+    LayoutMutation = 1 << 1,
+    Destructive = 1 << 2,
+    ProtectionChange = 1 << 3,
+    WholeDiskStateChange = 1 << 4
+}
+
 public sealed record StorageOperation
 {
     public Guid Id { get; init; } = Guid.NewGuid();
@@ -31,7 +42,34 @@ public sealed record StorageOperation
     public bool QuickFormat { get; init; } = true;
     public int? AllocationUnitSize { get; init; }
     public DateTimeOffset QueuedAt { get; init; } = DateTimeOffset.Now;
-    public bool IsDestructive => Type is StorageOperationType.InitializeGpt or StorageOperationType.InitializeMbr or StorageOperationType.DeletePartition or StorageOperationType.FormatPartition;
+
+    public StorageOperationRisk Risk => Type switch
+    {
+        StorageOperationType.SetDiskOnline or StorageOperationType.SetDiskOffline
+            => StorageOperationRisk.WholeDiskStateChange,
+        StorageOperationType.SetDiskReadOnly or StorageOperationType.ClearDiskReadOnly
+            => StorageOperationRisk.ProtectionChange | StorageOperationRisk.WholeDiskStateChange,
+        StorageOperationType.InitializeGpt or StorageOperationType.InitializeMbr
+            => StorageOperationRisk.LayoutMutation | StorageOperationRisk.Destructive | StorageOperationRisk.WholeDiskStateChange,
+        StorageOperationType.CreatePartition
+            => StorageOperationRisk.LayoutMutation,
+        StorageOperationType.DeletePartition
+            => StorageOperationRisk.LayoutMutation | StorageOperationRisk.Destructive,
+        StorageOperationType.FormatPartition
+            => StorageOperationRisk.Destructive,
+        StorageOperationType.ResizePartition
+            => StorageOperationRisk.LayoutMutation,
+        StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.SetVolumeLabel
+            => StorageOperationRisk.MetadataMutation,
+        _ => StorageOperationRisk.None
+    };
+
+    public bool IsMutation => Risk != StorageOperationRisk.None;
+    public bool IsDestructive => Risk.HasFlag(StorageOperationRisk.Destructive);
+    public bool RequiresReinforcedConfirmation => Risk.HasFlag(StorageOperationRisk.Destructive)
+        || Risk.HasFlag(StorageOperationRisk.LayoutMutation)
+        || Risk.HasFlag(StorageOperationRisk.ProtectionChange);
+
     public string Description => Type switch
     {
         StorageOperationType.SetDiskOnline => $"Colocar o Disco {DiskNumber} online",
