@@ -18,6 +18,7 @@
 
 - regras puras de segurança, fila, parsing, classificação e identidade por testes automatizados;
 - inventário somente leitura em Windows local.
+- pipeline GitHub Actions reproduzindo build/test Debug e Release, publish e instalador em runner limpo.
 
 ## PENDENTE
 

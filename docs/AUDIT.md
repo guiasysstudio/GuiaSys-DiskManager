@@ -24,3 +24,5 @@ Scripts são constantes e recebem parâmetros via JSON/stdin. Chamadas de proces
 ## Gates concluídos
 
 Debug e Release compilaram sem warnings; 41 testes passaram em ambas as configurações. O executável self-contained abriu, inventariou o armazenamento e permaneceu responsivo. O instalador compilou, instalou silenciosamente em escopo de usuário, abriu o aplicativo instalado e desinstalou sem resíduos do executável. O teste VHDX permaneceu corretamente pendente porque a sessão não tem elevação nem cmdlets Hyper-V.
+
+O GitHub Actions reproduziu restore, builds, testes, publish, compilação Inno e upload dos dois artefatos em runner Windows limpo. As actions oficiais usam versões com runtime Node.js 24.
