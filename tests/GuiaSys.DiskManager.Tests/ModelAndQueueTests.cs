@@ -3,6 +3,7 @@ using GuiaSys.DiskManager.Operations;
 using GuiaSys.DiskManager.Services;
 using GuiaSys.DiskManager.ViewModels;
 using System.Text.Json;
+using System.IO;
 
 namespace GuiaSys.DiskManager.Tests;
 
@@ -64,6 +65,59 @@ public sealed class ModelAndQueueTests
     {
         using var document = JsonDocument.Parse("""{"TemperatureC":null}""");
         Assert.Null(PowerShellDiskInventoryService.ReadNullableInt(document.RootElement, "TemperatureC"));
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"IsBoot":null}""")]
+    [InlineData("""{"IsBoot":0}""")]
+    [InlineData("""{"IsBoot":"false"}""")]
+    public void Inventory_rejects_missing_or_invalid_required_boolean(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        Assert.Throws<InvalidDataException>(() => PowerShellDiskInventoryService.ReadRequiredBool(document.RootElement, "IsBoot"));
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"Number":null}""")]
+    [InlineData("""{"Number":"0"}""")]
+    [InlineData("""{"Number":1.5}""")]
+    public void Inventory_rejects_missing_or_invalid_required_integer(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        Assert.Throws<InvalidDataException>(() => PowerShellDiskInventoryService.ReadRequiredInt(document.RootElement, "Number"));
+    }
+
+    [Fact]
+    public void Inventory_rejects_wrong_typed_nullable_temperature()
+    {
+        using var document = JsonDocument.Parse("""{"TemperatureC":"35"}""");
+        Assert.Throws<InvalidDataException>(() => PowerShellDiskInventoryService.ReadNullableInt(document.RootElement, "TemperatureC"));
+    }
+
+    [Fact]
+    public void Inventory_rejects_semantically_inconsistent_snapshot()
+    {
+        var disk = new DiskInfo { Number = 2, UniqueId = "disk-2", FriendlyName = "Disk", Size = 1_000, PartitionStyle = "GPT" };
+        var orphan = new PartitionInfo { DiskNumber = 3, PartitionNumber = 1, AccessPaths = "", DriveLetter = "", Type = "Basic", Offset = 0, Size = 100 };
+        Assert.Throws<InvalidDataException>(() => PowerShellDiskInventoryService.ValidateSnapshot([disk], [orphan]));
+    }
+
+    [Fact]
+    public void Inventory_rejects_partition_outside_disk_bounds()
+    {
+        var disk = new DiskInfo { Number = 2, UniqueId = "disk-2", FriendlyName = "Disk", Size = 1_000, PartitionStyle = "GPT" };
+        var partition = new PartitionInfo { DiskNumber = 2, PartitionNumber = 1, AccessPaths = "", DriveLetter = "", Type = "Basic", Offset = 900, Size = 200 };
+        Assert.Throws<InvalidDataException>(() => PowerShellDiskInventoryService.ValidateSnapshot([disk], [partition]));
+    }
+
+    [Fact]
+    public void Inventory_accepts_consistent_snapshot()
+    {
+        var disk = new DiskInfo { Number = 2, UniqueId = "disk-2", FriendlyName = "Disk", Size = 1_000, PartitionStyle = "GPT" };
+        var partition = new PartitionInfo { DiskNumber = 2, PartitionNumber = 1, AccessPaths = "", DriveLetter = "", Type = "Basic", Offset = 100, Size = 200 };
+        PowerShellDiskInventoryService.ValidateSnapshot([disk], [partition]);
     }
 
     private static StorageOperation Operation(StorageOperationType type) => new() { Type = type, DiskNumber = 2, ExpectedDiskIdentity = "disk-2" };
