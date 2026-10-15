@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -343,5 +344,75 @@ public sealed class GslV1LicensingTests
         await Assert.ThrowsAsync<GslV1ApiException>(() =>
             api.PostAsync(GslV1Protocol.ProjectConfig, new { integrationCode = GslV1Protocol.IntegrationCode },
                 CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Failed_activation_reuses_exact_request_id_on_retry()
+    {
+        using var fixture = new Fixture();
+        var store = new Store();
+        var activationCalls = 0;
+        var pendingOnRetry = "";
+        var client = Client(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == GslV1Protocol.ProjectConfig)
+                return Json(fixture.Config());
+            activationCalls++;
+            if (activationCalls == 1) throw new HttpRequestException("simulated loss after submit");
+            pendingOnRetry = store.State.PendingRequestId!;
+            return Json(fixture.Activation(fixture.Signed()));
+        });
+        var service = new GslV1LicensingService(client, store, fixture.Trust, new Clock());
+        var first = await service.ActivateAsync(LicenseKey, CancellationToken.None);
+        Assert.False(first.Allowed);
+        var firstRequestId = store.State.PendingRequestId;
+        Assert.Matches("^[a-f0-9]{32}$", firstRequestId!);
+        Assert.Equal("activate", store.State.PendingAction);
+        var second = await service.ActivateAsync(LicenseKey, CancellationToken.None);
+        Assert.True(second.Allowed);
+        Assert.Equal(2, activationCalls);
+        Assert.Equal(firstRequestId, pendingOnRetry);
+        Assert.Null(store.State.PendingRequestId);
+    }
+
+    [Fact]
+    public async Task Startup_revalidates_after_online_interval_and_keeps_server_response()
+    {
+        using var fixture = new Fixture();
+        var store = new Store
+        {
+            State = new GslV1SavedState(LicenseKey, fixture.Signed(), "license",
+                LastOnlineUtc: Now.AddHours(-25), ValidationHours: 24)
+        };
+        var paths = new List<string>();
+        var client = Client(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            paths.Add(path);
+            return Json(path == GslV1Protocol.ProjectConfig
+                ? fixture.Config() : fixture.Activation(fixture.Signed()));
+        });
+        var service = new GslV1LicensingService(client, store, fixture.Trust, new Clock());
+        Assert.True((await service.CheckAsync(CancellationToken.None)).Allowed);
+        Assert.Equal([GslV1Protocol.ProjectConfig, GslV1Protocol.Validate], paths);
+        Assert.Equal(Now, store.State.LastOnlineUtc);
+    }
+
+    [Fact]
+    public void Trust_config_from_writable_file_is_never_a_new_trust_anchor()
+    {
+        using var fixture = new Fixture();
+        var tempFile = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(tempFile, JsonSerializer.Serialize(new
+            {
+                projectId = fixture.Trust.ProjectId, keyId = fixture.Trust.KeyId,
+                publicJwk = new { kty = "EC", crv = "P-256", x = fixture.Trust.X, y = fixture.Trust.Y }
+            }));
+            // No publisher-approved digest exists in this developer build.
+            Assert.Null(GslV1TrustLoader.Load(tempFile));
+        }
+        finally { File.Delete(tempFile); }
     }
 }
