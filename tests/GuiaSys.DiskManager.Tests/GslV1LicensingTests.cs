@@ -226,7 +226,7 @@ public sealed class GslV1LicensingTests
     {
         using var f = new Fixture();
         var store = new Store { State = new GslV1SavedState(LicenseKey, f.Signed(), "license", LastOnlineUtc: Now) };
-        var service = new GslV1LicensingService(Client(_ => throw new Exception("No network expected")),
+        var service = new GslV1LicensingService(Client(_ => throw new HttpRequestException("network unavailable during recovery")),
             store, f.Trust, new Clock());
         Assert.True((await service.CheckAsync(CancellationToken.None)).Allowed);
         store.State = store.State with { LastObservedUtc = Now.AddDays(1) };
