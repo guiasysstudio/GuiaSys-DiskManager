@@ -56,3 +56,7 @@ Uma nova estrutura visual inclui sidebar de navegação funcional, painel de dis
 ### GDM-C06 — Inventário avançado e capacidade real
 
 O inventário agora oferece métricas opcionais de setor físico/lógico, tecnologia e conexão do dispositivo, classificação GPT de partições EFI/MSR/Recovery e estatísticas de ocupação do volume quando reportadas pelo Windows. O painel diferencia **espaço não alocado do disco** de **espaço livre dentro do volume**, com resumos de capacidade e uso, além de alertas de pouco espaço. Valores desconhecidos não são transformados em zeros. O gate de gravação continua fechado. Veja [GDM-C06](docs/GDM-C06.md).
+
+### GDM-C07 — Operações essenciais e contratos de segurança
+
+A preparação de operações agora usa um contrato estrito por tipo, incluindo validação exata de letras, tamanhos, rótulos e parâmetros de formatação, sem reaproveitar campos ocultos de ações anteriores. O `SafetyService` revalida o maior espaço contíguo para criação/expansão e impede alterações de layout quando a identidade GPT está incompleta. A criação de novas partições MBR permanece suspensa até existir verificação independente da identidade da partição; inicialização MBR em RAW vazio ainda pode ser planejada. **Gravações continuam bloqueadas.** Leia [GDM-C07](docs/GDM-C07.md).
