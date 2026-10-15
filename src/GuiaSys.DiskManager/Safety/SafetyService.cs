@@ -114,12 +114,12 @@ public sealed class SafetyService : ISafetyService
                     operation.SizeBytes is long newSize && newSize > diskLayout.LargestFreeExtentBytes)
                     return SafetyDecision.Deny("Não existe uma faixa não alocada contígua suficiente.");
             }
-            else if (partition is not null && operation.SizeBytes is long requested &&
-                requested > partition.Size)
+            else if (partition is not null && operation.SizeBytes is long requestedCapacity &&
+                requestedCapacity > partition.Size)
             {
                 var adjacent = diskLayout.Extents.FirstOrDefault(e =>
                     e.IsUnallocated && e.Offset == partition.Offset + partition.Size);
-                if (adjacent is null || requested - partition.Size > adjacent.Length)
+                if (adjacent is null || requestedCapacity - partition.Size > adjacent.Length)
                     return SafetyDecision.Deny("Expansão ultrapassa o espaço contíguo não alocado.");
             }
         }
