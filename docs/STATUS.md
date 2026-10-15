@@ -50,3 +50,12 @@ O cliente desktop GSL-v1 implementa consultas HTTPS da configuração do produto
 - UI apresenta resumo de planejamento, condição do disco e erros de conflito, além de impedir a inclusão de dependências inválidas.
 - Execução de escrita permanece bloqueada por `StorageWriteGate` de C01. Problemas P0 de fingerprint de partição, validação no executor e confirmação multi-disco **não foram declarados resolvidos**. Sem gate físico; testes de escrita apenas VHDX opt-in em etapa posterior.
 - Evidências detalhadas: [GDM-C02](GDM-C02.md) e status do pipeline Actions no HEAD desta branch.
+
+## GDM-C03 — Identidade e autorização de alvos (15/10/2026)
+
+- Captura do GUID GPT e tipo GPT, comparação canônica de identidade/topologia em operações destinadas a partições.
+- Identidade MBR insuficiente para escrita: recusada, sem exceção automática.
+- Proteções para layout integral (incluindo operações de criar, excluir e redimensionar) e identificação de tipos GPT não básicos.
+- Executor exige sua própria autorização (gate físico, inventário novo, SafetyService, administrador, licença), sem depender exclusivamente do ViewModel; processo PowerShell revalida disk UniqueId e atributos críticos da partição.
+- Confirmação reforçada cobre todos os discos afetados e o sinalizador legado de confirmação não ignora o diálogo.
+- Escritas físicas e testes destrutivos continuam **NO-GO** até os itens pendentes de C04. Relatório: [GDM-C03](GDM-C03.md).
