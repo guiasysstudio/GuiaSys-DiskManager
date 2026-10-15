@@ -42,6 +42,11 @@ public sealed class MainViewModelUiTests
         Assert.Equal("1 partição", vm.PartitionCountLabel);
         Assert.Contains("Disco 3", vm.SelectedTargetTitle);
         Assert.NotEmpty(vm.PartitionSegments);
+        Assert.Equal(8_000_000_000L, vm.OverviewMetrics.CapacityBytes);
+        Assert.Equal(6_000_000_000L, vm.OverviewMetrics.UnallocatedBytes);
+        Assert.Equal(6_000_000_000L, vm.SelectedDiskMetrics!.UnallocatedBytes);
+        Assert.Equal(25d, vm.SelectedAllocatedPercent);
+        Assert.Equal("0 volumes monitorados", vm.OverviewMetrics.MonitoredVolumesLabel);
         Assert.Contains(vm.ContextOperations, choice => choice.Type == StorageOperationType.SetDiskOnline && choice.IsAvailable);
     }
 
@@ -110,6 +115,9 @@ public sealed class MainViewModelUiTests
         Assert.Null(vm.SelectedDisk);
         Assert.Empty(vm.Partitions);
         Assert.Empty(vm.PartitionSegments);
+        Assert.Equal(0, vm.OverviewMetrics.DiskCount);
+        Assert.Null(vm.SelectedDiskMetrics);
+        Assert.Equal(0d, vm.SelectedAllocatedPercent);
         Assert.All(vm.ContextOperations, choice => Assert.False(choice.IsAvailable));
         Assert.False(vm.QueueCommand.CanExecute(null));
     }
