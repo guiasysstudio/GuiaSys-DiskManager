@@ -90,7 +90,10 @@ public sealed record StorageOperation
     };
 }
 
-public sealed record OperationResult(Guid OperationId, bool Succeeded, string Message, TimeSpan Duration);
+public enum StorageExecutionOutcome { Rejected, Verified, Indeterminate }
+
+public sealed record OperationResult(Guid OperationId, bool Succeeded, string Message, TimeSpan Duration,
+    StorageExecutionOutcome? Outcome = null);
 
 public sealed record SafetyDecision(bool Allowed, string Reason, bool RequiresReinforcedConfirmation = false)
 {
