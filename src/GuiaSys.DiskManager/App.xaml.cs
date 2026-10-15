@@ -20,7 +20,7 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += (_, args) => { _logger.Error("application.task.unobserved", args.Exception); args.SetObserved(); };
         _logger.Information("application.started", new { version = typeof(App).Assembly.GetName().Version?.ToString(), administrator = AdministratorService.IsAdministrator(), architecture = Environment.Is64BitProcess ? "x64" : "x86" });
         var licensing = new GslV1LicensingService(
-            new GslV1ApiClient(new HttpClient()), new WindowsGslV1Store(), GslV1TrustLoader.Load());
+            new GslV1ApiClient(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })), new WindowsGslV1Store(), GslV1TrustLoader.Load());
         var inventory = new PowerShellDiskInventoryService(_logger);
         var viewModel = new MainViewModel(inventory, new PowerShellStorageOperationExecutor(_logger), new SafetyService(), _logger, licensing);
         var window = new MainWindow(viewModel, licensing); MainWindow = window; window.Show();

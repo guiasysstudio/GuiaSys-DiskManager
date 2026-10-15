@@ -31,15 +31,23 @@ public sealed class GslV1ApiClient(HttpClient client)
         {
             const int limit = 64 * 1024;
             if (response.Content.Headers.ContentLength > limit) throw new GslV1ApiException("invalid_response");
-            using var stream = await response.Content.ReadAsStreamAsync(linked.Token);
             using var buffer = new MemoryStream();
-            var chunk = new byte[4096];
-            int read;
-            while ((read = await stream.ReadAsync(chunk, linked.Token)) != 0)
+            try
             {
-                if (buffer.Length + read > limit) throw new GslV1ApiException("invalid_response");
-                buffer.Write(chunk, 0, read);
+                using var stream = await response.Content.ReadAsStreamAsync(linked.Token);
+                var chunk = new byte[4096];
+                int read;
+                while ((read = await stream.ReadAsync(chunk, linked.Token)) != 0)
+                {
+                    if (buffer.Length + read > limit) throw new GslV1ApiException("invalid_response");
+                    buffer.Write(chunk, 0, read);
+                }
             }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new GslV1ApiException("network_error");
+            }
+            catch (HttpRequestException) { throw new GslV1ApiException("network_error"); }
             try
             {
                 using var json = JsonDocument.Parse(buffer.ToArray());
@@ -61,6 +69,13 @@ public sealed class GslV1ApiClient(HttpClient client)
                         retryAfter = seconds;
                     throw new GslV1ApiException(code, (int)response.StatusCode, retryAfter);
                 }
+                if (path == GslV1Protocol.ProjectConfig && !root.TryGetProperty("project", out _) ||
+                    path is GslV1Protocol.Activate or GslV1Protocol.Validate &&
+                    !root.TryGetProperty("license", out _) ||
+                    path is GslV1Protocol.TrialStart or GslV1Protocol.TrialValidate &&
+                    !root.TryGetProperty("trial", out _) ||
+                    path == GslV1Protocol.Deactivate && !root.TryGetProperty("result", out _))
+                    throw new GslV1ApiException("invalid_response");
                 return root.Clone();
             }
             catch (JsonException) { throw new GslV1ApiException("invalid_response"); }
