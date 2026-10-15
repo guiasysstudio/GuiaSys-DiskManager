@@ -76,7 +76,7 @@ public sealed class ContextOperationPolicyTests
         var result = ContextOperationPolicy.Evaluate(StorageOperationType.FormatPartition,
             "Formatar", disk, partition, Snapshot(disk, partition), Safety);
         Assert.False(result.IsAvailable);
-        Assert.Contains("proteg", result.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Recovery", result.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
