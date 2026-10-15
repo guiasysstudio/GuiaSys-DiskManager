@@ -103,6 +103,43 @@ public sealed class PartitionSecurityTests
         Assert.False(Policy.Evaluate(Op(Part()) with { Type = StorageOperationType.DeletePartition }, snapshot).Allowed);
     }
 
+    [Theory]
+    [InlineData("c12a7328-f81f-11d2-ba4b-00a0c93ec93b")]
+    [InlineData("e3c9e316-0b5c-4db8-817d-f92df00215ae")]
+    [InlineData("de94bba4-06d1-4d40-a16a-bfd50179d6ac")]
+    [InlineData("d1cb7b7c-0000-0000-0000-000000000000")]
+    public void Unknown_or_system_gpt_types_are_protected_even_if_basic_label(string gptType)
+    {
+        var current = Part() with { GptType = gptType };
+        Assert.True(SafetyService.IsProtected(current));
+        Assert.False(Policy.Evaluate(Op(current), Snapshot(current)).Allowed);
+    }
+
+    [Fact]
+    public void Known_basic_data_gpt_type_is_allowed_for_policy_evaluation()
+    {
+        var current = Part() with { GptType = "{ebd0a0a2-b9e5-4433-87c0-68b6b72699c7}" };
+        Assert.False(SafetyService.IsProtected(current));
+        Assert.True(Policy.Evaluate(Op(current), Snapshot(current)).Allowed);
+    }
+
+    [Fact]
+    public void Mounted_windows_system_path_is_protected_even_without_drive_letter()
+    {
+        var current = Part() with { DriveLetter = "", AccessPaths = @"C:\\SystemVolume\\;E:\\" };
+        Assert.True(SafetyService.IsProtected(current));
+    }
+
+    [Fact]
+    public void Inventory_rejects_duplicate_gpt_guid_even_when_formats_differ()
+    {
+        var first = Part();
+        var second = first with { PartitionNumber = 2, Offset = 700_000_000,
+            PartitionGuid = "{" + ValidGuid.ToUpperInvariant() + "}" };
+        Assert.Throws<System.IO.InvalidDataException>(() =>
+            PowerShellDiskInventoryService.ValidateSnapshot([Disk()], [first, second]));
+    }
+
     [Fact]
     public void No_operation_may_mutate_disk_zero()
     {
