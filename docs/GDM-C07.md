@@ -29,7 +29,7 @@ Fortalecer o fluxo de preparação de operações essenciais de disco e partiç�
 1. **Formulário WPF (`MainViewModel.QueueSelectedOperation`)** interpreta apenas os campos pertinentes à ação selecionada. Dados antigos em campos ocultos (ex.: tamanho de um redimensionamento anterior ou letra de outra operação) não são copiados para a nova operação. Entrada de letra exige **exatamente um caractere entre D e Z**. Tamanho obrigatório para redimensionar; opcional para criar (máximo). Tamanho de cluster considerado apenas na formatação.
 2. **Contrato explícito (`EssentialOperationValidator`)** verifica alvo correto (disco inteiro ou partição), proíbe parâmetros excedentes de outra ação, exige tamanho/identidade/letra quando necessários, valida filesystem/rótulo/unidade de alocação. O próprio ViewModel chama o validador antes de incluir a operação na fila.
 3. **`OperationPlanner`** confronta o novo pedido com a fila projetada sem executar escrita, e impede dependências que ficariam ambíguas após alterações de geometria.
-4. **`SafetyService.Evaluate`** revalida identidade, atributos protegidos e contrato; o C07 também recusa layout GPT com partições sem GUID forte ou sem tipo GPT confirmado, consulta geometria para confirmar a maior faixa contígua livre para criação e confere espaço adjacente antes de expansões. Recusa exclusão/letra de destinos não elegíveis.
+4. **`SafetyService.Evaluate`** revalida identidade, atributos protegidos e contrato; o C07 também recusa alterações de layout ou estado integral do disco GPT se alguma partição estiver sem GUID forte ou tipo GPT confirmado, consulta geometria para confirmar a maior faixa contígua livre para criação e confere espaço adjacente antes de expansões. Recusa exclusão/letra de destinos não elegíveis.
 5. **`SafeExecutionCoordinator` e executor PowerShell**, ainda fechados por `StorageWriteGate`, mantêm autorização independente, journal, refresh, confirmação e pós-condições C04. O validador de contrato não se torna uma autorização de gravação.
 
 ## Testes e evidências
@@ -40,7 +40,7 @@ Fortalecer o fluxo de preparação de operações essenciais de disco e partiç�
 
 ## Pendências e riscos
 
-- O script PowerShell de mutação **não foi exercitado** neste módulo: requer revisão por comando, provas de rollback/resultado indeterminado e testes em VHDX inequivocamente identificado dentro de VM descartável. **Não executar em discos reais como experimento.**
+- A defesa PowerShell agora não trata falha de consulta das partições como disco vazio: consulta de partições GPT/MBR é feita com `-ErrorAction Stop`, e, em disco RAW, exige `NumberOfPartitions=0` explicitamente. A criação de partições exige GPT também no script. **O script de mutação ainda não foi exercitado** neste módulo: requer revisão por comando, provas de rollback/resultado indeterminado e testes em VHDX inequivocamente identificado dentro de VM descartável. **Não executar em discos reais como experimento.**
 - Controles de acesso concorrente ao armazenamento entre processos, conflitos de volumes montados e validação do caminho efetivo do executável seguem pendentes de homologação.
 - O preparo de redimensionamento não garante que o sistema de arquivos possa reduzir ou expandir; GDM-C08 tratará a faixa real de `Get-PartitionSupportedSize`, alinhamentos e restrições pertinentes sem alterar o gate.
 - Testes visuais humanos do WPF e integração real do GSL-v1 permanecem pendentes; CI não substitui esses gates.
