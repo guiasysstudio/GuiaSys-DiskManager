@@ -97,7 +97,23 @@ public sealed class GslV1LicensingService(
     public async Task<GslLicenseDecision> CheckAsync(CancellationToken cancellationToken)
     {
         var cached = await CheckCachedAsync(cancellationToken);
-        if (!cached.Allowed) return cached;
+        if (!cached.Allowed)
+        {
+            if (cached.Status != GslLicenseStatus.InvalidEntitlement) return cached;
+            try
+            {
+                var previous = store.Load();
+                if (previous.Type is "trial" ||
+                    (previous.Type == "license" && !string.IsNullOrWhiteSpace(previous.LicenseKey)))
+                    return await ValidateOnlineAsync(cancellationToken);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+                System.Security.Cryptography.CryptographicException or InvalidOperationException or JsonException)
+            {
+                return cached;
+            }
+            return cached;
+        }
         try
         {
             var state = store.Load();

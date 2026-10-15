@@ -415,4 +415,26 @@ public sealed class GslV1LicensingTests
         }
         finally { File.Delete(tempFile); }
     }
+
+    [Fact]
+    public async Task Offline_window_ended_requests_fresh_signed_online_validation()
+    {
+        using var fixture = new Fixture();
+        var store = new Store
+        {
+            State = new GslV1SavedState(LicenseKey, fixture.Signed(offline: Now), "license",
+                LastOnlineUtc: Now.AddHours(-10))
+        };
+        var paths = new List<string>();
+        var service = new GslV1LicensingService(Client(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            paths.Add(path);
+            return Json(path == GslV1Protocol.ProjectConfig
+                ? fixture.Config() : fixture.Activation(fixture.Signed()));
+        }), store, fixture.Trust, new Clock());
+        var decision = await service.CheckAsync(CancellationToken.None);
+        Assert.True(decision.Allowed);
+        Assert.Equal([GslV1Protocol.ProjectConfig, GslV1Protocol.Validate], paths);
+    }
 }
