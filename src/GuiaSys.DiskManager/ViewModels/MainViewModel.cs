@@ -17,6 +17,8 @@ public sealed class MainViewModel : ObservableObject
     private readonly IAppLogger _logger;
     private readonly ILicenseEntitlements _licensing;
     private readonly OperationQueue _queue = new();
+    private readonly IOperationPlanner _planner;
+    private string _queuePreviewSummary = "Fila vazia. Nenhum efeito projetado.";
     private StorageSnapshot _snapshot = new([], [], DateTimeOffset.MinValue);
     private DiskInfo? _selectedDisk;
     private PartitionInfo? _selectedPartition;
@@ -34,6 +36,7 @@ public sealed class MainViewModel : ObservableObject
     public MainViewModel(IDiskInventoryService inventory, IStorageOperationExecutor executor, ISafetyService safety, IAppLogger logger, ILicenseEntitlements licensing)
     {
         _inventory = inventory; _executor = executor; _safety = safety; _logger = logger; _licensing = licensing;
+        _planner = new OperationPlanner(safety);
         PendingOperations = _queue.Pending;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsBusy);
         QueueCommand = new RelayCommand(QueueSelectedOperation, () => SelectedDisk is not null && !IsBusy);
@@ -41,7 +44,7 @@ public sealed class MainViewModel : ObservableObject
         ClearCommand = new RelayCommand(() => { _queue.Clear(); UpdateCommands(); Status = "Fila limpa."; }, () => PendingOperations.Count > 0 && !IsBusy);
         ApplyCommand = new AsyncRelayCommand(() => ApplyAsync(false), () => PendingOperations.Count > 0 && !IsBusy);
         OpenLogsCommand = new RelayCommand(OpenLogs);
-        PendingOperations.CollectionChanged += (_, _) => UpdateCommands();
+        PendingOperations.CollectionChanged += (_, _) => { UpdatePreview(); UpdateCommands(); };
     }
 
     public ObservableCollection<DiskInfo> Disks { get; } = [];
@@ -62,11 +65,26 @@ public sealed class MainViewModel : ObservableObject
     public bool IsAdministrator { get; } = AdministratorService.IsAdministrator();
     public string PrivilegeLabel => IsAdministrator ? "Administrador" : "Somente leitura · sem elevação";
     public string CapturedAtLabel => _snapshot.CapturedAt == DateTimeOffset.MinValue ? "" : $"Atualizado {_snapshot.CapturedAt:HH:mm:ss}";
+    public string QueuePreviewSummary { get => _queuePreviewSummary; private set => SetProperty(ref _queuePreviewSummary, value); }
+    public string SelectedLayoutSummary
+    {
+        get
+        {
+            if (SelectedDisk is null) return "Nenhum disco selecionado.";
+            try
+            {
+                var disk = StorageGeometry.Build(_snapshot).FindDisk(SelectedDisk.Number);
+                return disk is null ? "Disco indisponível." :
+                    $"Espaço livre: {ByteSize.Format(disk.TotalFreeBytes)} · maior faixa: {ByteSize.Format(disk.LargestFreeExtentBytes)}";
+            }
+            catch (System.IO.InvalidDataException) { return "Geometria inconsistente — operações bloqueadas."; }
+        }
+    }
 
     public DiskInfo? SelectedDisk
     {
         get => _selectedDisk;
-        set { if (SetProperty(ref _selectedDisk, value)) { SelectedPartition = null; FilterPartitions(); BuildPartitionMap(); UpdateCommands(); } }
+        set { if (SetProperty(ref _selectedDisk, value)) { SelectedPartition = null; FilterPartitions(); BuildPartitionMap(); OnPropertyChanged(nameof(SelectedLayoutSummary)); UpdateCommands(); } }
     }
     public PartitionInfo? SelectedPartition { get => _selectedPartition; set { if (SetProperty(ref _selectedPartition, value)) UpdateCommands(); } }
     public StorageOperationType SelectedOperationType { get => _selectedOperationType; set => SetProperty(ref _selectedOperationType, value); }
@@ -100,6 +118,8 @@ public sealed class MainViewModel : ObservableObject
             Disks.Clear(); foreach (var disk in snapshot.Disks) Disks.Add(disk);
             SelectedDisk = Disks.FirstOrDefault(d => d.Identity == previousIdentity) ?? Disks.FirstOrDefault();
             OnPropertyChanged(nameof(CapturedAtLabel));
+            OnPropertyChanged(nameof(SelectedLayoutSummary));
+            UpdatePreview();
             Progress = 100; Status = $"{Disks.Count} disco(s) e {_snapshot.Partitions.Count} partição(ões). Nenhuma alteração realizada.";
         }
         catch (Exception exception)
@@ -134,13 +154,47 @@ public sealed class MainViewModel : ObservableObject
         };
         var decision = _safety.Evaluate(operation, _snapshot);
         if (!decision.Allowed) { ShowError?.Invoke("Operação bloqueada", decision.Reason); Status = decision.Reason; return; }
-        _queue.Enqueue(operation); Status = $"Adicionado à fila: {operation.Description}";
+        try
+        {
+            var preview = _planner.Plan(_snapshot, _queue.Snapshot().Append(operation).ToArray());
+            if (!preview.CanApply)
+            {
+                var message = preview.FirstConflict?.Message ?? "Operações conflitantes.";
+                ShowError?.Invoke("Conflito no planejamento", message);
+                Status = message;
+                return;
+            }
+            _queue.Enqueue(operation); Status = $"Adicionado à fila: {operation.Description}";
+        }
+        catch (System.IO.InvalidDataException exception)
+        {
+            ShowError?.Invoke("Geometria inválida", exception.Message);
+            Status = "O inventário precisa ser atualizado antes de planejar.";
+        }
     }
 
     public async Task ApplyAsync(bool confirmationAlreadyGranted)
     {
         var operations = _queue.Snapshot();
         if (operations.Count == 0) return;
+        // C02 preview rejects conflicts; this is NOT the executor's authoritative security gate.
+        try
+        {
+            var preview = _planner.Plan(_snapshot, operations);
+            if (!preview.CanApply)
+            {
+                var reason = preview.FirstConflict?.Message ?? "Fila inconsistente.";
+                ShowError?.Invoke("Planejamento inválido", reason);
+                Status = reason;
+                return;
+            }
+        }
+        catch (System.IO.InvalidDataException exception)
+        {
+            ShowError?.Invoke("Inventário inválido", exception.Message);
+            Status = "A operação exige um novo inventário válido.";
+            return;
+        }
         // C01: deny all writes until the known C02-C04 safety blockers are addressed.
         // A license is NEVER a substitute for safe disk identity and execution policy.
         if (!StorageWriteGate.ReleasedAfterSafetyAudit)
@@ -179,6 +233,28 @@ public sealed class MainViewModel : ObservableObject
             await RefreshAsync();
         }
         finally { IsBusy = false; Progress = 0; }
+    }
+
+    private void UpdatePreview()
+    {
+        if (PendingOperations.Count == 0)
+        {
+            QueuePreviewSummary = "Fila vazia. Nada será alterado.";
+            return;
+        }
+        try
+        {
+            var plan = _planner.Plan(_snapshot, _queue.Snapshot());
+            QueuePreviewSummary = plan.CanApply
+                ? $"{plan.Steps.Count} operação(ões) · {plan.AffectedDisks} disco(s) · " +
+                    $"{plan.Steps.Count(x => x.RequiresRefreshAfterExecution)} exige(m) novo inventário. " +
+                    "Simulação apenas: não autoriza execução."
+                : $"CONFLITO etapa {plan.FirstConflict?.Position}: {plan.FirstConflict?.Message}";
+        }
+        catch (System.IO.InvalidDataException)
+        {
+            QueuePreviewSummary = "CONFLITO: inventário com geometria inválida. Atualize os discos.";
+        }
     }
 
     private void FilterPartitions()

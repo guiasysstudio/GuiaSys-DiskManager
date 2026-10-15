@@ -129,24 +129,8 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
 
     internal static void ValidateSnapshot(IReadOnlyList<DiskInfo> disks, IReadOnlyList<PartitionInfo> partitions)
     {
-        if (disks.Any(d => d.Number < 0 || d.Size <= 0))
-            throw new InvalidDataException("Inventário contém número de disco negativo ou tamanho de disco não positivo.");
-        if (disks.GroupBy(d => d.Number).Any(group => group.Count() != 1))
-            throw new InvalidDataException("Inventário contém números de disco duplicados.");
-        if (disks.Where(d => d.HasStrongIdentity).GroupBy(d => d.Identity, StringComparer.Ordinal).Any(group => group.Count() != 1))
-            throw new InvalidDataException("Inventário contém identidades fortes de disco duplicadas.");
-
-        var diskNumbers = disks.Select(d => d.Number).ToHashSet();
-        if (partitions.Any(p => p.DiskNumber < 0 || p.PartitionNumber <= 0 || p.Offset < 0 || p.Size <= 0))
-            throw new InvalidDataException("Inventário contém número, offset ou tamanho de partição inválido.");
-        if (partitions.Any(p => !diskNumbers.Contains(p.DiskNumber)))
-            throw new InvalidDataException("Inventário contém partição órfã sem disco correspondente.");
-        if (partitions.GroupBy(p => (p.DiskNumber, p.PartitionNumber)).Any(group => group.Count() != 1))
-            throw new InvalidDataException("Inventário contém números de partição duplicados no mesmo disco.");
-        if (partitions.Any(p => p.Offset > long.MaxValue - p.Size))
-            throw new InvalidDataException("Inventário contém intervalo de partição que excede o limite numérico.");
-        if (partitions.Any(p => disks.First(d => d.Number == p.DiskNumber).Size < p.Offset + p.Size))
-            throw new InvalidDataException("Inventário contém partição fora dos limites do disco.");
+        // C02 uses one authoritative geometry invariant for Windows inventory and dry-run planner.
+        _ = StorageGeometry.Build(new StorageSnapshot(disks, partitions, DateTimeOffset.MinValue));
     }
 
     private static InvalidDataException InvalidField(string key, string expected) => new($"Campo obrigatório '{key}' ausente ou inválido; esperado {expected}.");
