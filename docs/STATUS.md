@@ -35,3 +35,9 @@ Nenhuma função fora do escopo validado é apresentada na interface como suport
 ## Reconstrução GDM-C00 — CI da base de código
 
 O commit `c0a220c66f938067f7e3b48f24eb384f5f8a97c5` aprovou as execuções Actions `38666644551` e `38666648330`: restore; builds Debug/Release sem warnings ou errors; testes **87/87 em ambas as configurações**; publish win-x64; instalador Inno; upload dos dois artefatos. Isto não revalida o gate VHDX histórico nem autoriza uso comercial de gravação física. Detalhes e pendências: [GDM-C00](GDM-C00.md).
+
+## Reconstrução GDM-C01 — licenciamento (14/10/2026)
+
+O cliente desktop GSL-v1 implementa consultas HTTPS da configuração do produto, ativação, avaliação, revalidação, desativação, JWS ES256 validado contra chave de confiança fixada, ID de instalação persistente e cache criptografado DPAPI. A UI oferece a janela **Licença**.
+
+**Separação de gates:** testes automatizados com HTTP e JWS simulados são evidência funcional do cliente, mas **não** equivalem a ativação na produção. O build atual **não inclui a âncora pública de confiança aprovada para este produto**, logo bloqueia a concessão de licença real. É necessário obter do GuiaSys Licensing e confirmar externamente `projectId`, `signing.keyId`, `signing.publicJwk` e incorporar o fingerprint ao build. Nenhum segredo privado deve entrar no cliente. Operações de escrita continuam bloqueadas até C02–C04. Consulte [GDM-C01](GDM-C01.md) e o GitHub Actions no HEAD atual.

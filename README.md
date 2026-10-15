@@ -2,7 +2,7 @@
 
 Gerenciador gráfico de discos e partições para Windows 10 e Windows 11 x64, desenvolvido pela **GuiaSys Studio** em C# 14, .NET 10, WPF e MVVM.
 
-> Versão de desenvolvimento 0.1.0. Operações de gravação exigem administrador, passam por uma fila explícita e são revalidadas imediatamente antes da execução. Faça backup antes de alterar armazenamento.
+> Versão de desenvolvimento 0.1.0. **Operações de gravação temporariamente bloqueadas na reconstrução** até os gates C02–C04 de identidade e segurança. Inventário continua disponível somente para leitura; nenhuma licença libera gravações nessa fase.
 
 ## Recursos atuais
 
@@ -39,4 +39,4 @@ Os testes automatizados não escrevem em hardware. O gate de integração admini
 
 ## Reconstrução modular GDM-C00 → GDM-C18
 
-A evolução para produto comercial está em etapas. A preparação C00 corrige um bloqueio de compilação, define a [arquitetura de destino](docs/ARCHITECTURE.md), documenta o [plano de licenciamento GSL-v1](docs/LICENSING-PLAN.md) e os [riscos/gates C00](docs/GDM-C00.md). **Os resultados de 45 testes e 32 etapas VHDX citados acima pertencem ao HEAD funcional de 08/10/2026** e não substituem CI do novo HEAD. A integração com GuiaSys Licensing e o endurecimento necessário para discos físicos ainda não foram implementados/aprovados.
+A evolução para produto comercial está em etapas. A preparação C00 corrige um bloqueio de compilação, define a [arquitetura de destino](docs/ARCHITECTURE.md), documenta o [plano de licenciamento GSL-v1](docs/LICENSING-PLAN.md) e os [riscos/gates C00](docs/GDM-C00.md). **Os resultados de 45 testes e 32 etapas VHDX citados acima pertencem ao HEAD funcional de 08/10/2026** e não substituem CI do novo HEAD. O **cliente GuiaSys Licensing GSL-v1 foi implementado no GDM-C01** com UI, ativação, trial, validação online/offline ES256, cache DPAPI e desativação. **Homologação real ainda bloqueada**: faltam o Project ID e a chave pública de assinatura do produto, que precisam ser fixados no build; a segurança das gravações em discos físicos também permanece pendente de C02–C04. Consulte [GDM-C01](docs/GDM-C01.md).

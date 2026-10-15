@@ -1,12 +1,12 @@
-# Preparação para GuiaSys Licensing — contrato previsto para GDM-C01
+# GuiaSys Licensing — plano e implementação do GDM-C01
 
-Este arquivo documenta apenas o desenho e as condições de aceitação da futura integração comercial. **GDM-C00 não habilita licenciamento e não executa operações com o serviço.**
+O planejamento do GDM-C00 foi concretizado em um cliente GSL-v1 durante o GDM-C01. A documentação técnica atual, inclusive o bloqueio de produção por falta de confiança pública fixada e os testes, está em [GDM-C01](GDM-C01.md).
 
 ## Identidade e fronteira
 
-Produto comercial: **GuiaSys Disk Manager**; protocolo solicitado: **GSL-v1**; integração gerida no **GuiaSys Licensing**. O identificador/código de integração e credenciais operacionais não devem ser escritos em logs, comitados como segredo nem embutidos em arquivos públicos por conveniência. Confirmar com a documentação/API do Licensing, no C01, se o código de produto é identificador publicável ou credencial antes de distribuí-lo no cliente.
+Produto comercial: **GuiaSys Disk Manager**; protocolo solicitado: **GSL-v1**; integração gerida no **GuiaSys Licensing**. O identificador/código de integração e credenciais operacionais não devem ser escritos em logs, comitados como segredo nem embutidos em arquivos públicos por conveniência. A auditoria do contrato oficial GSL-v1 confirmou que o `integrationCode` é identificador público, não segredo. Project ID e JWK público são necessários para fixação criptográfica; chave privada jamais é distribuída.
 
-Criar em C01 uma abstração de aplicação `ILicenseEntitlements`, separada de `IStorageExecutor` e da UI, com uma implementação GSL-v1. A biblioteca de licenciamento não poderá executar scripts PowerShell, comandos de partição ou assumir elevação administrativa.
+A interface `ILicenseEntitlements` e a implementação `GslV1LicensingService` foram criadas, sem compartilhar autorização com `IStorageExecutor`. A biblioteca de licenciamento não poderá executar scripts PowerShell, comandos de partição ou assumir elevação administrativa.
 
 ## Comportamentos-alvo para validação em C01
 
@@ -21,4 +21,4 @@ Criar em C01 uma abstração de aplicação `ILicenseEntitlements`, separada de 
 
 ## Critério de liberação
 
-Antes de habilitar funcionalidades pagas: API GSL-v1 comprovada, fluxo real de ativação/desativação validado, licença de teste aprovada, comportamento offline definido, testes de falha e documentação de suporte. Nenhum desses gates foi executado no C00.
+Antes de habilitar funcionalidades pagas: API GSL-v1 comprovada, fluxo real de ativação/desativação validado, licença de teste aprovada, comportamento offline definido, testes de falha e documentação de suporte. O C00 não executou esses gates. No C01, testes HTTP simulados e verificação criptográfica foram implementados; testes reais e validação de publicação ainda estão pendentes.
