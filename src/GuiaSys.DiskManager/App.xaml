@@ -38,8 +38,8 @@
       <Style.Triggers><Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Trigger></Style.Triggers>
     </Style>
     <Style TargetType="ComboBox">
-      <Setter Property="Background" Value="#0F2338"/>
-      <Setter Property="Foreground" Value="#0B1321"/>
+      <Setter Property="Background" Value="#ECF4F8"/>
+      <Setter Property="Foreground" Value="#132438"/>
       <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}"/>
       <Setter Property="Padding" Value="9,6"/>
       <Setter Property="MinHeight" Value="34"/>
