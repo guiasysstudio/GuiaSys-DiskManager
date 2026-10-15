@@ -8,6 +8,7 @@ Data: 14/10/2026. Branch de trabalho: `feat/full-disk-manager`. `main` permanece
 - Solução: `GuiaSys.DiskManager.slnx`; .NET 10, WPF, MVVM, Windows x64; projeto de testes xUnit e runner administrativo VHDX.
 - CI do baseline: runs `38340715825` e `38340717069`, **failure** no passo `Build Debug`; restore aprovado e etapas posteriores puladas. Falha **CS0246** para `InvalidDataException` em `Services/PowerShellDiskInventoryService.cs:151`, por falta de `using System.IO;`.
 - Correção pontual C00: `using System.IO;` adicionado ao serviço, sem alterar o parser, o comportamento de inventário ou operações.
+- Após desbloquear a compilação, o CI revelou fixtures de teste com `ExpectedDiskIdentity` incompatível com o contrato `uid:<UniqueId>` e ausência de `DriveLetter` em um cenário de `SetDriveLetter`. Os fixtures foram corrigidos para usar `DiskInfo.Identity` e uma letra válida, sem afrouxar o `SafetyService`.
 - A documentação anterior registra 45/45 testes unitários Debug/Release e 32/32 etapas VHDX aprovadas **em 08/10/2026 em outro HEAD**. Esses resultados são evidência **histórica**, não validação automática da branch reconstruída.
 - Artefatos existentes, assets de marca, scripts de build, CI e funcionalidades aproveitáveis foram preservados.
 
@@ -41,7 +42,18 @@ Data: 14/10/2026. Branch de trabalho: `feat/full-disk-manager`. `main` permanece
 - [x] Diagnóstico de compilação sustentado por logs reais do CI.
 - [x] Correção de import e definição arquitetural com rastreabilidade.
 - [x] Sem implementação antecipada de C01 a C18; sem teste físico destrutivo.
-- [ ] CI do **HEAD final do C00**: restore, Debug build/test, Release build/test, publish Windows x64 e instalador sem erros.
-- [ ] Reinspecionar logs e atualizar o relatório final com hash de commit, resultado e contagem de testes.
+- [x] CI da **base de código C00**: restore, Debug build/test, Release build/test, publish Windows x64 e instalador sem erros.
+- [x] Reinspecionar logs e registrar hash de commit, resultado e contagem de testes.
 
-Qualquer falha ou etapa ainda em execução mantém o **gate C00 aberto**, independentemente da compilação ter sido corrigida.
+## Resultado da validação de código
+
+- Commit de código validado: `c0a220c66f938067f7e3b48f24eb384f5f8a97c5`.
+- GitHub Actions runs **38666644551** e **38666648330**: conclusão `success` (ambos, eventos push/PR).
+- Restore: aprovado. Build Debug: **0 warnings / 0 errors**. Testes Debug: **87/87** aprovados.
+- Build Release: **0 warnings / 0 errors**. Testes Release: **87/87** aprovados.
+- Publish **win-x64 self-contained**: aprovado. Compilação Inno Setup: **success**. Upload do portátil e do instalador: aprovados.
+- O CI foi realizado em runner Windows hospedado. Nenhum gate VHDX elevado foi executado no C00; o gate anterior de 32/32 permanece evidência histórica da implementação legado, não prova dos riscos P0.
+
+Os P0/P1 documentados permanecem backlog bloqueante para **gravação comercial**. O C00 cobre preparação, arquitetura e qualidade de compilação/testes, não certificação de funcionamento em discos físicos.
+
+O commit apenas documental que registra estas validações também precisa obter CI verde antes de declarar o **HEAD final** aprovado.

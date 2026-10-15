@@ -31,3 +31,7 @@
 - clonagem, recuperação avançada e telemetria SMART proprietária.
 
 Nenhuma função fora do escopo validado é apresentada na interface como suporte disponível. O gate VHDX não está pendente.
+
+## Reconstrução GDM-C00 — CI da base de código
+
+O commit `c0a220c66f938067f7e3b48f24eb384f5f8a97c5` aprovou as execuções Actions `38666644551` e `38666648330`: restore; builds Debug/Release sem warnings ou errors; testes **87/87 em ambas as configurações**; publish win-x64; instalador Inno; upload dos dois artefatos. Isto não revalida o gate VHDX histórico nem autoriza uso comercial de gravação física. Detalhes e pendências: [GDM-C00](GDM-C00.md).
