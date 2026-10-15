@@ -71,6 +71,16 @@ public sealed class InventoryInsightsTests
     }
 
     [Fact]
+    public void Empty_inventory_does_not_report_that_all_disks_have_stable_ids()
+    {
+        var empty = InventoryInsights.Build(new StorageSnapshot([], [], At));
+        Assert.Equal(0, empty.Overview.DiskCount);
+        Assert.Contains("Nenhum dispositivo", empty.Overview.IdentityLabel);
+        Assert.Equal(0L, empty.Overview.CapacityBytes);
+        Assert.Null(empty.FindDisk(2));
+    }
+
+    [Fact]
     public void All_empty_disk_space_is_unallocated_not_free_in_a_volume()
     {
         var report = InventoryInsights.Build(Snapshot());
