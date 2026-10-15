@@ -134,7 +134,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         // C02 uses one authoritative geometry invariant for Windows inventory and dry-run planner.
         _ = StorageGeometry.Build(new StorageSnapshot(disks, partitions, DateTimeOffset.MinValue));
         var strong = partitions.Where(p => p.HasStrongIdentity).ToArray();
-        if (strong.GroupBy(p => (p.DiskNumber, p.PartitionGuid.ToUpperInvariant())).Any(g => g.Count() != 1))
+        if (strong.GroupBy(p => (p.DiskNumber, Guid.Parse(p.PartitionGuid))).Any(g => g.Count() != 1))
             throw new InvalidDataException("Identidade GUID duplicada no mesmo disco.");
         if (partitions.Any(p => !string.IsNullOrWhiteSpace(p.PartitionGuid) && !p.HasStrongIdentity))
             throw new InvalidDataException("GUID de partição inválido.");
