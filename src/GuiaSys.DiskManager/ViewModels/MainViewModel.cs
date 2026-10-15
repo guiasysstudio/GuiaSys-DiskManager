@@ -186,7 +186,18 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception exception)
         {
             _logger.Error("storage.inventory.failed", exception);
-            Status = "Falha ao consultar o armazenamento.";
+            // Never leave stale inventory visible as if the device were still present.
+            _snapshot = new StorageSnapshot([], [], DateTimeOffset.MinValue);
+            Disks.Clear();
+            SelectedDisk = null;
+            Partitions.Clear();
+            PartitionSegments.Clear();
+            UpdateContextOperations();
+            UpdatePreview();
+            OnPropertyChanged(nameof(DiskCountLabel));
+            OnPropertyChanged(nameof(PartitionCountLabel));
+            OnPropertyChanged(nameof(CapturedAtLabel));
+            Status = "Inventário indisponível: dispositivos ocultados até a próxima atualização.";
             ShowError?.Invoke("Inventário indisponível", exception.Message);
         }
         finally { IsBusy = false; Progress = 0; }
