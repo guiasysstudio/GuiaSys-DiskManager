@@ -77,7 +77,7 @@ public sealed class MainViewModel : ObservableObject
         ? $"Disco {SelectedPartition.DiskNumber} / Partição {SelectedPartition.PartitionNumber}"
         : SelectedDisk is not null ? $"Disco {SelectedDisk.Number} / {SelectedDisk.FriendlyName}" : "Nenhum disco selecionado";
     public string SelectedTargetHint => SelectedPartition is not null
-        ? $"{SelectedPartition.Kind} · {SelectedPartition.SizeLabel} · {SelectedPartition.Identity ?? "identidade insuficiente"}"
+        ? $"{SelectedPartition.Kind} · {SelectedPartition.SizeLabel} · {(SelectedPartition.HasStrongIdentity ? "Identidade GPT disponível" : "Identidade insuficiente")}"
         : SelectedDisk is not null ? $"{SelectedDisk.SizeLabel} · {SelectedDisk.PartitionStyle} · {SelectedDisk.IdentityStrengthLabel}"
             : "Selecione um dispositivo na coluna esquerda.";
     public ContextOperationChoice? SelectedOperationAvailability => ContextOperations.FirstOrDefault(x => x.Type == SelectedOperationType);
