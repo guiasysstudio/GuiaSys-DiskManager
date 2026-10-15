@@ -3,6 +3,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using GuiaSys.DiskManager.Models;
+using GuiaSys.DiskManager.Licensing;
 using GuiaSys.DiskManager.Operations;
 using GuiaSys.DiskManager.Safety;
 using GuiaSys.DiskManager.Services;
@@ -20,6 +21,12 @@ internal static class Program
 
     public static async Task<int> Main(string[] args)
     {
+        // Never create or attach any VHDX while the commercial write gate remains closed.
+        if (!StorageWriteGate.ReleasedAfterSafetyAudit)
+        {
+            Console.Error.WriteLine("GDM-C04 NO-GO: testes VHDX destrutivos bloqueados até auditoria e liberação formal.");
+            return 2;
+        }
         _reportPath = args.Length == 1 ? Path.GetFullPath(args[0]) : Path.Combine(AppContext.BaseDirectory, "vhdx-integration-report.json");
         Directory.CreateDirectory(Path.GetDirectoryName(_reportPath)!);
         var startedAt = DateTimeOffset.Now;
@@ -41,12 +48,10 @@ internal static class Program
             await RunGptScenarioAsync(vhdxPaths[0], inventory, executor, safety);
             await RunMbrScenarioAsync(vhdxPaths[1], inventory, executor, safety);
             success = true;
-            return 0;
         }
         catch (Exception exception)
         {
             _failure = exception.ToString();
-            return 1;
         }
         finally
         {
@@ -62,6 +67,7 @@ internal static class Program
             if (leftovers.Length > 0) { success = false; _failure = $"Cleanup incompleto: {string.Join(", ", leftovers)}\n{_failure}"; }
             await WriteReportAsync(startedAt, DateTimeOffset.Now, success, testRoot);
         }
+        return success ? 0 : 1;
     }
 
     private static async Task RunGptScenarioAsync(string path, IDiskInventoryService inventory, IStorageOperationExecutor executor, ISafetyService safety)
