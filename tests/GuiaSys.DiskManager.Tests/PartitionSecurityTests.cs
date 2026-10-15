@@ -126,7 +126,7 @@ public sealed class PartitionSecurityTests
     [Fact]
     public void Mounted_windows_system_path_is_protected_even_without_drive_letter()
     {
-        var current = Part() with { DriveLetter = "", AccessPaths = @"C:\\SystemVolume\\;E:\\" };
+        var current = Part() with { DriveLetter = "", AccessPaths = @"C:\SystemVolume\;E:\" };
         Assert.True(SafetyService.IsProtected(current));
     }
 
