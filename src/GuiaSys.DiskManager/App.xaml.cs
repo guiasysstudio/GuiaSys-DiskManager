@@ -22,7 +22,9 @@ public partial class App : Application
         var licensing = new GslV1LicensingService(
             new GslV1ApiClient(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })), new WindowsGslV1Store(), GslV1TrustLoader.Load());
         var inventory = new PowerShellDiskInventoryService(_logger);
-        var viewModel = new MainViewModel(inventory, new PowerShellStorageOperationExecutor(_logger), new SafetyService(), _logger, licensing);
+        var safety = new SafetyService();
+        var executor = new PowerShellStorageOperationExecutor(_logger, inventory, safety, licensing);
+        var viewModel = new MainViewModel(inventory, executor, safety, _logger, licensing);
         var window = new MainWindow(viewModel, licensing); MainWindow = window; window.Show();
     }
 }
