@@ -29,7 +29,9 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
           $otherParts = @(Get-Partition -DiskNumber $disk.Number -ErrorAction SilentlyContinue)
           foreach ($other in $otherParts) {
             $otherType = ([string]$other.Type).ToUpperInvariant()
-            if ($other.IsBoot -or $other.IsSystem -or $other.IsHidden -or
+            $otherGptType = ([string]$other.GptType).Trim('{}')
+            $otherNonBasic = $otherGptType.Length -gt 0 -and $otherGptType -ine 'ebd0a0a2-b9e5-4433-87c0-68b6b72699c7'
+            if ($other.IsBoot -or $other.IsSystem -or $other.IsHidden -or $otherNonBasic -or
                 [string]$other.DriveLetter -eq 'C' -or $otherType.Contains('EFI') -or
                 $otherType.Contains('SYSTEM') -or $otherType.Contains('RESERVED') -or
                 $otherType.Contains('RECOVERY')) { throw 'PROTECTED_LAYOUT' }
@@ -41,9 +43,11 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
           $partitionGuid = [guid]::Empty
           if (-not [guid]::TryParse([string]$partition.Guid, [ref]$partitionGuid) -or $partitionGuid -eq [guid]::Empty) { throw 'PARTITION_IDENTITY_UNAVAILABLE' }
           $partType = ([string]$partition.Type).Trim().ToUpperInvariant()
+          $partGptType = ([string]$partition.GptType).Trim('{}')
+          $partNonBasic = $partGptType.Length -gt 0 -and $partGptType -ine 'ebd0a0a2-b9e5-4433-87c0-68b6b72699c7'
           $partIdentity = "gpt:$($partitionGuid.ToString('D'))|disk:$([int]$disk.Number)|part:$([int]$partition.PartitionNumber)|offset:$([int64]$partition.Offset)|size:$([int64]$partition.Size)|type:$partType"
           if ($partIdentity -cne [string]$request.ExpectedPartitionIdentity) { throw 'PARTITION_IDENTITY_CHANGED' }
-          if ($partition.IsBoot -or $partition.IsSystem -or $partition.IsHidden -or
+          if ($partition.IsBoot -or $partition.IsSystem -or $partition.IsHidden -or $partNonBasic -or
               [string]$partition.DriveLetter -eq 'C' -or $partType.Contains('EFI') -or
               $partType.Contains('SYSTEM') -or $partType.Contains('RESERVED') -or
               $partType.Contains('RECOVERY')) { throw 'PROTECTED_PARTITION' }
