@@ -36,6 +36,11 @@ public sealed class SafetyService : ISafetyService
         if (containsProtectedPartition && (AffectsWholeDisk(operation) || operation.Risk.HasFlag(StorageOperationRisk.LayoutMutation)))
             return SafetyDecision.Deny("O disco contém Windows, boot, sistema, EFI ou recuperação e está protegido.");
 
+        if (operation.Risk.HasFlag(StorageOperationRisk.LayoutMutation) &&
+            string.Equals(disk.PartitionStyle, "GPT", StringComparison.OrdinalIgnoreCase) &&
+            diskPartitions.Any(p => !p.HasStrongIdentity || string.IsNullOrWhiteSpace(p.GptType)))
+            return SafetyDecision.Deny("Há partições GPT sem identidade ou tipo confirmado; alterações de layout bloqueadas.");
+
         PartitionInfo? partition = null;
         if (RequiresPartition(operation.Type))
         {
@@ -76,6 +81,7 @@ public sealed class SafetyService : ISafetyService
 
         if (operation.Type == StorageOperationType.FormatPartition && !SupportedFileSystems.Contains(operation.FileSystem))
             return SafetyDecision.Deny("Sistema de arquivos inválido. Use NTFS, FAT32 ou exFAT.");
+        if (operation.Label is null) return SafetyDecision.Deny("Rótulo de volume inválido.");
         if (operation.Label.Length > 32 || operation.Label.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             return SafetyDecision.Deny("O label contém caracteres inválidos ou excede 32 caracteres.");
         if (operation.DriveLetter is char letter && (letter < 'D' || letter > 'Z'))
