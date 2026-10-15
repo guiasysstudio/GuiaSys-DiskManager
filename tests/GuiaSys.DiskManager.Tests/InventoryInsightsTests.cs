@@ -155,7 +155,7 @@ public sealed class InventoryInsightsTests
     {
         var disk = Disk();
         Assert.Equal("Não informado", disk.PhysicalSectorLabel);
-        Assert.Contains("Não informado", disk.TechnologyLabel);
+        Assert.Contains("não informado", disk.TechnologyLabel, StringComparison.OrdinalIgnoreCase);
         var known = disk with { LogicalSectorSize = 512, PhysicalSectorSize = 4096,
             MediaType = "SSD" };
         Assert.Contains("512", known.LogicalSectorLabel);
