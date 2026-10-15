@@ -70,10 +70,10 @@ public sealed class GslV1LicensingTests
                 status = status ?? "active",
                 licenseId = type == "license" ? "lic_0123456789abcdefabcd" : null,
                 planName = type == "license" ? "Plano Teste" : null,
-                lifetime, serverTime = (serverTime ?? Now.AddHours(-1)).ToString("O"),
-                offlineUntil = (offline ?? Now.AddDays(2)).ToString("O"),
-                expiresAt = lifetime ? null : (expiry ?? Now.AddDays(10)).ToString("O"),
-                startedAt = type == "trial" ? Now.AddDays(-2).ToString("O") : null
+                lifetime, serverTime = (serverTime ?? Now.AddHours(-1)).ToString("yyyy-MM-ddTHH:mm:ss.fff\'Z\'"),
+                offlineUntil = (offline ?? Now.AddDays(2)).ToString("yyyy-MM-ddTHH:mm:ss.fff\'Z\'"),
+                expiresAt = lifetime ? null : (expiry ?? Now.AddDays(10)).ToString("yyyy-MM-ddTHH:mm:ss.fff\'Z\'"),
+                startedAt = type == "trial" ? Now.AddDays(-2).ToString("yyyy-MM-ddTHH:mm:ss.fff\'Z\'") : null
             };
             var input = Url(JsonSerializer.Serialize(header)) + "." + Url(JsonSerializer.Serialize(payload));
             var signature = _key.SignData(Encoding.ASCII.GetBytes(input),
@@ -105,7 +105,7 @@ public sealed class GslV1LicensingTests
                 valid = true, type = "license", projectId = Trust.ProjectId,
                 integrationCode = GslV1Protocol.IntegrationCode,
                 status = "active", licenseId = "lic_0123456789abcdefabcd",
-                offlineUntil = Now.AddDays(2).ToString("O"),
+                offlineUntil = Now.AddDays(2).ToString("yyyy-MM-ddTHH:mm:ss.fff\'Z\'"),
                 entitlement = new { format = "JWS", algorithm = "ES256", keyId = Trust.KeyId, token }
             }
         };
@@ -116,7 +116,7 @@ public sealed class GslV1LicensingTests
             {
                 valid = true, type = "trial", projectId = Trust.ProjectId,
                 integrationCode = GslV1Protocol.IntegrationCode,
-                status = "active", offlineUntil = Now.AddDays(2).ToString("O"),
+                status = "active", offlineUntil = Now.AddDays(2).ToString("yyyy-MM-ddTHH:mm:ss.fff\'Z\'"),
                 entitlement = new { format = "JWS", algorithm = "ES256", keyId = Trust.KeyId, token }
             }
         };
