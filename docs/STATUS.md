@@ -63,3 +63,13 @@ O cliente desktop GSL-v1 implementa consultas HTTPS da configuração do produto
 ## GDM-C04 (15/10/2026)
 
 Execução com journal JSONL durável, pós-condições verificadas e distinção entre recusa, sucesso comprovado e resultado incerto. Runner VHDX bloqueado. Nenhuma gravação liberada. Ver [GDM-C04](GDM-C04.md).
+
+## GDM-C05 — Nova interface WPF (15/10/2026)
+
+- Interface principal reestruturada: cabeçalho global, sidebar navegável, visão geral, mapa proporcional, tabela e detalhes de partições, editor contextual e fila inferior redimensionável.
+- Estilos dark-mode, foco via teclado, tooltips em ações desativadas, navegação por seções e atalho F5.
+- `ContextOperationPolicy` analisa alvo selecionado com as mesmas recusas de `SafetyService`; nenhuma disponibilidade na interface autoriza execução real.
+- `MainViewModel` passa a atualizar ações contextuais, estado do item selecionado, seleção refletida no mapa, métricas do inventário, e oculta dispositivos obsoletos em falha de refresh.
+- `ApplyCommand` desabilitado com gate de escrita fechado. GSL-v1, execução e journal C04 preservados.
+- Testes automatizados de decisão contextual e integração do ViewModel adicionados. Smoke visual manual no Windows ainda pendente.
+- Relatório: [GDM-C05](GDM-C05.md). **NO-GO** para gravações físicas e testes destrutivos VHDX.
