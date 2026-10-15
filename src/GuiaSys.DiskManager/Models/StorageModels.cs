@@ -86,8 +86,18 @@ public sealed record PartitionInfo
     };
     public string DisplayName => DriveLetter.Length > 0 ? $"{DriveLetter}:  {Label}" : $"Partição {PartitionNumber}";
     public string Kind => PartitionClassifier.Classify(Type, FileSystem, GptType);
+    public bool IsSpecialGptType
+    {
+        get
+        {
+            var guid = GptType.Trim().Trim('{', '}');
+            return guid.Length > 0 &&
+                !guid.Equals("ebd0a0a2-b9e5-4433-87c0-68b6b72699c7", StringComparison.OrdinalIgnoreCase);
+        }
+    }
     public string ProtectionLabel => IsBoot || IsSystem ? "Inicialização / Sistema" :
         IsHidden ? "Oculta" : Kind is "EFI" or "MSR" or "Recovery" ? "Reservada / Protegida" :
+        IsSpecialGptType ? "Tipo GPT especial / Protegida" :
         IsReadOnly ? "Somente leitura" : "Padrão";
 }
 
