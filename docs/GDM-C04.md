@@ -30,7 +30,7 @@ O process runner passou a aplicar timeout também à escrita em stdin; matar sub
 
 Arquivo padrão: `%LOCALAPPDATA%\GuiaSys\DiskManager\Journal\operations.jsonl`. JSONL append-only na lógica, com `FileOptions.WriteThrough` e `Flush(true)` em cada entrada. Contém IDs de tentativa/operação, números de disco/partição, tipo, fase, estado, timestamp UTC e código fechado. **Não** inclui número de série, chave de licença, conteúdo de arquivos, rótulos de volumes ou saídas arbitrárias do PowerShell.
 
-**Limite:** o arquivo pertence ao usuário atual e não é assinado nem resistente à adulteração por administradores/processos maliciosos. O journal é evidência para diagnóstico e quarentena operacional, não uma prova criptográfica ou um mecanismo de transação ACID.
+O C04 armazena ainda um digest SHA-256 da topologia/estado do disco antes e depois da tentativa, sem gravar os valores originais no journal. Esse hash facilita comparar evidências, mas não substitui uma cópia do snapshot nem protege contra adulteração.\n\n**Limite:** o arquivo pertence ao usuário atual e não é assinado nem resistente à adulteração por administradores/processos maliciosos. O journal é evidência para diagnóstico e quarentena operacional, não uma prova criptográfica ou um mecanismo de transação ACID.
 
 ### Pós-condições cobertas
 
