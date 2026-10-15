@@ -69,3 +69,15 @@ Estudo conceitual realizado em `guiasysstudio/GuiaSys-DiskManager-References`:
 - **GNU Parted:** `libparted/disk.c`, `libparted/device.c` (separação entre topologia do disco e dispositivo); a distribuição contém GPLv3 em `COPYING` — verificar licenças específicas de cada componente antes de qualquer integração.
 
 Somente **ideias, requisitos e padrões arquiteturais** foram anotados. Nenhum código, asset, binário, driver, string literal protegida ou dependência dessas referências foi incorporado ao repositório do produto. O MiniTool é referência **de experiência de uso**, não fonte para replicar marca, código, drivers ou recursos proprietários. Uso de código copyleft em produto comercial exige análise de compatibilidade, obrigações de distribuição e revisão jurídica prévia.
+
+## Implementação incremental — GDM-C02 (15/10/2026)
+
+O desenho arquitetural acima foi parcialmente materializado **dentro da solução WPF existente**, sem criar assemblies ou habilitar operações de escrita:
+
+- `Models/StorageGeometry.cs`: intervalos em bytes semiabertos `[offset, fim)`, identificação explícita de lacunas, detecção de interseções, duplicações, órfãos e limites violados. Inventário Windows, mapa WPF e preview usam o mesmo cálculo.
+- `Operations/OperationPlanner.cs`: porta `IOperationPlanner`, `OperationPlan`, `PlanStep`. A fila é avaliada em ordem usando cópias dos metadados do snapshot, preservando o original.
+- Operações previsíveis (online/offline, somente leitura, letra, label) são simuladas. Operações de layout (GPT/MBR, criar/excluir/redimensionar) criam barreira de identidade no disco inteiro; formatação cria barreira na partição. Etapas posteriores que dependam desses alvos são marcadas em conflito e exigem leitura real e nova fila.
+- A prévia examina também disponibilidade de **faixa livre contígua** e conflito de letras no conjunto de discos, sem presumir que "espaço livre total" corresponda a região alocável; expansão requer espaço adjacente. Regras reais de filesystem, alinhamento Windows e limites mínimos permanecem autoridade do backend.
+- O ViewModel consulta o plano antes de aceitar operação na fila, exibe prévia e impede executar um plano conflituoso. **O planejamento não é controle de autorização do executor**; o bloqueio rígido de gravação introduzido no C01 continua até os próximos gates.
+
+Esse estágio não implementou o fingerprint estável de **partição** (C03), a proteção obrigatória dentro do executor (C03), journal de execução/pós-condições (C04) ou a revisão de confirmação multi-alvo (C03/C04). Esses riscos permanecem bloqueantes; a prévia não equivale a uma transação de partições nem prova que o Windows poderá completar o efeito pretendido.
