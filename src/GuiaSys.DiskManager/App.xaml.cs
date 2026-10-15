@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Windows;
 using GuiaSys.DiskManager.Licensing;
 using GuiaSys.DiskManager.Operations;

@@ -88,6 +88,6 @@ public sealed class GslV1ApiException : Exception
 // The physical write path remains locked until C02-C04 safety gates pass.
 public static class StorageWriteGate
 {
-    public const bool ReleasedAfterSafetyAudit = false;
+    public static bool ReleasedAfterSafetyAudit => false;
     public static bool Allows(GslLicenseDecision license) => ReleasedAfterSafetyAudit && license.Allowed;
 }
