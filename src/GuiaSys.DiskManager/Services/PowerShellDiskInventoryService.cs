@@ -32,6 +32,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
           [pscustomobject]@{
             DiskNumber=[int]$partition.DiskNumber; PartitionNumber=[int]$partition.PartitionNumber
             PartitionGuid=if ($partition.Guid) {[string]$partition.Guid} else {''}
+            GptType=if ($partition.GptType) {[string]$partition.GptType} else {''}
             AccessPaths=[string]($partition.AccessPaths -join ';'); DriveLetter=if ($partition.DriveLetter) {[string]$partition.DriveLetter} else {''}
             Type=[string]$partition.Type; Offset=[int64]$partition.Offset; Size=[int64]$partition.Size
             IsBoot=[bool]$partition.IsBoot; IsSystem=[bool]$partition.IsSystem
@@ -74,7 +75,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
 
     private static PartitionInfo ParsePartition(JsonElement item) => new()
     {
-        DiskNumber = ReadRequiredInt(item, "DiskNumber"), PartitionNumber = ReadRequiredInt(item, "PartitionNumber"), PartitionGuid = ReadString(item, "PartitionGuid"), AccessPaths = ReadString(item, "AccessPaths"), DriveLetter = ReadString(item, "DriveLetter"),
+        DiskNumber = ReadRequiredInt(item, "DiskNumber"), PartitionNumber = ReadRequiredInt(item, "PartitionNumber"), PartitionGuid = ReadString(item, "PartitionGuid"), GptType = ReadString(item, "GptType"), AccessPaths = ReadString(item, "AccessPaths"), DriveLetter = ReadString(item, "DriveLetter"),
         Type = ReadRequiredString(item, "Type"), Offset = ReadRequiredLong(item, "Offset"), Size = ReadRequiredLong(item, "Size"), IsBoot = ReadRequiredBool(item, "IsBoot"), IsSystem = ReadRequiredBool(item, "IsSystem"),
         IsHidden = ReadRequiredBool(item, "IsHidden"), IsReadOnly = ReadRequiredBool(item, "IsReadOnly"), IsOffline = ReadRequiredBool(item, "IsOffline"), FileSystem = ReadString(item, "FileSystem"),
         Label = ReadString(item, "Label"), VolumeSizeRemaining = ReadLongOrDefault(item, "VolumeSizeRemaining"), HealthStatus = ReadString(item, "HealthStatus", "Unknown")
