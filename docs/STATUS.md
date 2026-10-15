@@ -73,3 +73,12 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - `ApplyCommand` desabilitado com gate de escrita fechado. GSL-v1, execução e journal C04 preservados.
 - Testes automatizados de decisão contextual e integração do ViewModel adicionados. Smoke visual manual no Windows ainda pendente.
 - Relatório: [GDM-C05](GDM-C05.md). **NO-GO** para gravações físicas e testes destrutivos VHDX.
+
+## GDM-C06 — Inventário e visualização avançada (15/10/2026)
+
+- Consulta read-only de setor físico/lógico e `Get-Volume.Size`/`SizeRemaining` opcionais.
+- Associação conservadora de `Get-PhysicalDisk` por serial único; mídia e temperatura desconhecidas não são fabricadas. NVMe é rotulado como protocolo, não prova de SSD.
+- `InventoryInsights` calcula capacidade particionada, espaço não alocado, maior faixa contígua e volume utilizado, com prevenção de overflow.
+- GUI mostra resumos globais, capacidade do disco, progresso de uso do volume, métricas opcionais, proteção e classificação GPT confiável.
+- Parser testável com campos opcionais ausentes/inválidos e fixtures sem operações de gravação.
+- Gate de escrita e testes destrutivos continuam **NO-GO**. Detalhes: [GDM-C06](GDM-C06.md).
