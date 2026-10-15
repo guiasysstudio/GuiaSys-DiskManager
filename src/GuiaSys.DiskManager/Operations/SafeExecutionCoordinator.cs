@@ -51,7 +51,9 @@ public sealed class SafeExecutionCoordinator(
             if (!decision.Allowed)
                 throw new InvalidOperationException("Segurança recusou a operação: " + decision.Reason);
 
-            journal.Append(OperationJournal.Record(attemptId, op, OperationPhase.Prepared, "PREPARED"));
+            var beforeDigest = OperationSnapshotDigest.Compute(before, op.DiskNumber);
+            journal.Append(OperationJournal.Record(attemptId, op, OperationPhase.Prepared, "PREPARED",
+                snapshotSha256: beforeDigest));
             prepared = true;
             journal.Append(OperationJournal.Record(attemptId, op, OperationPhase.Dispatching, "DISPATCHING"));
             mayHaveDispatched = true;
@@ -71,7 +73,8 @@ public sealed class SafeExecutionCoordinator(
             var status = decisionAfter.Verified ? StorageExecutionOutcome.Verified
                 : StorageExecutionOutcome.Indeterminate;
             journal.Append(OperationJournal.Record(attemptId, op, OperationPhase.Reconciled,
-                decisionAfter.Verified ? "POSTCONDITION_VERIFIED" : "POSTCONDITION_UNKNOWN", status));
+                decisionAfter.Verified ? "POSTCONDITION_VERIFIED" : "POSTCONDITION_UNKNOWN",
+                status, OperationSnapshotDigest.Compute(after, op.DiskNumber)));
             return new OperationResult(op.Id, decisionAfter.Verified, decisionAfter.Reason,
                 timer.Elapsed, status);
         }
