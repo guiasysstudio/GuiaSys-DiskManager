@@ -18,7 +18,7 @@ public sealed class PartitionSecurityTests
     private static PartitionInfo Part(int number = 4, int partition = 1) => new()
     {
         DiskNumber = number, PartitionNumber = partition, PartitionGuid = ValidGuid,
-        Type = "Basic", Offset = 1_048_576, Size = 500_000_000,
+        Type = "Basic", GptType = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7", Offset = 1_048_576, Size = 500_000_000,
         DriveLetter = "F", AccessPaths = "", FileSystem = "NTFS"
     };
     private static StorageSnapshot Snapshot(PartitionInfo partition) =>
