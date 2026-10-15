@@ -26,8 +26,21 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
         $layoutMutations = @('SetDiskOnline','SetDiskOffline','SetDiskReadOnly','ClearDiskReadOnly',
           'InitializeGpt','InitializeMbr','CreatePartition','DeletePartition','ResizePartition')
         if ($layoutMutations -contains [string]$request.Type) {
-          $otherParts = @(Get-Partition -DiskNumber $disk.Number -ErrorAction SilentlyContinue)
+          if ([string]$disk.PartitionStyle -ieq 'RAW') {
+            if ($null -eq $disk.NumberOfPartitions -or [int]$disk.NumberOfPartitions -ne 0) {
+              throw 'RAW_PARTITION_COUNT_UNVERIFIED'
+            }
+            $otherParts = @()
+          } else {
+            # Query failures must never be treated as an empty partition table.
+            $otherParts = @(Get-Partition -DiskNumber $disk.Number -ErrorAction Stop)
+          }
           foreach ($other in $otherParts) {
+            if ([string]$disk.PartitionStyle -ieq 'GPT' -and
+                ([string]::IsNullOrWhiteSpace([string]$other.Guid) -or
+                 [string]::IsNullOrWhiteSpace([string]$other.GptType))) {
+              throw 'GPT_PARTITION_METADATA_UNVERIFIED'
+            }
             $otherType = ([string]$other.Type).ToUpperInvariant()
             $otherGptType = ([string]$other.GptType).Trim([char[]]@('{','}'))
             $otherNonBasic = $otherGptType.Length -gt 0 -and $otherGptType -ine 'ebd0a0a2-b9e5-4433-87c0-68b6b72699c7'
@@ -58,7 +71,9 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
               $disk.IsOffline -or $disk.IsReadOnly) { throw 'DISK_NOT_EMPTY_RAW' }
         }
         if ([string]$request.Type -eq 'CreatePartition') {
-          if ([string]$disk.PartitionStyle -ieq 'RAW' -or $disk.IsOffline -or $disk.IsReadOnly) { throw 'DISK_NOT_READY' }
+          if ([string]$disk.PartitionStyle -ine 'GPT' -or $disk.IsOffline -or $disk.IsReadOnly) {
+            throw 'GPT_DISK_REQUIRED'
+          }
         }
         switch ([string]$request.Type) {
           'SetDiskOnline' { Set-Disk -Number $disk.Number -IsOffline $false -ErrorAction Stop }
