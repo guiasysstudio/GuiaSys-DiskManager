@@ -18,7 +18,8 @@ public sealed class StoragePlanningTests
     private static PartitionInfo Part(int disk = 2, int number = 1, long offset = 100 * MB,
         long size = 300 * MB, string letter = "E") =>
         new() { DiskNumber = disk, PartitionNumber = number, Offset = offset, Size = size,
-            AccessPaths = "", DriveLetter = letter, Type = "Basic", FileSystem = "NTFS" };
+            AccessPaths = "", DriveLetter = letter, Type = "Basic", FileSystem = "NTFS",
+            PartitionGuid = $"ecb7da44-3b19-4e0f-97a4-{disk:0000}{number:00000000}" };
 
     private static StorageSnapshot Snapshot(params PartitionInfo[] partitions) =>
         new([Disk()], partitions, Captured);
@@ -26,7 +27,10 @@ public sealed class StoragePlanningTests
     private static StorageOperation Op(StorageOperationType type, int disk = 2, int? partition = null,
         long? size = null, char? letter = null) =>
         new() { Type = type, DiskNumber = disk, PartitionNumber = partition,
-            ExpectedDiskIdentity = Disk(disk).Identity, SizeBytes = size,
+            ExpectedDiskIdentity = Disk(disk).Identity,
+            ExpectedPartitionIdentity = partition is int n ? Part(disk: disk, number: n,
+                offset: n == 1 ? 100 * MB : 500 * MB).Identity : null,
+            SizeBytes = size,
             DriveLetter = letter };
 
     private static OperationPlanner Planner() => new(new SafetyService(null));
