@@ -59,3 +59,7 @@ O cliente desktop GSL-v1 implementa consultas HTTPS da configuração do produto
 - Executor exige sua própria autorização (gate físico, inventário novo, SafetyService, administrador, licença), sem depender exclusivamente do ViewModel; processo PowerShell revalida disk UniqueId e atributos críticos da partição.
 - Confirmação reforçada cobre todos os discos afetados e o sinalizador legado de confirmação não ignora o diálogo.
 - Escritas físicas e testes destrutivos continuam **NO-GO** até os itens pendentes de C04. Relatório: [GDM-C03](GDM-C03.md).
+
+## GDM-C04 (15/10/2026)
+
+Execução com journal JSONL durável, pós-condições verificadas e distinção entre recusa, sucesso comprovado e resultado incerto. Runner VHDX bloqueado. Nenhuma gravação liberada. Ver [GDM-C04](GDM-C04.md).
