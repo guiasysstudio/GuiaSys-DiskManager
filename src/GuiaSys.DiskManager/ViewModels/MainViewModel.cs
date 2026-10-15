@@ -228,10 +228,25 @@ public sealed class MainViewModel : ObservableObject
                 if (!decision.Allowed) { ShowError?.Invoke("Operação cancelada por segurança", decision.Reason); Status = decision.Reason; return; }
                 Status = $"Executando {index + 1}/{operations.Count}: {operation.Description}";
                 var result = await _executor.ExecuteAsync(operation, CancellationToken.None);
-                if (!result.Succeeded) { ShowError?.Invoke("Operação não concluída", result.Message); Status = result.Message; return; }
+                if (!result.Succeeded)
+                {
+                    if (result.Outcome == StorageExecutionOutcome.Indeterminate)
+                    {
+                        // Never leave an uncertain operation available for one-click reapply.
+                        _queue.Clear();
+                        Status = "Resultado indeterminado. Fila esvaziada; reconciliação manual necessária.";
+                        ShowError?.Invoke("Não repetir a operação", result.Message);
+                    }
+                    else
+                    {
+                        Status = result.Message;
+                        ShowError?.Invoke("Operação não iniciada ou recusada", result.Message);
+                    }
+                    return;
+                }
                 PendingOperations.Remove(operation);
             }
-            Progress = 100; Status = "Todas as operações foram concluídas e verificadas pelo Windows.";
+            Progress = 100; Status = "As operações foram confirmadas por inventário independente.";
             await RefreshAsync();
         }
         finally { IsBusy = false; Progress = 0; }
