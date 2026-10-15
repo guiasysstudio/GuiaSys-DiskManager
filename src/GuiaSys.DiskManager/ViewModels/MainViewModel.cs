@@ -170,9 +170,13 @@ public sealed class MainViewModel : ObservableObject
             {
                 Disks.Clear(); foreach (var disk in snapshot.Disks) Disks.Add(disk);
                 SelectedDisk = Disks.FirstOrDefault(d => d.Identity == previousIdentity) ?? Disks.FirstOrDefault();
-                if (SelectedDisk is not null && previousPartitionIdentity is not null)
-                    SelectedPartition = Partitions.FirstOrDefault(p =>
-                        string.Equals(p.Identity, previousPartitionIdentity, StringComparison.Ordinal));
+                // Record value-equality may suppress the setter on an unchanged disk.
+                // Explicitly rebuild dependent projections from the new inventory.
+                FilterPartitions();
+                SelectedPartition = SelectedDisk is not null && previousPartitionIdentity is not null
+                    ? Partitions.FirstOrDefault(p => string.Equals(p.Identity, previousPartitionIdentity, StringComparison.Ordinal))
+                    : null;
+                BuildPartitionMap();
             }
             finally { _loadingSelection = false; }
             NotifyTargetChanged();
