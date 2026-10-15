@@ -82,3 +82,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - GUI mostra resumos globais, capacidade do disco, progresso de uso do volume, métricas opcionais, proteção e classificação GPT confiável.
 - Parser testável com campos opcionais ausentes/inválidos e fixtures sem operações de gravação.
 - Gate de escrita e testes destrutivos continuam **NO-GO**. Detalhes: [GDM-C06](GDM-C06.md).
+
+## GDM-C07 — Operações essenciais (15/10/2026)
+
+- `EssentialOperationValidator` exige contrato coerente por tipo: disco ou partição, GUID/identidade, rótulo, tamanho, letra, filesystem e cluster; proíbe parâmetros ocultos/stale.
+- O `MainViewModel` prepara comandos somente com os campos relevantes, sem confundir entradas anteriores; valida letras de D a Z como um único caractere e requer tamanho no resize.
+- `SafetyService` checa limites de área contígua diretamente no inventário recente, recusa GPT ambíguo e impede criação MBR sem pós-condição independente confiável.
+- Testes sintéticos e de ViewModel foram adicionados; nenhum teste de disco físico/VHDX foi liberado.
+- Gate **NO-GO para gravações**. Ver [GDM-C07](GDM-C07.md).
