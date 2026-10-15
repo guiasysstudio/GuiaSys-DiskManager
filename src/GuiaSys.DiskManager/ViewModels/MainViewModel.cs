@@ -228,25 +228,74 @@ public sealed class MainViewModel : ObservableObject
     private void QueueSelectedOperation()
     {
         if (SelectedDisk is null) return;
+        var type = SelectedOperationType;
+        var needsSize = type is StorageOperationType.CreatePartition or StorageOperationType.ResizePartition;
+        var needsLetter = type == StorageOperationType.SetDriveLetter;
+        var needsFormat = type == StorageOperationType.FormatPartition;
+        var needsLabel = needsFormat || type == StorageOperationType.SetVolumeLabel;
+        var needsPartition = ContextOperationPolicy.RequiresPartition(type);
         long? size = null;
-        if (!string.IsNullOrWhiteSpace(SizeInput))
+        if (needsSize)
         {
-            if (!TryParseSize(SizeInput, out var parsed)) { ShowError?.Invoke("Tamanho inválido", "Use bytes ou valores como 512 MB, 20 GB ou 1,5 TB."); return; }
-            size = parsed;
+            if (string.IsNullOrWhiteSpace(SizeInput) && type == StorageOperationType.ResizePartition)
+            {
+                ShowError?.Invoke("Tamanho obrigatório", "Informe um tamanho para redimensionar a partição.");
+                return;
+            }
+            if (!string.IsNullOrWhiteSpace(SizeInput))
+            {
+                if (!TryParseSize(SizeInput, out var parsed))
+                {
+                    ShowError?.Invoke("Tamanho inválido", "Use bytes ou valores como 512 MB, 20 GB ou 1,5 TB.");
+                    return;
+                }
+                size = parsed;
+            }
         }
-        char? letter = string.IsNullOrWhiteSpace(DriveLetterInput) ? null : char.ToUpperInvariant(DriveLetterInput.Trim()[0]);
-        int? allocationUnit = null;
-        if (!string.IsNullOrWhiteSpace(AllocationUnitInput))
+        char? letter = null;
+        if (needsLetter)
         {
-            if (!int.TryParse(AllocationUnitInput.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedAllocation)) { ShowError?.Invoke("Unidade de alocação inválida", "Informe o tamanho em bytes, por exemplo 4096."); return; }
+            var entered = DriveLetterInput.Trim().ToUpperInvariant();
+            if (entered.Length != 1 || entered[0] is < 'D' or > 'Z')
+            {
+                ShowError?.Invoke("Letra inválida", "Informe somente uma letra de D a Z.");
+                return;
+            }
+            letter = entered[0];
+        }
+        int? allocationUnit = null;
+        if (needsFormat && !string.IsNullOrWhiteSpace(AllocationUnitInput))
+        {
+            if (!int.TryParse(AllocationUnitInput.Trim(), NumberStyles.Integer,
+                CultureInfo.InvariantCulture, out var parsedAllocation))
+            {
+                ShowError?.Invoke("Unidade de alocação inválida",
+                    "Informe um valor inteiro em bytes, por exemplo 4096.");
+                return;
+            }
             allocationUnit = parsedAllocation;
         }
         var operation = new StorageOperation
         {
-            Type = SelectedOperationType, DiskNumber = SelectedDisk.Number, PartitionNumber = SelectedPartition?.PartitionNumber,
+            Type = type,
+            DiskNumber = SelectedDisk.Number,
+            PartitionNumber = needsPartition ? SelectedPartition?.PartitionNumber : null,
             ExpectedDiskIdentity = SelectedDisk.Identity,
-            ExpectedPartitionIdentity = SelectedPartition?.Identity, SizeBytes = size, FileSystem = SelectedFileSystem, Label = LabelInput.Trim(), DriveLetter = letter, QuickFormat = QuickFormat, AllocationUnitSize = allocationUnit
+            ExpectedPartitionIdentity = needsPartition ? SelectedPartition?.Identity : null,
+            SizeBytes = size,
+            DriveLetter = letter,
+            FileSystem = needsFormat ? SelectedFileSystem : "NTFS",
+            Label = needsLabel ? LabelInput.Trim() : "",
+            QuickFormat = !needsFormat || QuickFormat,
+            AllocationUnitSize = allocationUnit
         };
+        var shape = EssentialOperationValidator.Validate(operation);
+        if (!shape.Allowed)
+        {
+            ShowError?.Invoke("Parâmetros inválidos", shape.Reason);
+            Status = shape.Reason;
+            return;
+        }
         // The planner evaluates this operation against all prior queued effects, not stale inventory.
         try
         {
