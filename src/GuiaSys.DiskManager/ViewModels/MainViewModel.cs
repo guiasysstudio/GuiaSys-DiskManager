@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using GuiaSys.DiskManager.Infrastructure;
+using GuiaSys.DiskManager.Licensing;
 using GuiaSys.DiskManager.Models;
 using GuiaSys.DiskManager.Operations;
 using GuiaSys.DiskManager.Services;
@@ -14,6 +15,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IStorageOperationExecutor _executor;
     private readonly ISafetyService _safety;
     private readonly IAppLogger _logger;
+    private readonly ILicenseEntitlements _licensing;
     private readonly OperationQueue _queue = new();
     private StorageSnapshot _snapshot = new([], [], DateTimeOffset.MinValue);
     private DiskInfo? _selectedDisk;
@@ -29,9 +31,9 @@ public sealed class MainViewModel : ObservableObject
     private bool _isBusy;
     private double _progress;
 
-    public MainViewModel(IDiskInventoryService inventory, IStorageOperationExecutor executor, ISafetyService safety, IAppLogger logger)
+    public MainViewModel(IDiskInventoryService inventory, IStorageOperationExecutor executor, ISafetyService safety, IAppLogger logger, ILicenseEntitlements licensing)
     {
-        _inventory = inventory; _executor = executor; _safety = safety; _logger = logger;
+        _inventory = inventory; _executor = executor; _safety = safety; _logger = logger; _licensing = licensing;
         PendingOperations = _queue.Pending;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsBusy);
         QueueCommand = new RelayCommand(QueueSelectedOperation, () => SelectedDisk is not null && !IsBusy);
@@ -139,6 +141,21 @@ public sealed class MainViewModel : ObservableObject
     {
         var operations = _queue.Snapshot();
         if (operations.Count == 0) return;
+        // C01: deny all writes until the known C02-C04 safety blockers are addressed.
+        // A license is NEVER a substitute for safe disk identity and execution policy.
+        if (!StorageWriteGate.ReleasedAfterSafetyAudit)
+        {
+            Status = "Gravações bloqueadas nesta fase de desenvolvimento (C02-C04 pendentes).";
+            ShowError?.Invoke("Operações não liberadas", Status);
+            return;
+        }
+        var license = await _licensing.CheckAsync(CancellationToken.None);
+        if (!StorageWriteGate.Allows(license))
+        {
+            Status = "Licenciamento: " + license.Message;
+            ShowError?.Invoke("Licença necessária", license.Message);
+            return;
+        }
         if (!IsAdministrator) { ShowError?.Invoke("Elevação necessária", "Reabra o aplicativo como administrador para aplicar operações. O inventário permanece disponível sem elevação."); return; }
         var reinforced = operations.Any(x => x.RequiresReinforcedConfirmation);
         if (!confirmationAlreadyGranted && ConfirmOperationsAsync is not null && !await ConfirmOperationsAsync(operations, reinforced)) { Status = "Aplicação cancelada."; return; }

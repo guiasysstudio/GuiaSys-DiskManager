@@ -22,6 +22,9 @@
     <Resource Include="Assets\Branding\*.ico" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="GuiaSys.DiskManager.Tests" />
   </ItemGroup>
 </Project>
