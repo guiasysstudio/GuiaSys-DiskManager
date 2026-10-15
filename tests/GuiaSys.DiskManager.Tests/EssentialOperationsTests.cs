@@ -192,7 +192,7 @@ public sealed class EssentialOperationsTests
     }
 
     [Fact]
-    public void Gpt_creation_rejects_size_larger_than_largest_contiguous_free_extent()
+    public void Gpt_creation_accepts_size_within_largest_contiguous_free_extent()
     {
         var part = Part();
         var op = Op(StorageOperationType.CreatePartition) with { SizeBytes = 590 * Mb };
@@ -225,6 +225,32 @@ public sealed class EssentialOperationsTests
         var operation = Op(StorageOperationType.ResizePartition, first);
         Assert.False(Safety.Evaluate(operation with { SizeBytes = 401 * Mb }, State("GPT", first, next)).Allowed);
         Assert.True(Safety.Evaluate(operation with { SizeBytes = 400 * Mb }, State("GPT", first, next)).Allowed);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-guid")]
+    public void Unknown_partition_identity_refuses_other_layout_mutations(string guid)
+    {
+        var partition = Part() with { PartitionGuid = guid };
+        var operation = Op(StorageOperationType.CreatePartition);
+        Assert.False(Safety.Evaluate(operation, State("GPT", partition)).Allowed);
+    }
+
+    [Fact]
+    public void Missing_gpt_type_refuses_layout_mutation_even_if_existing_partition_has_guid()
+    {
+        var partition = Part() with { GptType = "" };
+        Assert.False(Safety.Evaluate(Op(StorageOperationType.CreatePartition), State("GPT", partition)).Allowed);
+    }
+
+    [Fact]
+    public void Null_label_from_external_caller_is_denied_not_crashed()
+    {
+        var partition = Part();
+        var operation = Op(StorageOperationType.SetVolumeLabel, partition) with { Label = null! };
+        var decision = Safety.Evaluate(operation, State("GPT", partition));
+        Assert.False(decision.Allowed);
     }
 
     [Fact]
