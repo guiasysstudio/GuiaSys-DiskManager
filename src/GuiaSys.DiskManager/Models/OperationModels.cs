@@ -35,6 +35,7 @@ public sealed record StorageOperation
     public required int DiskNumber { get; init; }
     public int? PartitionNumber { get; init; }
     public required string ExpectedDiskIdentity { get; init; }
+    public string? ExpectedPartitionIdentity { get; init; }
     public long? SizeBytes { get; init; }
     public string FileSystem { get; init; } = "NTFS";
     public string Label { get; init; } = "";
