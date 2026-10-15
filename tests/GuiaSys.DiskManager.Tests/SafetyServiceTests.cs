@@ -216,6 +216,6 @@ public sealed class SafetyServiceTests
 
     private static bool RequiresPartition(StorageOperationType type) => type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
     private static DiskInfo Disk(int number) => new() { Number = number, UniqueId = $"disk-{number}", FriendlyName = "Test disk", Size = 100_000_000_000, PartitionStyle = "RAW" };
-    private static PartitionInfo Partition() => new() { DiskNumber = 2, PartitionNumber = 1, AccessPaths = "", DriveLetter = "D", Type = "Basic", PartitionGuid = "ecb7da44-3b19-4e0f-97a4-900000000001", Offset = 1_000_000, Size = 10_000_000_000, FileSystem = "NTFS" };
-    private static StorageSnapshot Snapshot(params PartitionInfo[] partitions) => new([Disk(2)], partitions, DateTimeOffset.Now);
+    private static PartitionInfo Partition() => new() { DiskNumber = 2, PartitionNumber = 1, AccessPaths = "", DriveLetter = "D", Type = "Basic", PartitionGuid = "ecb7da44-3b19-4e0f-97a4-900000000001", GptType = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7", Offset = 1_000_000, Size = 10_000_000_000, FileSystem = "NTFS" };
+    private static StorageSnapshot Snapshot(params PartitionInfo[] partitions) => new([Disk(2) with { PartitionStyle = partitions.Length > 0 ? "GPT" : "RAW" }], partitions, DateTimeOffset.Now);
 }
