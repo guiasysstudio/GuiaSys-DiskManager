@@ -44,6 +44,9 @@ public sealed class SafetyService : ISafetyService
             if (IsProtected(partition) || ContainsRunningExecutable(partition)) return SafetyDecision.Deny("Partições de boot, sistema, EFI, MSR, Recovery, ocultas, C: ou que hospedam o aplicativo não podem ser alteradas.");
             if (!partition.HasStrongIdentity)
                 return SafetyDecision.Deny("Partição sem identidade GPT forte; operações MBR ainda não autorizadas.");
+            if (!string.Equals(disk.PartitionStyle, "GPT", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrWhiteSpace(partition.GptType))
+                return SafetyDecision.Deny("Partição sem esquema GPT e tipo GUID confirmado; a mutação não é autorizada.");
             if (string.IsNullOrWhiteSpace(operation.ExpectedPartitionIdentity) ||
                 !string.Equals(partition.Identity, operation.ExpectedPartitionIdentity, StringComparison.Ordinal))
                 return SafetyDecision.Deny("A identidade ou geometria da partição mudou. Atualize o inventário.");
