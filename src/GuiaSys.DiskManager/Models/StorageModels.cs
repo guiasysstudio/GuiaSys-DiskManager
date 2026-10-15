@@ -35,6 +35,9 @@ public sealed record PartitionInfo
 {
     public required int DiskNumber { get; init; }
     public required int PartitionNumber { get; init; }
+    public string PartitionGuid { get; init; } = "";
+    public bool HasStrongIdentity => PartitionIdentity.HasStrongIdentity(this);
+    public string? Identity => PartitionIdentity.TryGetFingerprint(this);
     public required string AccessPaths { get; init; }
     public required string DriveLetter { get; init; }
     public required string Type { get; init; }
