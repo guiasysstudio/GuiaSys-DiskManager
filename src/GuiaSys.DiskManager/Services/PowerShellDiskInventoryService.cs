@@ -11,17 +11,24 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         $ErrorActionPreference = 'Stop'
         [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
         $physicalDisks = @(Get-PhysicalDisk -ErrorAction SilentlyContinue)
-        $disks = @(Get-Disk | ForEach-Object {
+        $windowsDisks = @(Get-Disk -ErrorAction Stop)
+        $disks = @($windowsDisks | ForEach-Object {
           $disk = $_
           # Get-PhysicalDisk.DeviceId is a subsystem identifier; it is not necessarily
           # Get-Disk.Number. Never infer a hardware match from the numeric IDs alone.
           $physical = $null
           if (-not [string]::IsNullOrWhiteSpace([string]$disk.SerialNumber)) {
+            $diskCandidates = @($windowsDisks | Where-Object {
+              ([string]$_.SerialNumber).Trim() -eq ([string]$disk.SerialNumber).Trim()
+            })
             $physicalCandidates = @($physicalDisks | Where-Object {
               -not [string]::IsNullOrWhiteSpace([string]$_.SerialNumber) -and
               ([string]$_.SerialNumber).Trim() -eq ([string]$disk.SerialNumber).Trim()
             })
-            if ($physicalCandidates.Count -eq 1) { $physical = $physicalCandidates[0] }
+            # One-to-one serial match in both namespaces. Duplicate serials are ambiguous.
+            if ($diskCandidates.Count -eq 1 -and $physicalCandidates.Count -eq 1) {
+              $physical = $physicalCandidates[0]
+            }
           }
           $temperature = $null
           if ($physical) { try { $temperature = ($physical | Get-StorageReliabilityCounter -ErrorAction Stop).Temperature } catch { } }
