@@ -52,3 +52,7 @@ Journal de execução, reconciliação de operações e verificações independe
 ### GDM-C05 — Nova interface gráfica WPF
 
 Uma nova estrutura visual inclui sidebar de navegação funcional, painel de discos, mapa de partições proporcional, grade de volumes, painel de operações contextuais e fila inferior com altura ajustável. Ações bloqueadas exibem o motivo, entradas do formulário aparecem conforme a operação e o comando Aplicar permanece desabilitado enquanto o gate de escrita estiver fechado. Atalho **F5** atualiza o inventário em modo leitura. Nenhuma nova dependência visual externa foi adicionada. Consulte [GDM-C05](docs/GDM-C05.md) para ver os critérios de smoke visual ainda pendentes.
+
+### GDM-C06 — Inventário avançado e capacidade real
+
+O inventário agora oferece métricas opcionais de setor físico/lógico, tecnologia e conexão do dispositivo, classificação GPT de partições EFI/MSR/Recovery e estatísticas de ocupação do volume quando reportadas pelo Windows. O painel diferencia **espaço não alocado do disco** de **espaço livre dentro do volume**, com resumos de capacidade e uso, além de alertas de pouco espaço. Valores desconhecidos não são transformados em zeros. O gate de gravação continua fechado. Veja [GDM-C06](docs/GDM-C06.md).
