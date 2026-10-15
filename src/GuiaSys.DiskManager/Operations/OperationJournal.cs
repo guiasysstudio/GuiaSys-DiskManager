@@ -14,7 +14,8 @@ public enum OperationPhase { Prepared, Dispatching, Reconciled }
 public sealed record OperationJournalEntry(
     Guid AttemptId, Guid OperationId, DateTimeOffset AtUtc,
     int DiskNumber, int? PartitionNumber, StorageOperationType Type,
-    OperationPhase Phase, StorageExecutionOutcome? Outcome, string Code);
+    OperationPhase Phase, StorageExecutionOutcome? Outcome, string Code,
+    string? SnapshotSha256 = null);
 
 public interface IOperationJournal
 {
@@ -48,7 +49,10 @@ public sealed class OperationJournal : IOperationJournal
         if (entry.AttemptId == Guid.Empty || entry.OperationId == Guid.Empty ||
             entry.DiskNumber < 0 || !Enum.IsDefined(entry.Type) ||
             !Enum.IsDefined(entry.Phase) || entry.Code.Length is < 1 or > 64 ||
-            entry.Code.Any(x => !char.IsAsciiLetterUpper(x) && x != '_'))
+            entry.Code.Any(x => !char.IsAsciiLetterUpper(x) && x != '_') ||
+            (entry.SnapshotSha256 is not null &&
+                (entry.SnapshotSha256.Length != 64 ||
+                 entry.SnapshotSha256.Any(x => !Uri.IsHexDigit(x)))))
             throw new ArgumentException("Registro de journal inválido.", nameof(entry));
         var row = JsonSerializer.Serialize(entry, JsonOptions) + "\n";
         var bytes = Encoding.UTF8.GetBytes(row);
@@ -87,7 +91,8 @@ public sealed class OperationJournal : IOperationJournal
     }
 
     public static OperationJournalEntry Record(Guid attemptId, StorageOperation operation,
-        OperationPhase phase, string code, StorageExecutionOutcome? outcome = null) =>
+        OperationPhase phase, string code, StorageExecutionOutcome? outcome = null,
+        string? snapshotSha256 = null) =>
         new(attemptId, operation.Id, DateTimeOffset.UtcNow, operation.DiskNumber,
-            operation.PartitionNumber, operation.Type, phase, outcome, code);
+            operation.PartitionNumber, operation.Type, phase, outcome, code, snapshotSha256);
 }
