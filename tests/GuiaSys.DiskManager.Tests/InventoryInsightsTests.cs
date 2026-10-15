@@ -161,6 +161,16 @@ public sealed class InventoryInsightsTests
     }
 
     [Fact]
+    public void Unknown_non_basic_gpt_type_is_visibly_protected_not_mislabeled_as_standard()
+    {
+        var unknown = Part() with { GptType = "d0e98700-0000-0000-0000-000000000000" };
+        Assert.Equal("Other", unknown.Kind);
+        Assert.True(unknown.IsSpecialGptType);
+        Assert.Contains("Protegida", unknown.ProtectionLabel);
+        Assert.False((Part() with { GptType = Basic }).IsSpecialGptType);
+    }
+
+    [Fact]
     public void Device_sector_metrics_do_not_invent_missing_values()
     {
         var disk = Disk();
