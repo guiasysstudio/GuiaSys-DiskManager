@@ -31,7 +31,7 @@ public sealed class SafetyServiceTests
         var disk = Disk(0) with { UniqueId = "disk0", PartitionStyle = "GPT" };
         var partition = Partition() with { DiskNumber = 0 };
         var snapshot = new StorageSnapshot([disk], [partition], DateTimeOffset.Now);
-        var operation = Operation(type) with { DiskNumber = 0, ExpectedDiskIdentity = "disk0" };
+        var operation = Operation(type) with { DiskNumber = 0, ExpectedDiskIdentity = disk.Identity };
 
         var decision = _service.Evaluate(operation, snapshot);
 
@@ -208,7 +208,7 @@ public sealed class SafetyServiceTests
         Type = type,
         DiskNumber = 2,
         PartitionNumber = RequiresPartition(type) ? 1 : null,
-        ExpectedDiskIdentity = "disk-2",
+        ExpectedDiskIdentity = Disk(2).Identity,
         SizeBytes = type == StorageOperationType.ResizePartition ? 5_000_000_000 : null
     };
 
