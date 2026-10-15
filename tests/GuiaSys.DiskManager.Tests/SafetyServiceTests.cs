@@ -209,12 +209,13 @@ public sealed class SafetyServiceTests
         DiskNumber = 2,
         PartitionNumber = RequiresPartition(type) ? 1 : null,
         ExpectedDiskIdentity = Disk(2).Identity,
+        ExpectedPartitionIdentity = RequiresPartition(type) ? Partition().Identity : null,
         SizeBytes = type == StorageOperationType.ResizePartition ? 5_000_000_000 : null,
         DriveLetter = type == StorageOperationType.SetDriveLetter ? 'E' : null
     };
 
     private static bool RequiresPartition(StorageOperationType type) => type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
     private static DiskInfo Disk(int number) => new() { Number = number, UniqueId = $"disk-{number}", FriendlyName = "Test disk", Size = 100_000_000_000, PartitionStyle = "RAW" };
-    private static PartitionInfo Partition() => new() { DiskNumber = 2, PartitionNumber = 1, AccessPaths = "", DriveLetter = "D", Type = "Basic", Offset = 1_000_000, Size = 10_000_000_000, FileSystem = "NTFS" };
+    private static PartitionInfo Partition() => new() { DiskNumber = 2, PartitionNumber = 1, AccessPaths = "", DriveLetter = "D", Type = "Basic", PartitionGuid = "ecb7da44-3b19-4e0f-97a4-900000000001", Offset = 1_000_000, Size = 10_000_000_000, FileSystem = "NTFS" };
     private static StorageSnapshot Snapshot(params PartitionInfo[] partitions) => new([Disk(2)], partitions, DateTimeOffset.Now);
 }
