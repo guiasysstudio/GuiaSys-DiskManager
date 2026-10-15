@@ -20,7 +20,8 @@ public static class OperationPostconditionVerifier
         if (diskBefore is null || diskAfter is null ||
             !diskBefore.HasStrongIdentity || !diskAfter.HasStrongIdentity ||
             !string.Equals(diskBefore.Identity, operation.ExpectedDiskIdentity, StringComparison.Ordinal) ||
-            !string.Equals(diskAfter.Identity, diskBefore.Identity, StringComparison.Ordinal))
+            !string.Equals(diskAfter.Identity, diskBefore.Identity, StringComparison.Ordinal) ||
+            diskBefore.Size != diskAfter.Size)
             return PostconditionDecision.Uncertain("A identidade do disco mudou ou não pôde ser verificada.");
 
         // Only InitializeGpt/Mbr may change the disk partition style.
