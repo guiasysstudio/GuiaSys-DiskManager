@@ -23,7 +23,14 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
         $actualIdentity = "uid:$(([string]$disk.UniqueId).Trim())"
         if ($actualIdentity -cne [string]$request.ExpectedDiskIdentity) { throw 'DEVICE_IDENTITY_CHANGED' }
         $partition = $null
-        if ($null -ne $request.PartitionNumber) { $partition = Get-Partition -DiskNumber $disk.Number -PartitionNumber ([int]$request.PartitionNumber) -ErrorAction Stop }
+        if ($null -ne $request.PartitionNumber) {
+          $partition = Get-Partition -DiskNumber $disk.Number -PartitionNumber ([int]$request.PartitionNumber) -ErrorAction Stop
+          $partitionGuid = [guid]::Empty
+          if (-not [guid]::TryParse([string]$partition.Guid, [ref]$partitionGuid) -or $partitionGuid -eq [guid]::Empty) { throw 'PARTITION_IDENTITY_UNAVAILABLE' }
+          $partType = ([string]$partition.Type).Trim().ToUpperInvariant()
+          $partIdentity = "gpt:$($partitionGuid.ToString('D'))|disk:$([int]$disk.Number)|part:$([int]$partition.PartitionNumber)|offset:$([int64]$partition.Offset)|size:$([int64]$partition.Size)|type:$partType"
+          if ($partIdentity -cne [string]$request.ExpectedPartitionIdentity) { throw 'PARTITION_IDENTITY_CHANGED' }
+        }
         switch ([string]$request.Type) {
           'SetDiskOnline' { Set-Disk -Number $disk.Number -IsOffline $false -ErrorAction Stop }
           'SetDiskOffline' { Set-Disk -Number $disk.Number -IsOffline $true -ErrorAction Stop }
