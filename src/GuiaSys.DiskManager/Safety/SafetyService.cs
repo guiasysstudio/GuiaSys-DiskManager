@@ -63,8 +63,12 @@ public sealed class SafetyService : ISafetyService
 
         if (operation.Type == StorageOperationType.CreatePartition)
         {
-            if (disk.IsOffline || disk.IsReadOnly) return SafetyDecision.Deny("O disco precisa estar online e com gravação liberada para criar uma partição.");
-            if (string.Equals(disk.PartitionStyle, "RAW", StringComparison.OrdinalIgnoreCase)) return SafetyDecision.Deny("Inicialize o disco como GPT ou MBR antes de criar uma partição.");
+            if (disk.IsOffline || disk.IsReadOnly)
+                return SafetyDecision.Deny("O disco precisa estar online e gravável para criar uma partição.");
+            // The C04 postcondition verifier requires a strong GPT partition GUID.
+            // Until MBR creation has a separately audited identity/postcondition model, deny it.
+            if (!string.Equals(disk.PartitionStyle, "GPT", StringComparison.OrdinalIgnoreCase))
+                return SafetyDecision.Deny("Criação autorizável somente em disco GPT. MBR/RAW requer homologação específica.");
         }
 
         if (partition is not null && (disk.IsOffline || disk.IsReadOnly || partition.IsOffline || partition.IsReadOnly))
@@ -91,6 +95,34 @@ public sealed class SafetyService : ISafetyService
             return SafetyDecision.Deny("A partição não possui letra de unidade para remover.");
         if (operation.AllocationUnitSize is int allocation && (allocation < 512 || allocation > 2_097_152 || !IsPowerOfTwo(allocation)))
             return SafetyDecision.Deny("O tamanho da unidade de alocação deve ser uma potência de 2 entre 512 bytes e 2 MiB.");
+
+        // The executor calls this policy independently with a fresh inventory. Essential
+        // geometry checks must not depend solely on the UI's preview/planning stage.
+        if (operation.Type is StorageOperationType.CreatePartition or StorageOperationType.ResizePartition)
+        {
+            StorageLayout layout;
+            try { layout = StorageGeometry.Build(currentSnapshot); }
+            catch (InvalidDataException)
+            {
+                return SafetyDecision.Deny("Geometria inconsistente; nenhuma operação será preparada.");
+            }
+            var diskLayout = layout.FindDisk(disk.Number);
+            if (diskLayout is null) return SafetyDecision.Deny("Layout do disco não encontrado.");
+            if (operation.Type == StorageOperationType.CreatePartition)
+            {
+                if (diskLayout.LargestFreeExtentBytes <= 0 ||
+                    operation.SizeBytes is long newSize && newSize > diskLayout.LargestFreeExtentBytes)
+                    return SafetyDecision.Deny("Não existe uma faixa não alocada contígua suficiente.");
+            }
+            else if (partition is not null && operation.SizeBytes is long requested &&
+                requested > partition.Size)
+            {
+                var adjacent = diskLayout.Extents.FirstOrDefault(e =>
+                    e.IsUnallocated && e.Offset == partition.Offset + partition.Size);
+                if (adjacent is null || requested - partition.Size > adjacent.Length)
+                    return SafetyDecision.Deny("Expansão ultrapassa o espaço contíguo não alocado.");
+            }
+        }
 
         // Independently enforced schema: reject stale parameters, wrong targets and
         // noncanonical text rather than silently accepting hidden UI inputs.
