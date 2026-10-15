@@ -48,3 +48,7 @@ O núcleo de [Segurança GDM-C03](docs/GDM-C03.md) vincula a partição GPT a GU
 ### GDM-C04
 
 Journal de execução, reconciliação de operações e verificações independentes de pós-condição foram adicionados. **O gate de escrita permanece fechado**, inclusive para o runner VHDX. Consulte [GDM-C04](docs/GDM-C04.md).
+
+### GDM-C05 — Nova interface gráfica WPF
+
+Uma nova estrutura visual inclui sidebar de navegação funcional, painel de discos, mapa de partições proporcional, grade de volumes, painel de operações contextuais e fila inferior com altura ajustável. Ações bloqueadas exibem o motivo, entradas do formulário aparecem conforme a operação e o comando Aplicar permanece desabilitado enquanto o gate de escrita estiver fechado. Atalho **F5** atualiza o inventário em modo leitura. Nenhuma nova dependência visual externa foi adicionada. Consulte [GDM-C05](docs/GDM-C05.md) para ver os critérios de smoke visual ainda pendentes.
