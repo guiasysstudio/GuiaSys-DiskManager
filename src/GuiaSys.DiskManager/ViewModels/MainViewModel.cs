@@ -150,7 +150,8 @@ public sealed class MainViewModel : ObservableObject
         var operation = new StorageOperation
         {
             Type = SelectedOperationType, DiskNumber = SelectedDisk.Number, PartitionNumber = SelectedPartition?.PartitionNumber,
-            ExpectedDiskIdentity = SelectedDisk.Identity, SizeBytes = size, FileSystem = SelectedFileSystem, Label = LabelInput.Trim(), DriveLetter = letter, QuickFormat = QuickFormat, AllocationUnitSize = allocationUnit
+            ExpectedDiskIdentity = SelectedDisk.Identity,
+            ExpectedPartitionIdentity = SelectedPartition?.Identity, SizeBytes = size, FileSystem = SelectedFileSystem, Label = LabelInput.Trim(), DriveLetter = letter, QuickFormat = QuickFormat, AllocationUnitSize = allocationUnit
         };
         // The planner evaluates this operation against all prior queued effects, not stale inventory.
         try
@@ -194,11 +195,11 @@ public sealed class MainViewModel : ObservableObject
             Status = "A operação exige um novo inventário válido.";
             return;
         }
-        // C01: deny all writes until the known C02-C04 safety blockers are addressed.
+        // C03: no commit permission yet; the executor enforces its own independent gate.
         // A license is NEVER a substitute for safe disk identity and execution policy.
         if (!StorageWriteGate.ReleasedAfterSafetyAudit)
         {
-            Status = "Gravações bloqueadas nesta fase de desenvolvimento (C02-C04 pendentes).";
+            Status = "Gravações bloqueadas nesta fase (validação do executor e testes VHDX pendentes).";
             ShowError?.Invoke("Operações não liberadas", Status);
             return;
         }
@@ -211,7 +212,9 @@ public sealed class MainViewModel : ObservableObject
         }
         if (!IsAdministrator) { ShowError?.Invoke("Elevação necessária", "Reabra o aplicativo como administrador para aplicar operações. O inventário permanece disponível sem elevação."); return; }
         var reinforced = operations.Any(x => x.RequiresReinforcedConfirmation);
-        if (!confirmationAlreadyGranted && ConfirmOperationsAsync is not null && !await ConfirmOperationsAsync(operations, reinforced)) { Status = "Aplicação cancelada."; return; }
+        // The old 'confirmationAlreadyGranted' parameter is intentionally never a bypass.
+        if (ConfirmOperationsAsync is null || !await ConfirmOperationsAsync(operations, reinforced))
+        { Status = "Aplicação cancelada: confirmação explícita obrigatória."; return; }
 
         IsBusy = true;
         try
