@@ -209,7 +209,8 @@ public sealed class SafetyServiceTests
         DiskNumber = 2,
         PartitionNumber = RequiresPartition(type) ? 1 : null,
         ExpectedDiskIdentity = Disk(2).Identity,
-        SizeBytes = type == StorageOperationType.ResizePartition ? 5_000_000_000 : null
+        SizeBytes = type == StorageOperationType.ResizePartition ? 5_000_000_000 : null,
+        DriveLetter = type == StorageOperationType.SetDriveLetter ? 'E' : null
     };
 
     private static bool RequiresPartition(StorageOperationType type) => type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
