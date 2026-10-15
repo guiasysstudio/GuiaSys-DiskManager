@@ -38,8 +38,8 @@ public sealed class MainViewModelUiTests
         Assert.Single(vm.Disks);
         Assert.Single(vm.Partitions);
         Assert.NotNull(vm.SelectedDisk);
-        Assert.Equal("1 dispositivos", vm.DiskCountLabel);
-        Assert.Equal("1 partições", vm.PartitionCountLabel);
+        Assert.Equal("1 dispositivo", vm.DiskCountLabel);
+        Assert.Equal("1 partição", vm.PartitionCountLabel);
         Assert.Contains("Disco 3", vm.SelectedTargetTitle);
         Assert.NotEmpty(vm.PartitionSegments);
         Assert.Contains(vm.ContextOperations, choice => choice.Type == StorageOperationType.SetDiskOnline && choice.IsAvailable);
