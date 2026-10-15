@@ -71,8 +71,8 @@ public sealed class MainViewModel : ObservableObject
         ? "Execução sujeita a licença, confirmação e auditoria"
         : "MODO SEGURO · gravações desativadas";
     public bool CanApplyWrites => StorageWriteGate.ReleasedAfterSafetyAudit;
-    public string DiskCountLabel => $"{Disks.Count} dispositivos";
-    public string PartitionCountLabel => $"{_snapshot.Partitions.Count} partições";
+    public string DiskCountLabel => $"{Disks.Count} {(Disks.Count == 1 ? "dispositivo" : "dispositivos")}";
+    public string PartitionCountLabel => $"{_snapshot.Partitions.Count} {(_snapshot.Partitions.Count == 1 ? "partição" : "partições")}";
     public string SelectedTargetTitle => SelectedPartition is not null
         ? $"Disco {SelectedPartition.DiskNumber} / Partição {SelectedPartition.PartitionNumber}"
         : SelectedDisk is not null ? $"Disco {SelectedDisk.Number} / {SelectedDisk.FriendlyName}" : "Nenhum disco selecionado";
