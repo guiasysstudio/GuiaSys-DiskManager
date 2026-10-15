@@ -31,6 +31,7 @@ public sealed class MainViewModel : ObservableObject
     private string _selectedFileSystem = "NTFS";
     private bool _quickFormat = true;
     private bool _isBusy;
+    private bool _loadingSelection;
     private double _progress;
 
     public MainViewModel(IDiskInventoryService inventory, IStorageOperationExecutor executor, ISafetyService safety, IAppLogger logger, ILicenseEntitlements licensing)
@@ -39,18 +40,20 @@ public sealed class MainViewModel : ObservableObject
         _planner = new OperationPlanner(safety);
         PendingOperations = _queue.Pending;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsBusy);
-        QueueCommand = new RelayCommand(QueueSelectedOperation, () => SelectedDisk is not null && !IsBusy);
+        QueueCommand = new RelayCommand(QueueSelectedOperation, () => SelectedDisk is not null && !IsBusy && SelectedOperationAvailability?.IsAvailable == true);
         UndoCommand = new RelayCommand(() => { _queue.UndoLast(); UpdateCommands(); }, () => PendingOperations.Count > 0 && !IsBusy);
         ClearCommand = new RelayCommand(() => { _queue.Clear(); UpdateCommands(); Status = "Fila limpa."; }, () => PendingOperations.Count > 0 && !IsBusy);
-        ApplyCommand = new AsyncRelayCommand(() => ApplyAsync(false), () => PendingOperations.Count > 0 && !IsBusy);
+        ApplyCommand = new AsyncRelayCommand(() => ApplyAsync(false), () => PendingOperations.Count > 0 && !IsBusy && StorageWriteGate.ReleasedAfterSafetyAudit);
         OpenLogsCommand = new RelayCommand(OpenLogs);
         PendingOperations.CollectionChanged += (_, _) => { UpdatePreview(); UpdateCommands(); };
+        UpdateContextOperations();
     }
 
     public ObservableCollection<DiskInfo> Disks { get; } = [];
     public ObservableCollection<PartitionInfo> Partitions { get; } = [];
     public ObservableCollection<PartitionSegmentViewModel> PartitionSegments { get; } = [];
     public ObservableCollection<StorageOperation> PendingOperations { get; }
+    public ObservableCollection<ContextOperationChoice> ContextOperations { get; } = [];
     public IReadOnlyList<OperationChoice> OperationChoices { get; } =
     [
         new(StorageOperationType.SetDiskOnline, "Colocar disco online"), new(StorageOperationType.SetDiskOffline, "Colocar disco offline"),
@@ -64,6 +67,24 @@ public sealed class MainViewModel : ObservableObject
     public string[] FileSystems { get; } = ["NTFS", "FAT32", "exFAT"];
     public bool IsAdministrator { get; } = AdministratorService.IsAdministrator();
     public string PrivilegeLabel => IsAdministrator ? "Administrador" : "Somente leitura · sem elevação";
+    public string WriteModeLabel => StorageWriteGate.ReleasedAfterSafetyAudit
+        ? "Execução sujeita a licença, confirmação e auditoria"
+        : "MODO SEGURO · gravações desativadas";
+    public bool CanApplyWrites => StorageWriteGate.ReleasedAfterSafetyAudit;
+    public string DiskCountLabel => $"{Disks.Count} dispositivos";
+    public string PartitionCountLabel => $"{_snapshot.Partitions.Count} partições";
+    public string SelectedTargetTitle => SelectedPartition is not null
+        ? $"Disco {SelectedPartition.DiskNumber} / Partição {SelectedPartition.PartitionNumber}"
+        : SelectedDisk is not null ? $"Disco {SelectedDisk.Number} / {SelectedDisk.FriendlyName}" : "Nenhum disco selecionado";
+    public string SelectedTargetHint => SelectedPartition is not null
+        ? $"{SelectedPartition.Kind} · {SelectedPartition.SizeLabel} · {SelectedPartition.Identity ?? "identidade insuficiente"}"
+        : SelectedDisk is not null ? $"{SelectedDisk.SizeLabel} · {SelectedDisk.PartitionStyle} · {SelectedDisk.IdentityStrengthLabel}"
+            : "Selecione um dispositivo na coluna esquerda.";
+    public ContextOperationChoice? SelectedOperationAvailability => ContextOperations.FirstOrDefault(x => x.Type == SelectedOperationType);
+    public string SelectedActionReason => SelectedOperationAvailability?.Reason ?? "Selecione uma operação.";
+    public string SelectedActionStatus => SelectedOperationAvailability?.IsAvailable == true
+        ? "Pronta para adicionar à fila (simulação)"
+        : "Indisponível para o alvo selecionado";
     public string CapturedAtLabel => _snapshot.CapturedAt == DateTimeOffset.MinValue ? "" : $"Atualizado {_snapshot.CapturedAt:HH:mm:ss}";
     public string QueuePreviewSummary { get => _queuePreviewSummary; private set => SetProperty(ref _queuePreviewSummary, value); }
     public string SelectedLayoutSummary
@@ -84,10 +105,38 @@ public sealed class MainViewModel : ObservableObject
     public DiskInfo? SelectedDisk
     {
         get => _selectedDisk;
-        set { if (SetProperty(ref _selectedDisk, value)) { SelectedPartition = null; FilterPartitions(); BuildPartitionMap(); OnPropertyChanged(nameof(SelectedLayoutSummary)); UpdateCommands(); } }
+        set
+        {
+            if (!SetProperty(ref _selectedDisk, value)) return;
+            SelectedPartition = null;
+            FilterPartitions();
+            BuildPartitionMap();
+            OnPropertyChanged(nameof(SelectedLayoutSummary));
+            NotifyTargetChanged();
+        }
     }
-    public PartitionInfo? SelectedPartition { get => _selectedPartition; set { if (SetProperty(ref _selectedPartition, value)) UpdateCommands(); } }
-    public StorageOperationType SelectedOperationType { get => _selectedOperationType; set => SetProperty(ref _selectedOperationType, value); }
+    public PartitionInfo? SelectedPartition
+    {
+        get => _selectedPartition;
+        set
+        {
+            if (!SetProperty(ref _selectedPartition, value)) return;
+            BuildPartitionMap();
+            NotifyTargetChanged();
+        }
+    }
+    public StorageOperationType SelectedOperationType
+    {
+        get => _selectedOperationType;
+        set
+        {
+            if (!SetProperty(ref _selectedOperationType, value)) return;
+            OnPropertyChanged(nameof(SelectedOperationAvailability));
+            OnPropertyChanged(nameof(SelectedActionReason));
+            OnPropertyChanged(nameof(SelectedActionStatus));
+            UpdateCommands();
+        }
+    }
     public string LabelInput { get => _labelInput; set => SetProperty(ref _labelInput, value); }
     public string SizeInput { get => _sizeInput; set => SetProperty(ref _sizeInput, value); }
     public string DriveLetterInput { get => _driveLetterInput; set => SetProperty(ref _driveLetterInput, value); }
@@ -115,8 +164,20 @@ public sealed class MainViewModel : ObservableObject
             var snapshot = await _inventory.ReadAsync(CancellationToken.None);
             _snapshot = snapshot;
             var previousIdentity = SelectedDisk?.Identity;
-            Disks.Clear(); foreach (var disk in snapshot.Disks) Disks.Add(disk);
-            SelectedDisk = Disks.FirstOrDefault(d => d.Identity == previousIdentity) ?? Disks.FirstOrDefault();
+            var previousPartitionIdentity = SelectedPartition?.Identity;
+            _loadingSelection = true;
+            try
+            {
+                Disks.Clear(); foreach (var disk in snapshot.Disks) Disks.Add(disk);
+                SelectedDisk = Disks.FirstOrDefault(d => d.Identity == previousIdentity) ?? Disks.FirstOrDefault();
+                if (SelectedDisk is not null && previousPartitionIdentity is not null)
+                    SelectedPartition = Partitions.FirstOrDefault(p =>
+                        string.Equals(p.Identity, previousPartitionIdentity, StringComparison.Ordinal));
+            }
+            finally { _loadingSelection = false; }
+            NotifyTargetChanged();
+            OnPropertyChanged(nameof(DiskCountLabel));
+            OnPropertyChanged(nameof(PartitionCountLabel));
             OnPropertyChanged(nameof(CapturedAtLabel));
             OnPropertyChanged(nameof(SelectedLayoutSummary));
             UpdatePreview();
@@ -303,7 +364,39 @@ public sealed class MainViewModel : ObservableObject
         var width = Math.Max(54, Math.Min(760, size / (double)SelectedDisk.Size * 760));
         var title = partition?.DisplayName ?? "Não alocado";
         var subtitle = partition is null ? ByteSize.Format(size) : $"{partition.Kind} · {partition.SizeLabel}";
-        PartitionSegments.Add(new PartitionSegmentViewModel(partition, title, subtitle, partition?.Kind ?? "Unallocated", size, width));
+        PartitionSegments.Add(new PartitionSegmentViewModel(partition, title, subtitle,
+            partition?.Kind ?? "Unallocated", size, width,
+            partition is not null && SelectedPartition?.PartitionNumber == partition.PartitionNumber));
+    }
+
+    private void NotifyTargetChanged()
+    {
+        if (!_loadingSelection) UpdateContextOperations();
+        OnPropertyChanged(nameof(SelectedTargetTitle));
+        OnPropertyChanged(nameof(SelectedTargetHint));
+        OnPropertyChanged(nameof(SelectedActionReason));
+        OnPropertyChanged(nameof(SelectedActionStatus));
+        UpdateCommands();
+    }
+
+    private void UpdateContextOperations()
+    {
+        ContextOperations.Clear();
+        foreach (var choice in OperationChoices)
+            ContextOperations.Add(ContextOperationPolicy.Evaluate(choice.Type, choice.Display,
+                SelectedDisk, SelectedPartition, _snapshot, _safety));
+        var selected = ContextOperations.FirstOrDefault(c => c.Type == SelectedOperationType);
+        if (selected?.IsAvailable != true)
+        {
+            var preferred = ContextOperations.FirstOrDefault(c => c.IsAvailable &&
+                c.Type == StorageOperationType.SetVolumeLabel)
+                ?? ContextOperations.FirstOrDefault(c => c.IsAvailable);
+            if (preferred is not null) SelectedOperationType = preferred.Type;
+        }
+        OnPropertyChanged(nameof(SelectedOperationAvailability));
+        OnPropertyChanged(nameof(SelectedActionReason));
+        OnPropertyChanged(nameof(SelectedActionStatus));
+        UpdateCommands();
     }
 
     private void OpenLogs()
