@@ -43,6 +43,11 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
           $partType = ([string]$partition.Type).Trim().ToUpperInvariant()
           $partIdentity = "gpt:$($partitionGuid.ToString('D'))|disk:$([int]$disk.Number)|part:$([int]$partition.PartitionNumber)|offset:$([int64]$partition.Offset)|size:$([int64]$partition.Size)|type:$partType"
           if ($partIdentity -cne [string]$request.ExpectedPartitionIdentity) { throw 'PARTITION_IDENTITY_CHANGED' }
+          if ($partition.IsBoot -or $partition.IsSystem -or $partition.IsHidden -or
+              [string]$partition.DriveLetter -eq 'C' -or $partType.Contains('EFI') -or
+              $partType.Contains('SYSTEM') -or $partType.Contains('RESERVED') -or
+              $partType.Contains('RECOVERY')) { throw 'PROTECTED_PARTITION' }
+          if ($disk.IsOffline -or $disk.IsReadOnly -or $partition.IsOffline -or $partition.IsReadOnly) { throw 'TARGET_NOT_WRITABLE' }
         }
         switch ([string]$request.Type) {
           'SetDiskOnline' { Set-Disk -Number $disk.Number -IsOffline $false -ErrorAction Stop }
@@ -114,6 +119,8 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
 
     private static string FriendlyError(string error)
     {
+        if (error.Contains("PARTITION_IDENTITY_CHANGED", StringComparison.Ordinal)) return "A identidade da partição mudou antes da execução.";
+        if (error.Contains("PROTECTED_", StringComparison.Ordinal) || error.Contains("PARTITION_IDENTITY_UNAVAILABLE", StringComparison.Ordinal)) return "Alvo protegido ou sem identidade forte; operação recusada.";
         if (error.Contains("DEVICE_IDENTITY_CHANGED", StringComparison.Ordinal)) return "A identidade do disco mudou. A operação foi cancelada.";
         if (error.Contains("Access is denied", StringComparison.OrdinalIgnoreCase) || error.Contains("Acesso negado", StringComparison.OrdinalIgnoreCase)) return "Acesso negado. Execute o aplicativo como administrador.";
         if (error.Contains("access path is already in use", StringComparison.OrdinalIgnoreCase) || error.Contains("caminho de acesso solicitado já está em uso", StringComparison.OrdinalIgnoreCase))
