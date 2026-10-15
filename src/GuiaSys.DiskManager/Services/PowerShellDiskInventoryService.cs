@@ -13,7 +13,16 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         $physicalDisks = @(Get-PhysicalDisk -ErrorAction SilentlyContinue)
         $disks = @(Get-Disk | ForEach-Object {
           $disk = $_
-          $physical = $physicalDisks | Where-Object { ([string]$_.DeviceId -eq [string]$disk.Number) -or ($disk.SerialNumber -and ([string]$_.SerialNumber).Trim() -eq ([string]$disk.SerialNumber).Trim()) } | Select-Object -First 1
+          # Get-PhysicalDisk.DeviceId is a subsystem identifier; it is not necessarily
+          # Get-Disk.Number. Never infer a hardware match from the numeric IDs alone.
+          $physical = $null
+          if (-not [string]::IsNullOrWhiteSpace([string]$disk.SerialNumber)) {
+            $matches = @($physicalDisks | Where-Object {
+              -not [string]::IsNullOrWhiteSpace([string]$_.SerialNumber) -and
+              ([string]$_.SerialNumber).Trim() -ceq ([string]$disk.SerialNumber).Trim()
+            })
+            if ($matches.Count -eq 1) { $physical = $matches[0] }
+          }
           $temperature = $null
           if ($physical) { try { $temperature = ($physical | Get-StorageReliabilityCounter -ErrorAction Stop).Temperature } catch { } }
           [pscustomobject]@{
@@ -21,6 +30,8 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
             Manufacturer=[string]$disk.Manufacturer; SerialNumber=[string]$disk.SerialNumber
             PartitionStyle=[string]$disk.PartitionStyle; BusType=[string]$disk.BusType; MediaType=if ($physical) {[string]$physical.MediaType} else {'Unspecified'}
             HealthStatus=[string]$disk.HealthStatus; OperationalStatus=[string]($disk.OperationalStatus -join ', '); TemperatureC=$temperature
+            LogicalSectorSize=if ($disk.LogicalSectorSize -gt 0) {[int]$disk.LogicalSectorSize} else {$null}
+            PhysicalSectorSize=if ($disk.PhysicalSectorSize -gt 0) {[int]$disk.PhysicalSectorSize} else {$null}
             Size=[int64]$disk.Size; IsBoot=[bool]$disk.IsBoot; IsSystem=[bool]$disk.IsSystem
             IsOffline=[bool]$disk.IsOffline; IsReadOnly=[bool]$disk.IsReadOnly
           }
@@ -40,6 +51,8 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
             FileSystem=if ($volume) {[string]$volume.FileSystem} else {''}
             Label=if ($volume) {[string]$volume.FileSystemLabel} else {''}
             VolumeSizeRemaining=if ($volume) {[int64]$volume.SizeRemaining} else {[int64]0}
+            VolumeCapacityBytes=if ($volume -and $volume.Size -gt 0 -and $volume.SizeRemaining -ge 0 -and $volume.SizeRemaining -le $volume.Size) {[int64]$volume.Size} else {$null}
+            VolumeAvailableBytes=if ($volume -and $volume.Size -gt 0 -and $volume.SizeRemaining -ge 0 -and $volume.SizeRemaining -le $volume.Size) {[int64]$volume.SizeRemaining} else {$null}
             HealthStatus=if ($volume) {[string]$volume.HealthStatus} else {'Unknown'}
           }
         })
@@ -69,7 +82,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     {
         Number = ReadRequiredInt(item, "Number"), UniqueId = ReadString(item, "UniqueId"), FriendlyName = ReadString(item, "FriendlyName", "Dispositivo sem nome"),
         Manufacturer = ReadString(item, "Manufacturer"), SerialNumber = ReadString(item, "SerialNumber"), PartitionStyle = ReadRequiredString(item, "PartitionStyle"),
-        BusType = ReadString(item, "BusType", "Unknown"), MediaType = ReadString(item, "MediaType", "Unspecified"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"), TemperatureC = ReadNullableInt(item, "TemperatureC"),
+        BusType = ReadString(item, "BusType", "Unknown"), MediaType = ReadString(item, "MediaType", "Unspecified"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"), TemperatureC = ReadNullableInt(item, "TemperatureC"), LogicalSectorSize = ReadNullableInt(item, "LogicalSectorSize"), PhysicalSectorSize = ReadNullableInt(item, "PhysicalSectorSize"),
         Size = ReadRequiredLong(item, "Size"), IsBoot = ReadRequiredBool(item, "IsBoot"), IsSystem = ReadRequiredBool(item, "IsSystem"), IsOffline = ReadRequiredBool(item, "IsOffline"), IsReadOnly = ReadRequiredBool(item, "IsReadOnly")
     };
 
@@ -78,7 +91,8 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         DiskNumber = ReadRequiredInt(item, "DiskNumber"), PartitionNumber = ReadRequiredInt(item, "PartitionNumber"), PartitionGuid = ReadString(item, "PartitionGuid"), GptType = ReadString(item, "GptType"), AccessPaths = ReadString(item, "AccessPaths"), DriveLetter = ReadString(item, "DriveLetter"),
         Type = ReadRequiredString(item, "Type"), Offset = ReadRequiredLong(item, "Offset"), Size = ReadRequiredLong(item, "Size"), IsBoot = ReadRequiredBool(item, "IsBoot"), IsSystem = ReadRequiredBool(item, "IsSystem"),
         IsHidden = ReadRequiredBool(item, "IsHidden"), IsReadOnly = ReadRequiredBool(item, "IsReadOnly"), IsOffline = ReadRequiredBool(item, "IsOffline"), FileSystem = ReadString(item, "FileSystem"),
-        Label = ReadString(item, "Label"), VolumeSizeRemaining = ReadLongOrDefault(item, "VolumeSizeRemaining"), HealthStatus = ReadString(item, "HealthStatus", "Unknown")
+        Label = ReadString(item, "Label"), VolumeSizeRemaining = ReadLongOrDefault(item, "VolumeSizeRemaining"),
+        VolumeCapacityBytes = ReadNullableLong(item, "VolumeCapacityBytes"), VolumeAvailableBytes = ReadNullableLong(item, "VolumeAvailableBytes"), HealthStatus = ReadString(item, "HealthStatus", "Unknown")
     };
 
     internal static IEnumerable<JsonElement> Elements(JsonElement element) => element.ValueKind switch { JsonValueKind.Array => element.EnumerateArray(), JsonValueKind.Object => [element], _ => [] };
@@ -111,6 +125,13 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         if (!item.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var result))
             throw InvalidField(key, "inteiro de 64 bits");
         return result;
+    }
+
+    internal static long? ReadNullableLong(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null) return null;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var result)) return result;
+        throw InvalidField(key, "inteiro de 64 bits ou null");
     }
 
     private static long ReadLongOrDefault(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var result) ? result : 0;
