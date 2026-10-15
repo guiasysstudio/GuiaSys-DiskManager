@@ -122,6 +122,80 @@ public sealed class MainViewModelUiTests
         Assert.False(vm.QueueCommand.CanExecute(null));
     }
 
+    [Fact]
+    public async Task Unrelated_hidden_inputs_are_not_attached_to_whole_disk_operation()
+    {
+        var disk = Disk();
+        var vm = Build(new StaticInventory(new StorageSnapshot([disk], [], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        vm.SelectedOperationType = StorageOperationType.SetDiskOnline;
+        vm.SizeInput = "invalid stale size";
+        vm.DriveLetterInput = "ABC";
+        vm.LabelInput = "old label from another operation";
+        vm.AllocationUnitInput = "invalid stale cluster";
+        vm.SelectedFileSystem = "exFAT";
+        vm.QuickFormat = false;
+        Assert.True(vm.QueueCommand.CanExecute(null));
+        vm.QueueCommand.Execute(null);
+        var queued = Assert.Single(vm.PendingOperations);
+        Assert.Null(queued.SizeBytes);
+        Assert.Null(queued.DriveLetter);
+        Assert.Null(queued.AllocationUnitSize);
+        Assert.Equal("", queued.Label);
+        Assert.Equal("NTFS", queued.FileSystem);
+        Assert.True(queued.QuickFormat);
+        Assert.Null(queued.PartitionNumber);
+    }
+
+    [Theory]
+    [InlineData("AB")]
+    [InlineData("C")]
+    [InlineData("1")]
+    public async Task Drive_letter_form_refuses_invalid_exact_inputs(string rawInput)
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.SetDriveLetter;
+        vm.DriveLetterInput = rawInput;
+        Assert.True(vm.QueueCommand.CanExecute(null));
+        vm.QueueCommand.Execute(null);
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Formatting_does_not_inherit_stale_resize_size_or_letter()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.FormatPartition;
+        vm.SizeInput = "not a number";
+        vm.DriveLetterInput = "AB";
+        vm.AllocationUnitInput = "4096";
+        vm.LabelInput = "Novo";
+        Assert.True(vm.QueueCommand.CanExecute(null));
+        vm.QueueCommand.Execute(null);
+        var queued = Assert.Single(vm.PendingOperations);
+        Assert.Null(queued.SizeBytes);
+        Assert.Null(queued.DriveLetter);
+        Assert.Equal(4096, queued.AllocationUnitSize);
+        Assert.Equal("Novo", queued.Label);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Format_preview_rejects_invalid_cluster_size_before_adding_to_queue()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.FormatPartition;
+        vm.AllocationUnitInput = "750";
+        vm.QueueCommand.Execute(null);
+        Assert.Empty(vm.PendingOperations);
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);
