@@ -10,7 +10,7 @@ namespace GuiaSys.DiskManager.Operations;
 /// <summary>Executes only allow-listed operations through a constant script and strongly validated JSON input.</summary>
 public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
     IDiskInventoryService? inventory = null, ISafetyService? safety = null,
-    ILicenseEntitlements? licensing = null) : IStorageOperationExecutor
+    ILicenseEntitlements? licensing = null, IOperationJournal? journal = null) : IStorageOperationExecutor
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { Converters = { new JsonStringEnumConverter() } };
     private const string Script = """
@@ -91,41 +91,13 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
         [pscustomobject]@{ Success=$true } | ConvertTo-Json -Compress
         """;
 
-    public async Task<OperationResult> ExecuteAsync(StorageOperation operation, CancellationToken cancellationToken)
+    public Task<OperationResult> ExecuteAsync(StorageOperation operation, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(operation);
-        var timer = Stopwatch.StartNew();
-        logger.Information("storage.operation.started", new { operation.Id, operation.Type, operation.DiskNumber, operation.PartitionNumber });
-        try
-        {
-            // Authorization must be enforced at the executor boundary as well as in the UI.
-            if (!StorageWriteGate.ReleasedAfterSafetyAudit)
-                throw new InvalidOperationException("Executor bloqueado até a liberação formal de gravações.");
-            if (inventory is null || safety is null || licensing is null)
-                throw new InvalidOperationException("Executor sem dependências de segurança obrigatórias.");
-            if (!AdministratorService.IsAdministrator())
-                throw new InvalidOperationException("É necessário executar como administrador.");
-            var license = await licensing.CheckAsync(cancellationToken);
-            if (!StorageWriteGate.Allows(license))
-                throw new InvalidOperationException("Licenciamento não autoriza a gravação.");
-            var snapshot = await inventory.ReadAsync(cancellationToken);
-            _ = StorageGeometry.Build(snapshot);
-            var decision = safety.Evaluate(operation, snapshot);
-            if (!decision.Allowed)
-                throw new InvalidOperationException("Operação recusada pela política do executor: " + decision.Reason);
-            var json = JsonSerializer.Serialize(operation, JsonOptions);
-            var output = await PowerShellProcessRunner.RunEncodedAsync(Script, json, TimeSpan.FromMinutes(30), cancellationToken);
-            timer.Stop();
-            if (output.ExitCode != 0) throw new InvalidOperationException(FriendlyError(output.StandardError), new InvalidOperationException(TrimTechnicalError(output.StandardError)));
-            logger.Information("storage.operation.completed", new { operation.Id, durationMs = timer.Elapsed.TotalMilliseconds });
-            return new OperationResult(operation.Id, true, "Operação concluída.", timer.Elapsed);
-        }
-        catch (Exception exception)
-        {
-            timer.Stop();
-            logger.Error("storage.operation.failed", exception, new { operation.Id, operation.Type, operation.DiskNumber, durationMs = timer.Elapsed.TotalMilliseconds });
-            return new OperationResult(operation.Id, false, exception.Message, timer.Elapsed);
-        }
+        var coordinator = new SafeExecutionCoordinator(logger, inventory, safety, licensing,
+            journal ?? new OperationJournal(),
+            (target, token) => PowerShellProcessRunner.RunEncodedAsync(Script,
+                JsonSerializer.Serialize(target, JsonOptions), TimeSpan.FromMinutes(30), token));
+        return coordinator.ExecuteAsync(operation, cancellationToken);
     }
 
     private static string FriendlyError(string error)
