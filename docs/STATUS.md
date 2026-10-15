@@ -1,5 +1,7 @@
 # Status verificável — 0.1.0-dev
 
+> **Reconstrução GDM-C00 (14/10/2026):** os gates abaixo referem-se à **base 0.1.0-dev testada em 08/10/2026**, não significam aprovação da integração comercial nem dos riscos P0. O baseline `fac02647` falhou no CI por `CS0246`; o C00 corrigiu o import e registrou sua própria validação em [GDM-C00](GDM-C00.md). Operações de escrita em hardware físico **não estão liberadas para teste nesta reconstrução**. A situação de cada HEAD deve ser verificada nos Actions, sem presumir o resultado histórico.
+
 ## IMPLEMENTADO
 
 - inventário, seleção sincronizada, detalhes e mapa proporcional;

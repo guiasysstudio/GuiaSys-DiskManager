@@ -36,3 +36,7 @@ Documentação: [arquitetura](docs/ARCHITECTURE.md), [segurança](docs/SECURITY.
 ## Segurança
 
 Os testes automatizados não escrevem em hardware. O gate de integração administrativa está concluído e aceita somente VHDX temporários criados pelo próprio runner, valida o alvo em várias camadas e sempre os desmonta e exclui no bloco `finally`. Não execute operações de armazenamento sem backup verificado.
+
+## Reconstrução modular GDM-C00 → GDM-C18
+
+A evolução para produto comercial está em etapas. A preparação C00 corrige um bloqueio de compilação, define a [arquitetura de destino](docs/ARCHITECTURE.md), documenta o [plano de licenciamento GSL-v1](docs/LICENSING-PLAN.md) e os [riscos/gates C00](docs/GDM-C00.md). **Os resultados de 45 testes e 32 etapas VHDX citados acima pertencem ao HEAD funcional de 08/10/2026** e não substituem CI do novo HEAD. A integração com GuiaSys Licensing e o endurecimento necessário para discos físicos ainda não foram implementados/aprovados.
