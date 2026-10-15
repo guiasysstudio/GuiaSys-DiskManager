@@ -34,6 +34,11 @@ public partial class LicenseWindow : Window
             var result = await action(CancellationToken.None);
             StatusText.Text = result.Message;
             DetailsText.Text = $"Estado: {result.Status}\n" +
+                (result.CustomerName is { Length: > 0 } ? $"Cliente: {result.CustomerName}\n" : "") +
+                (result.CustomerEmail is { Length: > 0 } ? $"E-mail: {result.CustomerEmail}\n" : "") +
+                (result.StartedAt is null ? "" : $"Início da avaliação: {result.StartedAt.Value.LocalDateTime:dd/MM/yyyy HH:mm}\n") +
+                (result.ActivatedAt is null ? "" : $"Ativação: {result.ActivatedAt.Value.LocalDateTime:dd/MM/yyyy HH:mm}\n") +
+                (result.MaxDevices is null ? "" : $"Máximo de dispositivos: {result.MaxDevices}\n" : "") +
                 (result.PlanName is { Length: > 0 } ? $"Plano: {result.PlanName}\n" : "") +
                 (result.ExpiresAt is null ? (result.Allowed ? "Validade: vitalícia\n" : "") :
                     $"Validade: {result.ExpiresAt.Value.LocalDateTime:dd/MM/yyyy HH:mm}\n") +

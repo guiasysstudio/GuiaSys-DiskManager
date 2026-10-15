@@ -224,7 +224,7 @@ public sealed class GslV1LicensingTests
     public async Task Active_signed_cache_is_usable_but_clock_rollback_invalidates_it()
     {
         using var f = new Fixture();
-        var store = new Store { State = new GslV1SavedState(LicenseKey, f.Signed(), "license") };
+        var store = new Store { State = new GslV1SavedState(LicenseKey, f.Signed(), "license", LastOnlineUtc: Now) };
         var service = new GslV1LicensingService(Client(_ => throw new Exception("No network expected")),
             store, f.Trust, new Clock());
         Assert.True((await service.CheckAsync(CancellationToken.None)).Allowed);

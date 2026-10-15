@@ -17,8 +17,8 @@ Base HTTPS: `https://licencas.guiasys.online`. Protocolo: `GSL-v1`. Identificado
 - Tokens GSL-ENT compactos ES256 são verificados com ECDsa P-256/SHA-256/P1363, assinatura exata dos dois primeiros segmentos, base64url canônico e campos vinculados a projeto, dispositivo, tipo, estado e prazo. Rejeitar `crit`/`b64` não suportados, expiração, janela offline vencida e retrocesso de relógio.
 - Device ID de instalação persistente em HKCU; não derivar dos seriais de discos gerenciados. License Key e autorização cacheada cifradas via DPAPI `CurrentUser` em `%LOCALAPPDATA%\GuiaSys\DiskManager\license-state.dpapi`; sem tokens nos logs.
 - A licença só é aceita após retorno positivo assinado. Offline apenas com token já válido, mesma identidade e prazo; falhas de revogação/expiração/negação online limpam a autorização antiga.
-- Requests por operação usam `requestId` exclusivo; não há retry silencioso com novo ID após timeout de ativação. Reexecução idempotente com o *mesmo* ID deve ser implementada em etapa futura se necessário para falhas de rede após mutação.
-- Interface inclui a janela **Licença**, com ativação, avaliação, validação e desativação.
+- Requests mutativos persistem o `requestId` no cache protegido antes do envio e o reutilizam ao tentar de novo a mesma operação após falha de rede. Uma nova operação lógica recebe novo ID. O servidor mantém janela de deduplicação limitada; a implementação não assume idempotência eterna.
+- Interface inclui a janela **Licença**, com ativação, avaliação, validação, informações do plano/cliente e desativação. `CheckAsync` agenda revalidação online quando alcançado `validationHours` do último retorno confiável, mantendo fallback apenas se o JWS offline ainda estiver válido.
 - Gate de escrita física **travado** (`StorageWriteGate.ReleasedAfterSafetyAudit=false`) até os riscos P0/P1 de C02–C04 serem resolvidos. Uma licença válida não concede permissão para alterar discos nesta reconstrução.
 
 ### Evidências e gates
