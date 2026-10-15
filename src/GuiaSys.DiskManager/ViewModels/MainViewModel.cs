@@ -152,8 +152,7 @@ public sealed class MainViewModel : ObservableObject
             Type = SelectedOperationType, DiskNumber = SelectedDisk.Number, PartitionNumber = SelectedPartition?.PartitionNumber,
             ExpectedDiskIdentity = SelectedDisk.Identity, SizeBytes = size, FileSystem = SelectedFileSystem, Label = LabelInput.Trim(), DriveLetter = letter, QuickFormat = QuickFormat, AllocationUnitSize = allocationUnit
         };
-        var decision = _safety.Evaluate(operation, _snapshot);
-        if (!decision.Allowed) { ShowError?.Invoke("Operação bloqueada", decision.Reason); Status = decision.Reason; return; }
+        // The planner evaluates this operation against all prior queued effects, not stale inventory.
         try
         {
             var preview = _planner.Plan(_snapshot, _queue.Snapshot().Append(operation).ToArray());
@@ -268,14 +267,16 @@ public sealed class MainViewModel : ObservableObject
     {
         PartitionSegments.Clear();
         if (SelectedDisk is null || SelectedDisk.Size <= 0) return;
-        long cursor = 0;
-        foreach (var partition in Partitions.OrderBy(p => p.Offset))
+
+        // Same checked, half-open extents used by C02's planning engine and inventory validator.
+        var layout = StorageGeometry.Build(_snapshot).FindDisk(SelectedDisk.Number);
+        if (layout is null) return;
+        foreach (var extent in layout.Extents)
         {
-            if (partition.Offset > cursor) AddSegment(null, cursor, partition.Offset - cursor);
-            AddSegment(partition, partition.Offset, partition.Size);
-            cursor = Math.Max(cursor, partition.Offset + partition.Size);
+            var partition = extent.PartitionNumber is int number
+                ? _snapshot.FindPartition(SelectedDisk.Number, number) : null;
+            AddSegment(partition, extent.Offset, extent.Length);
         }
-        if (cursor < SelectedDisk.Size) AddSegment(null, cursor, SelectedDisk.Size - cursor);
     }
 
     private void AddSegment(PartitionInfo? partition, long offset, long size)
