@@ -91,8 +91,15 @@ public sealed class SafetyService : ISafetyService
     public static bool IsProtected(PartitionInfo partition)
     {
         var type = partition.Type.ToUpperInvariant();
-        return partition.IsBoot || partition.IsSystem || partition.IsHidden || string.Equals(partition.DriveLetter, "C", StringComparison.OrdinalIgnoreCase)
-            || type.Contains("SYSTEM") || type.Contains("EFI") || type.Contains("RESERVED") || type.Contains("RECOVERY");
+        var gptType = partition.GptType.Trim().Trim('{', '}');
+        var nonBasicGptType = gptType.Length > 0 &&
+            !string.Equals(gptType, "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7", StringComparison.OrdinalIgnoreCase);
+        var systemMount = partition.AccessPaths.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(path => path.StartsWith("C:\\", StringComparison.OrdinalIgnoreCase));
+        return partition.IsBoot || partition.IsSystem || partition.IsHidden || systemMount ||
+            nonBasicGptType || string.Equals(partition.DriveLetter, "C", StringComparison.OrdinalIgnoreCase)
+            || type.Contains("SYSTEM") || type.Contains("EFI") || type.Contains("RESERVED") ||
+            type.Contains("RECOVERY") || type == "MSR";
     }
 
     private static bool AffectsWholeDisk(StorageOperation operation) => operation.Risk.HasFlag(StorageOperationRisk.WholeDiskStateChange);
