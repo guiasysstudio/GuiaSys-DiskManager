@@ -1,5 +1,6 @@
 using GuiaSys.DiskManager.Models;
 using GuiaSys.DiskManager.Services;
+using GuiaSys.DiskManager.Operations;
 using System.IO;
 
 namespace GuiaSys.DiskManager.Safety;
@@ -85,9 +86,16 @@ public sealed class SafetyService : ISafetyService
             return SafetyDecision.Deny("Informe um tamanho positivo para redimensionar.");
         if (operation.Type == StorageOperationType.CreatePartition && operation.SizeBytes is <= 0)
             return SafetyDecision.Deny("O tamanho da nova partição deve ser positivo ou deixado em branco para usar o máximo.");
+        if (operation.Type == StorageOperationType.RemoveDriveLetter &&
+            string.IsNullOrWhiteSpace(partition?.DriveLetter))
+            return SafetyDecision.Deny("A partição não possui letra de unidade para remover.");
         if (operation.AllocationUnitSize is int allocation && (allocation < 512 || allocation > 2_097_152 || !IsPowerOfTwo(allocation)))
             return SafetyDecision.Deny("O tamanho da unidade de alocação deve ser uma potência de 2 entre 512 bytes e 2 MiB.");
 
+        // Independently enforced schema: reject stale parameters, wrong targets and
+        // noncanonical text rather than silently accepting hidden UI inputs.
+        var shape = EssentialOperationValidator.Validate(operation);
+        if (!shape.Allowed) return shape;
         return SafetyDecision.Permit(operation.RequiresReinforcedConfirmation);
     }
 
