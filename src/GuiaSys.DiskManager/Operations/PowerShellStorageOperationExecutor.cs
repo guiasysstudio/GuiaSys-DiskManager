@@ -53,6 +53,13 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
               $partType.Contains('RECOVERY')) { throw 'PROTECTED_PARTITION' }
           if ($disk.IsOffline -or $disk.IsReadOnly -or $partition.IsOffline -or $partition.IsReadOnly) { throw 'TARGET_NOT_WRITABLE' }
         }
+        if ([string]$request.Type -in @('InitializeGpt','InitializeMbr')) {
+          if ([string]$disk.PartitionStyle -ine 'RAW' -or @($otherParts).Count -ne 0 -or
+              $disk.IsOffline -or $disk.IsReadOnly) { throw 'DISK_NOT_EMPTY_RAW' }
+        }
+        if ([string]$request.Type -eq 'CreatePartition') {
+          if ([string]$disk.PartitionStyle -ieq 'RAW' -or $disk.IsOffline -or $disk.IsReadOnly) { throw 'DISK_NOT_READY' }
+        }
         switch ([string]$request.Type) {
           'SetDiskOnline' { Set-Disk -Number $disk.Number -IsOffline $false -ErrorAction Stop }
           'SetDiskOffline' { Set-Disk -Number $disk.Number -IsOffline $true -ErrorAction Stop }
