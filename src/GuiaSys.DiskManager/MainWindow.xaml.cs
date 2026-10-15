@@ -1,4 +1,3 @@
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -30,11 +29,49 @@ public partial class MainWindow : Window
         var dialog = new ReinforcedConfirmationWindow(challenge.Summary, challenge.ExpectedResponse) { Owner = this };
         return Task.FromResult(dialog.ShowDialog() == true);
     }
-    private void QueuePreset_Click(object sender, RoutedEventArgs e)
+    private void ContextAction_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem { Tag: string tag } && Enum.TryParse<StorageOperationType>(tag, out var type)) { _viewModel.SelectedOperationType = type; if (_viewModel.QueueCommand.CanExecute(null)) _viewModel.QueueCommand.Execute(null); }
+        if (sender is not Button { Tag: StorageOperationType type }) return;
+        _viewModel.SelectedOperationType = type;
+        OperationEditor.BringIntoView();
+        OperationTypeSelector.Focus();
     }
-    private void PartitionSegment_Click(object sender, MouseButtonEventArgs e) { if ((sender as FrameworkElement)?.DataContext is PartitionSegmentViewModel { Partition: not null } segment) _viewModel.SelectedPartition = segment.Partition; }
+
+    private void ClearPartition_Click(object sender, RoutedEventArgs e) =>
+        _viewModel.SelectedPartition = null;
+
+    private void Navigation_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string target }) return;
+        switch (target)
+        {
+            case "Overview":
+                WorkAreaScroll.ScrollToTop();
+                break;
+            case "DiskMap":
+                DiskMapSection.BringIntoView();
+                break;
+            case "Partitions":
+                PartitionsSection.BringIntoView();
+                break;
+            case "Operations":
+                OperationEditor.BringIntoView();
+                OperationTypeSelector.Focus();
+                break;
+            case "Queue":
+                QueueSection.BringIntoView();
+                break;
+        }
+    }
+
+    private void PartitionSegment_Click(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not PartitionSegmentViewModel segment) return;
+        // Selecting unallocated space selects the whole disk, never an invented partition.
+        _viewModel.SelectedPartition = segment.Partition;
+        e.Handled = true;
+    }
+
     private void License_Click(object sender, RoutedEventArgs e) => new LicenseWindow(_licensing) { Owner = this }.ShowDialog();
     private void About_Click(object sender, RoutedEventArgs e) => new AboutWindow { Owner = this }.ShowDialog();
 }
