@@ -22,6 +22,19 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
         if ([string]::IsNullOrWhiteSpace([string]$disk.UniqueId)) { throw 'DEVICE_STRONG_IDENTITY_UNAVAILABLE' }
         $actualIdentity = "uid:$(([string]$disk.UniqueId).Trim())"
         if ($actualIdentity -cne [string]$request.ExpectedDiskIdentity) { throw 'DEVICE_IDENTITY_CHANGED' }
+        if ($disk.Number -eq 0 -or $disk.IsBoot -or $disk.IsSystem) { throw 'PROTECTED_DISK' }
+        $layoutMutations = @('SetDiskOnline','SetDiskOffline','SetDiskReadOnly','ClearDiskReadOnly',
+          'InitializeGpt','InitializeMbr','CreatePartition','DeletePartition','ResizePartition')
+        if ($layoutMutations -contains [string]$request.Type) {
+          $otherParts = @(Get-Partition -DiskNumber $disk.Number -ErrorAction SilentlyContinue)
+          foreach ($other in $otherParts) {
+            $otherType = ([string]$other.Type).ToUpperInvariant()
+            if ($other.IsBoot -or $other.IsSystem -or $other.IsHidden -or
+                [string]$other.DriveLetter -eq 'C' -or $otherType.Contains('EFI') -or
+                $otherType.Contains('SYSTEM') -or $otherType.Contains('RESERVED') -or
+                $otherType.Contains('RECOVERY')) { throw 'PROTECTED_LAYOUT' }
+          }
+        }
         $partition = $null
         if ($null -ne $request.PartitionNumber) {
           $partition = Get-Partition -DiskNumber $disk.Number -PartitionNumber ([int]$request.PartitionNumber) -ErrorAction Stop
