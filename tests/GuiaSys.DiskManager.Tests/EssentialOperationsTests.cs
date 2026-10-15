@@ -244,6 +244,18 @@ public sealed class EssentialOperationsTests
         Assert.False(Safety.Evaluate(Op(StorageOperationType.CreatePartition), State("GPT", partition)).Allowed);
     }
 
+    [Theory]
+    [InlineData(StorageOperationType.SetDiskOnline)]
+    [InlineData(StorageOperationType.SetDiskOffline)]
+    [InlineData(StorageOperationType.SetDiskReadOnly)]
+    [InlineData(StorageOperationType.ClearDiskReadOnly)]
+    public void Unverifiable_existing_gpt_partition_blocks_whole_disk_state_changes(StorageOperationType type)
+    {
+        var partition = Part() with { GptType = "" };
+        var decision = Safety.Evaluate(Op(type), State("GPT", partition));
+        Assert.False(decision.Allowed);
+    }
+
     [Fact]
     public void Null_label_from_external_caller_is_denied_not_crashed()
     {
