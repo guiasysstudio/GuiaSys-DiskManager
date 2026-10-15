@@ -83,7 +83,7 @@ public sealed class MainViewModel : ObservableObject
     public ContextOperationChoice? SelectedOperationAvailability => ContextOperations.FirstOrDefault(x => x.Type == SelectedOperationType);
     public string SelectedActionReason => SelectedOperationAvailability?.Reason ?? "Selecione uma operação.";
     public string SelectedActionStatus => SelectedOperationAvailability?.IsAvailable == true
-        ? "Pronta para adicionar à fila (simulação)"
+        ? "Alvo compatível · valide os parâmetros para planejar"
         : "Indisponível para o alvo selecionado";
     public string CapturedAtLabel => _snapshot.CapturedAt == DateTimeOffset.MinValue ? "" : $"Atualizado {_snapshot.CapturedAt:HH:mm:ss}";
     public string QueuePreviewSummary { get => _queuePreviewSummary; private set => SetProperty(ref _queuePreviewSummary, value); }
