@@ -252,6 +252,18 @@ public sealed class StorageExecutionTests
         finally { File.Delete(path); }
     }
 
+    [Fact]
+    public void Snapshot_digests_are_redacted_and_sensitive_to_change()
+    {
+        var a = OperationSnapshotDigest.Compute(State(null, Part(label: "PRIVATE")), 3);
+        var b = OperationSnapshotDigest.Compute(State(null, Part(label: "PUBLIC")), 3);
+        Assert.Equal(64, a.Length);
+        Assert.NotEqual(a, b);
+        var entry = OperationJournal.Record(Guid.NewGuid(), Op(StorageOperationType.SetVolumeLabel, Part()),
+            OperationPhase.Prepared, "PREPARED", snapshotSha256: a);
+        Assert.Equal(a, entry.SnapshotSha256);
+    }
+
     private static string TempPath() =>
         Path.Combine(Path.GetTempPath(), $"gdm-c04-journal-{Guid.NewGuid():N}.jsonl");
 }
