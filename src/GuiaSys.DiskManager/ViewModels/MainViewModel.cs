@@ -20,6 +20,8 @@ public sealed class MainViewModel : ObservableObject
     private readonly IOperationPlanner _planner;
     private string _queuePreviewSummary = "Fila vazia. Nenhum efeito projetado.";
     private StorageSnapshot _snapshot = new([], [], DateTimeOffset.MinValue);
+    private InventoryInsights _inventoryInsights = new(StorageOverviewMetrics.Empty,
+        new Dictionary<int, DiskSpaceMetrics>());
     private DiskInfo? _selectedDisk;
     private PartitionInfo? _selectedPartition;
     private StorageOperationType _selectedOperationType;
@@ -72,6 +74,14 @@ public sealed class MainViewModel : ObservableObject
         : "MODO SEGURO · gravações desativadas";
     public bool CanApplyWrites => StorageWriteGate.ReleasedAfterSafetyAudit;
     public string DiskCountLabel => $"{Disks.Count} {(Disks.Count == 1 ? "dispositivo" : "dispositivos")}";
+    public StorageOverviewMetrics OverviewMetrics => _inventoryInsights.Overview;
+    public DiskSpaceMetrics? SelectedDiskMetrics =>
+        SelectedDisk is null ? null : _inventoryInsights.FindDisk(SelectedDisk.Number);
+    public string SelectedUsageSummary => SelectedDiskMetrics?.UtilizationLabel ?? "Selecione um disco.";
+    public string SelectedAllocatedLabel => SelectedDiskMetrics?.AllocatedLabel ?? "—";
+    public string SelectedUnallocatedLabel => SelectedDiskMetrics?.UnallocatedLabel ?? "—";
+    public string SelectedLargestFreeLabel => SelectedDiskMetrics?.LargestFreeLabel ?? "—";
+    public double SelectedAllocatedPercent => SelectedDiskMetrics?.AllocatedPercent ?? 0;
     public string PartitionCountLabel => $"{_snapshot.Partitions.Count} {(_snapshot.Partitions.Count == 1 ? "partição" : "partições")}";
     public string SelectedTargetTitle => SelectedPartition is not null
         ? $"Disco {SelectedPartition.DiskNumber} / Partição {SelectedPartition.PartitionNumber}"
@@ -162,7 +172,11 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var snapshot = await _inventory.ReadAsync(CancellationToken.None);
+            // Validate ALL geometry and presentation aggregates before exposing any snapshot.
+            var newInsights = InventoryInsights.Build(snapshot);
+            _inventoryInsights = newInsights;
             _snapshot = snapshot;
+            OnPropertyChanged(nameof(OverviewMetrics));
             var previousIdentity = SelectedDisk?.Identity;
             var previousPartitionIdentity = SelectedPartition?.Identity;
             _loadingSelection = true;
@@ -180,6 +194,7 @@ public sealed class MainViewModel : ObservableObject
             }
             finally { _loadingSelection = false; }
             NotifyTargetChanged();
+            OnPropertyChanged(nameof(OverviewMetrics));
             OnPropertyChanged(nameof(DiskCountLabel));
             OnPropertyChanged(nameof(PartitionCountLabel));
             OnPropertyChanged(nameof(CapturedAtLabel));
@@ -192,6 +207,9 @@ public sealed class MainViewModel : ObservableObject
             _logger.Error("storage.inventory.failed", exception);
             // Never leave stale inventory visible as if the device were still present.
             _snapshot = new StorageSnapshot([], [], DateTimeOffset.MinValue);
+            _inventoryInsights = new InventoryInsights(StorageOverviewMetrics.Empty,
+                new Dictionary<int, DiskSpaceMetrics>());
+            OnPropertyChanged(nameof(OverviewMetrics));
             Disks.Clear();
             SelectedDisk = null;
             Partitions.Clear();
@@ -376,7 +394,9 @@ public sealed class MainViewModel : ObservableObject
     private void AddSegment(PartitionInfo? partition, long offset, long size)
     {
         if (size <= 0 || SelectedDisk is null) return;
-        var width = Math.Max(54, Math.Min(760, size / (double)SelectedDisk.Size * 760));
+        // Tiny service partitions need a minimum hit target; values and offsets remain
+        // authoritative in the tooltip/table. The display scale is explicitly approximate.
+        var width = Math.Max(12, size / (double)SelectedDisk.Size * 880);
         var title = partition?.DisplayName ?? "Não alocado";
         var subtitle = partition is null ? ByteSize.Format(size) : $"{partition.Kind} · {partition.SizeLabel}";
         PartitionSegments.Add(new PartitionSegmentViewModel(partition, title, subtitle,
@@ -387,6 +407,13 @@ public sealed class MainViewModel : ObservableObject
     private void NotifyTargetChanged()
     {
         if (!_loadingSelection) UpdateContextOperations();
+        OnPropertyChanged(nameof(SelectedDiskMetrics));
+        OnPropertyChanged(nameof(SelectedUsageSummary));
+        OnPropertyChanged(nameof(SelectedAllocatedLabel));
+        OnPropertyChanged(nameof(SelectedUnallocatedLabel));
+        OnPropertyChanged(nameof(SelectedLargestFreeLabel));
+        OnPropertyChanged(nameof(SelectedAllocatedPercent));
+        OnPropertyChanged(nameof(SelectedLayoutSummary));
         OnPropertyChanged(nameof(SelectedTargetTitle));
         OnPropertyChanged(nameof(SelectedTargetHint));
         OnPropertyChanged(nameof(SelectedActionReason));
