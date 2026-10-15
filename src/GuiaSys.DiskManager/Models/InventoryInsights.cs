@@ -31,7 +31,7 @@ public sealed record StorageOverviewMetrics(
     public string TotalCapacityLabel => CapacityBytes.HasValue ? ByteSize.Format(CapacityBytes.Value) : "Capacidade acima do limite de exibição";
     public string UnallocatedLabel => UnallocatedBytes.HasValue ? ByteSize.Format(UnallocatedBytes.Value) : "Capacidade acima do limite de exibição";
     public string MonitoredVolumesLabel => VolumeMetricsCount == 1 ? "1 volume monitorado" : $"{VolumeMetricsCount} volumes monitorados";
-    public string IdentityLabel => UnknownIdentityCount == 0
+    public string IdentityLabel => DiskCount == 0 ? "Nenhum dispositivo no inventário" : UnknownIdentityCount == 0
         ? "Todos os discos com ID"
         : $"{UnknownIdentityCount} disco(s) sem identidade forte";
 }
