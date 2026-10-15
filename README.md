@@ -44,3 +44,7 @@ A evolução para produto comercial está em etapas. A preparação C00 corrige 
 ### C03 — identidade e segurança de operações
 
 O núcleo de [Segurança GDM-C03](docs/GDM-C03.md) vincula a partição GPT a GUID, geometria e tipo, bloqueia alvos protegidos inclusive em chamadas diretas ao executor e exige confirmação textual envolvendo todos os discos afetados. Isso **não habilita escrita física**: o gate `StorageWriteGate` segue fechado até a conclusão dos critérios C04. Partições MBR sem GUID próprio não podem ser alteradas nesta etapa.
+
+### GDM-C04
+
+Journal de execução, reconciliação de operações e verificações independentes de pós-condição foram adicionados. **O gate de escrita permanece fechado**, inclusive para o runner VHDX. Consulte [GDM-C04](docs/GDM-C04.md).
