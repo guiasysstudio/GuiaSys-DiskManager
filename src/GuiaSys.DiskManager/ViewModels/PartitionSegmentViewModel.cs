@@ -8,7 +8,8 @@ public sealed record PartitionSegmentViewModel(
     string Subtitle,
     string Kind,
     long Size,
-    double Width)
+    double Width,
+    bool IsSelected = false)
 {
     public bool IsUnallocated => Partition is null;
     public string ToolTip => $"{Title}\n{Subtitle}\n{ByteSize.Format(Size)}";
