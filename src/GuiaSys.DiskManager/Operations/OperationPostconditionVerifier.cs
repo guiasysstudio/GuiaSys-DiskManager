@@ -23,6 +23,11 @@ public static class OperationPostconditionVerifier
             !string.Equals(diskAfter.Identity, diskBefore.Identity, StringComparison.Ordinal))
             return PostconditionDecision.Uncertain("A identidade do disco mudou ou não pôde ser verificada.");
 
+        // Only InitializeGpt/Mbr may change the disk partition style.
+        if (operation.Type is not (StorageOperationType.InitializeGpt or StorageOperationType.InitializeMbr) &&
+            !diskBefore.PartitionStyle.Equals(diskAfter.PartitionStyle, StringComparison.OrdinalIgnoreCase))
+            return PostconditionDecision.Uncertain("O estilo do disco mudou inesperadamente.");
+
         var prior = before.Partitions.Where(x => x.DiskNumber == operation.DiskNumber).ToArray();
         var current = after.Partitions.Where(x => x.DiskNumber == operation.DiskNumber).ToArray();
         PartitionInfo? targetBefore = operation.PartitionNumber is int pn ? before.FindPartition(operation.DiskNumber, pn) : null;
