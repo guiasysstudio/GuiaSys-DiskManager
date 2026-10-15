@@ -36,7 +36,7 @@ public sealed class SafetyService : ISafetyService
         if (containsProtectedPartition && (AffectsWholeDisk(operation) || operation.Risk.HasFlag(StorageOperationRisk.LayoutMutation)))
             return SafetyDecision.Deny("O disco contém Windows, boot, sistema, EFI ou recuperação e está protegido.");
 
-        if (operation.Risk.HasFlag(StorageOperationRisk.LayoutMutation) &&
+        if ((operation.Risk.HasFlag(StorageOperationRisk.LayoutMutation) || AffectsWholeDisk(operation)) &&
             string.Equals(disk.PartitionStyle, "GPT", StringComparison.OrdinalIgnoreCase) &&
             diskPartitions.Any(p => !p.HasStrongIdentity || string.IsNullOrWhiteSpace(p.GptType)))
             return SafetyDecision.Deny("Há partições GPT sem identidade ou tipo confirmado; alterações de layout bloqueadas.");
