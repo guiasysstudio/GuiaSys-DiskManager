@@ -41,6 +41,12 @@ public static class StorageGeometry
             x.Offset < 0 || x.Size <= 0))
             throw new InvalidDataException("Geometria ou numeração de partição inválida.");
 
+        if (snapshot.Partitions.Any(p => !string.IsNullOrWhiteSpace(p.PartitionGuid) && !p.HasStrongIdentity))
+            throw new InvalidDataException("O inventário contém GUID de partição inválido.");
+        if (snapshot.Partitions.Where(p => p.HasStrongIdentity)
+            .GroupBy(p => (p.DiskNumber, Guid.Parse(p.PartitionGuid))).Any(g => g.Count() > 1))
+            throw new InvalidDataException("GUID de partição duplicado no disco.");
+
         var layouts = new List<DiskLayout>(snapshot.Disks.Count);
         foreach (var disk in snapshot.Disks.OrderBy(x => x.Number))
         {
