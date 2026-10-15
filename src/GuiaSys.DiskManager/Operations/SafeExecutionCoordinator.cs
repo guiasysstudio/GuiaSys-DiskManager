@@ -25,7 +25,7 @@ public sealed class SafeExecutionCoordinator(
         ArgumentNullException.ThrowIfNull(op);
         var timer = Stopwatch.StartNew();
         if (!StorageWriteGate.ReleasedAfterSafetyAudit)
-            return new OperationResult(op.Id, false, "Gravações ainda bloqueadas por segurança.",
+            return new OperationResult(op.Id, false, "Executor bloqueado por segurança.",
                 timer.Elapsed, StorageExecutionOutcome.Rejected);
 
         var locked = false;
