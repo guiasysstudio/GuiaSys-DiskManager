@@ -17,11 +17,11 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
           # Get-Disk.Number. Never infer a hardware match from the numeric IDs alone.
           $physical = $null
           if (-not [string]::IsNullOrWhiteSpace([string]$disk.SerialNumber)) {
-            $matches = @($physicalDisks | Where-Object {
+            $physicalCandidates = @($physicalDisks | Where-Object {
               -not [string]::IsNullOrWhiteSpace([string]$_.SerialNumber) -and
-              ([string]$_.SerialNumber).Trim() -ceq ([string]$disk.SerialNumber).Trim()
+              ([string]$_.SerialNumber).Trim() -eq ([string]$disk.SerialNumber).Trim()
             })
-            if ($matches.Count -eq 1) { $physical = $matches[0] }
+            if ($physicalCandidates.Count -eq 1) { $physical = $physicalCandidates[0] }
           }
           $temperature = $null
           if ($physical) { try { $temperature = ($physical | Get-StorageReliabilityCounter -ErrorAction Stop).Temperature } catch { } }
@@ -66,16 +66,31 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         if (output.ExitCode != 0) throw new InvalidOperationException(ToFriendlyError(output.StandardError), new InvalidOperationException(TrimTechnicalError(output.StandardError)));
         try
         {
-            using var document = JsonDocument.Parse(output.StandardOutput);
-            var root = document.RootElement;
-            var disks = ReadRequiredElements(root, "Disks").Select(ParseDisk).OrderBy(x => x.Number).ToArray();
-            var partitions = ReadRequiredElements(root, "Partitions").Select(ParsePartition).OrderBy(x => x.DiskNumber).ThenBy(x => x.Offset).ToArray();
-            ValidateSnapshot(disks, partitions);
-            logger.Information("storage.inventory.completed", new { disks = disks.Length, partitions = partitions.Length, durationMs = (DateTimeOffset.UtcNow - started).TotalMilliseconds });
-            return new StorageSnapshot(disks, partitions, DateTimeOffset.Now);
+            var snapshot = ParseInventory(output.StandardOutput, DateTimeOffset.Now);
+            logger.Information("storage.inventory.completed", new
+            {
+                disks = snapshot.Disks.Count, partitions = snapshot.Partitions.Count,
+                durationMs = (DateTimeOffset.UtcNow - started).TotalMilliseconds
+            });
+            return snapshot;
         }
         catch (JsonException exception) { throw new InvalidOperationException("O Windows retornou dados de armazenamento em formato inesperado. Consulte os logs.", exception); }
         catch (InvalidDataException exception) { throw new InvalidOperationException("O Windows retornou dados de armazenamento incompletos ou inconsistentes. Nenhuma alteração será permitida até o inventário ser atualizado. Consulte os logs.", exception); }
+    }
+
+    /// <summary>
+    /// Pure parser used by production and tests. Missing optional volume/hardware metrics
+    /// never fabricate zero free bytes or an SSD/HDD classification.
+    /// </summary>
+    internal static StorageSnapshot ParseInventory(string json, DateTimeOffset capturedAt)
+    {
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        var disks = ReadRequiredElements(root, "Disks").Select(ParseDisk).OrderBy(x => x.Number).ToArray();
+        var partitions = ReadRequiredElements(root, "Partitions").Select(ParsePartition)
+            .OrderBy(x => x.DiskNumber).ThenBy(x => x.Offset).ToArray();
+        ValidateSnapshot(disks, partitions);
+        return new StorageSnapshot(disks, partitions, capturedAt);
     }
 
     private static DiskInfo ParseDisk(JsonElement item) => new()
