@@ -28,7 +28,16 @@ public sealed record GslV1SavedState(
     string? Entitlement = null,
     string? Type = null,
     DateTimeOffset? LastObservedUtc = null,
-    DateTimeOffset? LastOnlineUtc = null);
+    DateTimeOffset? LastOnlineUtc = null,
+    int ValidationHours = 24,
+    string? PendingAction = null,
+    string? PendingRequestId = null,
+    string? PendingLicenseKey = null,
+    string? CustomerName = null,
+    string? CustomerEmail = null,
+    DateTimeOffset? StartedAt = null,
+    DateTimeOffset? ActivatedAt = null,
+    int? MaxDevices = null);
 
 public interface IGslV1Store
 {
@@ -51,7 +60,12 @@ public sealed record GslLicenseDecision(
     DateTimeOffset? ExpiresAt = null,
     DateTimeOffset? OfflineUntil = null,
     string? PlanName = null,
-    DateTimeOffset? LastOnlineUtc = null)
+    DateTimeOffset? LastOnlineUtc = null,
+    string? CustomerName = null,
+    string? CustomerEmail = null,
+    DateTimeOffset? StartedAt = null,
+    DateTimeOffset? ActivatedAt = null,
+    int? MaxDevices = null)
 {
     public static GslLicenseDecision Deny(GslLicenseStatus status, string message) => new(false, status, message);
 }

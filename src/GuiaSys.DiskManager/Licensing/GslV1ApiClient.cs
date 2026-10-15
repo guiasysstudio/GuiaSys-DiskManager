@@ -31,11 +31,11 @@ public sealed class GslV1ApiClient(HttpClient client)
         {
             const int limit = 64 * 1024;
             if (response.Content.Headers.ContentLength > limit) throw new GslV1ApiException("invalid_response");
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var stream = await response.Content.ReadAsStreamAsync(linked.Token);
             using var buffer = new MemoryStream();
             var chunk = new byte[4096];
             int read;
-            while ((read = await stream.ReadAsync(chunk, cancellationToken)) != 0)
+            while ((read = await stream.ReadAsync(chunk, linked.Token)) != 0)
             {
                 if (buffer.Length + read > limit) throw new GslV1ApiException("invalid_response");
                 buffer.Write(chunk, 0, read);

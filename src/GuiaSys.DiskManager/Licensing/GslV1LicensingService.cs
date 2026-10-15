@@ -63,7 +63,8 @@ public sealed class GslV1LicensingService(
                 verified.Type == "license" ? GslLicenseStatus.ActiveLicense : GslLicenseStatus.ActiveTrial,
                 verified.Type == "license" ? "Licença ativa (autorização ES256 verificada)." :
                     "Avaliação ativa (autorização ES256 verificada).",
-                verified.ExpiresAt, verified.OfflineUntil, verified.PlanName, state.LastOnlineUtc);
+                verified.ExpiresAt, verified.OfflineUntil, verified.PlanName, state.LastOnlineUtc,
+                state.CustomerName, state.CustomerEmail, state.StartedAt, state.ActivatedAt, state.MaxDevices);
         }
         catch (Exception exception) when (exception is FormatException or InvalidOperationException)
         {
@@ -72,7 +73,7 @@ public sealed class GslV1LicensingService(
         }
     }
 
-    public Task<GslLicenseDecision> CheckAsync(CancellationToken cancellationToken)
+    private Task<GslLicenseDecision> CheckCachedAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!Configured) return Task.FromResult(NoConfig());
@@ -91,6 +92,41 @@ public sealed class GslV1LicensingService(
             return Task.FromResult(GslLicenseDecision.Deny(GslLicenseStatus.InvalidEntitlement,
                 "O cache protegido ou a identidade local não estão disponíveis."));
         }
+    }
+
+    public async Task<GslLicenseDecision> CheckAsync(CancellationToken cancellationToken)
+    {
+        var cached = await CheckCachedAsync(cancellationToken);
+        if (!cached.Allowed) return cached;
+        try
+        {
+            var state = store.Load();
+            var hours = state.ValidationHours is >= 1 and <= 720 ? state.ValidationHours : 24;
+            if (state.LastOnlineUtc is null ||
+                Now - state.LastOnlineUtc.Value >= TimeSpan.FromHours(hours))
+                return await ValidateOnlineAsync(cancellationToken);
+            return cached;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or
+            System.Security.Cryptography.CryptographicException or InvalidOperationException or JsonException)
+        {
+            return GslLicenseDecision.Deny(GslLicenseStatus.InvalidEntitlement,
+                "Não foi possível verificar o estado protegido da licença.");
+        }
+    }
+
+    private string PendingRequestId(string action, string? licenseKey)
+    {
+        var state = store.Load();
+        if (state.PendingAction == action && state.PendingLicenseKey == licenseKey &&
+            state.PendingRequestId is { } pending &&
+            Regex.IsMatch(pending, "^[a-f0-9]{32}$", RegexOptions.CultureInvariant))
+            return pending;
+
+        var id = Guid.NewGuid().ToString("N");
+        store.Save(state with { PendingAction = action, PendingLicenseKey = licenseKey,
+            PendingRequestId = id });
+        return id;
     }
 
     private async Task AssertProjectAsync(CancellationToken ct)
@@ -139,8 +175,25 @@ public sealed class GslV1LicensingService(
                 !DateTimeOffset.TryParse(offline, out var until) || until != verified.OfflineUntil)
                 throw new FormatException("Unsigned offline window mismatch.");
 
+            var validationHours = body.TryGetProperty("validationHours", out var interval) &&
+                interval.ValueKind == JsonValueKind.Number && interval.TryGetInt32(out var hours) &&
+                hours is >= 1 and <= 720 ? hours : 24;
+            static string? Detail(JsonElement obj, string field) =>
+                obj.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.String &&
+                value.GetString() is { Length: > 0 and <= 256 } text ? text : null;
+            static DateTimeOffset? DetailDate(JsonElement obj, string field) =>
+                obj.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.String &&
+                DateTimeOffset.TryParse(value.GetString(), out var date) ? date : null;
+            int? maxDevices = body.TryGetProperty("maxDevices", out var max) &&
+                max.ValueKind == JsonValueKind.Number && max.TryGetInt32(out var count) &&
+                count is >= 1 and <= 10000 ? count : null;
             store.Save(new GslV1SavedState(
-                licenseKey, token, expectedType, Now, Now));
+                licenseKey, token, expectedType, Now, Now, validationHours,
+                CustomerName: Detail(body, "customerName"),
+                CustomerEmail: Detail(body, "customerEmail"),
+                StartedAt: DetailDate(body, "startedAt"),
+                ActivatedAt: DetailDate(body, "activatedAt"),
+                MaxDevices: maxDevices));
             return Inspect(store.Load(), deviceId);
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or
@@ -183,7 +236,7 @@ public sealed class GslV1LicensingService(
                 deviceName = Environment.MachineName.Length <= 120 ? Environment.MachineName : Environment.MachineName[..120],
                 platform = "Windows",
                 appVersion = Version,
-                requestId = Guid.NewGuid().ToString("N")
+                requestId = PendingRequestId("activate", normalized)
             }, ct);
             return Accept(response, "license", "license", normalized, deviceId);
         }
@@ -207,7 +260,7 @@ public sealed class GslV1LicensingService(
             var deviceId = store.GetDeviceId();
             await AssertProjectAsync(ct);
             var response = await api.PostAsync(GslV1Protocol.TrialStart,
-                DeviceRequest(deviceId, Version, Guid.NewGuid().ToString("N")), ct);
+                DeviceRequest(deviceId, Version, PendingRequestId("trial_start", null)), ct);
             return Accept(response, "trial", "trial", null, deviceId);
         }
         catch (GslV1ApiException ex) { return Failure(ex); }
@@ -237,12 +290,12 @@ public sealed class GslV1LicensingService(
                 {
                     integrationCode = GslV1Protocol.IntegrationCode,
                     licenseKey = saved.LicenseKey, deviceId, appVersion = Version,
-                    requestId = Guid.NewGuid().ToString("N")
+                    requestId = PendingRequestId("license_validate", saved.LicenseKey)
                 }, ct)
                 : await api.PostAsync(GslV1Protocol.TrialValidate, new
                 {
                     integrationCode = GslV1Protocol.IntegrationCode,
-                    deviceId, appVersion = Version, requestId = Guid.NewGuid().ToString("N")
+                    deviceId, appVersion = Version, requestId = PendingRequestId("trial_validate", null)
                 }, ct);
             return Accept(response, saved.Type, saved.Type, saved.LicenseKey, deviceId);
         }
@@ -250,13 +303,14 @@ public sealed class GslV1LicensingService(
         {
             if (IsServerDenial(ex.Code))
             {
-                try { var state = store.Load(); store.Save(state with { Entitlement = null }); }
+                try { var state = store.Load(); store.Save(state with { Entitlement = null, PendingAction = null,
+                    PendingRequestId = null, PendingLicenseKey = null }); }
                 catch (Exception) { /* Deny regardless of local store failure. */ }
                 return Failure(ex);
             }
             if (ex.Code is "network_error" or "upstream_error" or "upstream_timeout" or "server_error" or "internal_error")
             {
-                var cached = await CheckAsync(ct);
+                var cached = await CheckCachedAsync(ct);
                 return cached.Allowed ? cached with { Message = "Sem conexão: autorização offline assinada ainda vigente." } : Failure(ex);
             }
             return Failure(ex);
@@ -284,7 +338,7 @@ public sealed class GslV1LicensingService(
             {
                 integrationCode = GslV1Protocol.IntegrationCode,
                 licenseKey = state.LicenseKey, deviceId = store.GetDeviceId(),
-                requestId = Guid.NewGuid().ToString("N")
+                requestId = PendingRequestId("deactivate", state.LicenseKey)
             }, ct);
             var result = response.GetProperty("result");
             if (result.GetProperty("ok").ValueKind != JsonValueKind.True ||
