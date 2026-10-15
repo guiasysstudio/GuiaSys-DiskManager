@@ -208,13 +208,13 @@ public sealed class GslV1LicensingTests
     }
 
     [Fact]
-    public void Missing_trust_never_grants_access_or_opens_disk_write_gate()
+    public async Task Missing_trust_never_grants_access_or_opens_disk_write_gate()
     {
         using var f = new Fixture();
         var store = new Store { State = new GslV1SavedState(LicenseKey, f.Signed(), "license") };
         var service = new GslV1LicensingService(Client(_ => throw new Exception("No network expected")),
             store, null, new Clock());
-        var decision = service.CheckAsync(CancellationToken.None).Result;
+        var decision = await service.CheckAsync(CancellationToken.None);
         Assert.False(decision.Allowed);
         Assert.Equal(GslLicenseStatus.NotConfigured, decision.Status);
         Assert.False(StorageWriteGate.Allows(new GslLicenseDecision(true, GslLicenseStatus.ActiveLicense, "test")));
