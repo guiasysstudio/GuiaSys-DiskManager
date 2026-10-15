@@ -6,7 +6,6 @@ using GuiaSys.DiskManager.Models;
 namespace GuiaSys.DiskManager.Operations;
 
 public enum OperationPhase { Prepared, Dispatching, Reconciled }
-public enum OperationOutcome { Rejected, Verified, Indeterminate }
 
 /// <summary>
 /// Minimal, privacy-preserving immutable audit entry. No license keys, filesystem paths,
@@ -15,7 +14,7 @@ public enum OperationOutcome { Rejected, Verified, Indeterminate }
 public sealed record OperationJournalEntry(
     Guid AttemptId, Guid OperationId, DateTimeOffset AtUtc,
     int DiskNumber, int? PartitionNumber, StorageOperationType Type,
-    OperationPhase Phase, OperationOutcome? Outcome, string Code);
+    OperationPhase Phase, StorageExecutionOutcome? Outcome, string Code);
 
 public interface IOperationJournal
 {
@@ -82,13 +81,13 @@ public sealed class OperationJournal : IOperationJournal
                 latest[entry.AttemptId] = entry;
             }
             return latest.Values.Where(x => x.Phase != OperationPhase.Reconciled ||
-                x.Outcome == OperationOutcome.Indeterminate)
+                x.Outcome == StorageExecutionOutcome.Indeterminate)
                 .Select(x => x.AttemptId).OrderBy(x => x).ToArray();
         }
     }
 
     public static OperationJournalEntry Record(Guid attemptId, StorageOperation operation,
-        OperationPhase phase, string code, OperationOutcome? outcome = null) =>
+        OperationPhase phase, string code, StorageExecutionOutcome? outcome = null) =>
         new(attemptId, operation.Id, DateTimeOffset.UtcNow, operation.DiskNumber,
             operation.PartitionNumber, operation.Type, phase, outcome, code);
 }
