@@ -19,7 +19,8 @@ public sealed class StoragePlanningTests
         long size = 300 * MB, string letter = "E") =>
         new() { DiskNumber = disk, PartitionNumber = number, Offset = offset, Size = size,
             AccessPaths = "", DriveLetter = letter, Type = "Basic", FileSystem = "NTFS",
-            PartitionGuid = $"ecb7da44-3b19-4e0f-97a4-{disk:0000}{number:00000000}" };
+            PartitionGuid = $"ecb7da44-3b19-4e0f-97a4-{disk:0000}{number:00000000}",
+            GptType = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7" };
 
     private static StorageSnapshot Snapshot(params PartitionInfo[] partitions) =>
         new([Disk()], partitions, Captured);
