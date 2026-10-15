@@ -14,6 +14,10 @@ public sealed class SafetyService : ISafetyService
 
     public SafetyDecision Evaluate(StorageOperation operation, StorageSnapshot currentSnapshot)
     {
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(currentSnapshot);
+        if (!Enum.IsDefined(operation.Type) || !operation.IsMutation || operation.Id == Guid.Empty || operation.DiskNumber < 0)
+            return SafetyDecision.Deny("Identificador ou tipo de operação inválido.");
         var disk = currentSnapshot.FindDisk(operation.DiskNumber);
         if (disk is null) return SafetyDecision.Deny("O disco não existe mais ou foi removido.");
         if (!string.Equals(disk.Identity, operation.ExpectedDiskIdentity, StringComparison.Ordinal))
@@ -28,7 +32,7 @@ public sealed class SafetyService : ISafetyService
 
         var diskPartitions = currentSnapshot.Partitions.Where(p => p.DiskNumber == disk.Number).ToArray();
         var containsProtectedPartition = disk.IsBoot || disk.IsSystem || diskPartitions.Any(partition => IsProtected(partition) || ContainsRunningExecutable(partition));
-        if (containsProtectedPartition && AffectsWholeDisk(operation))
+        if (containsProtectedPartition && (AffectsWholeDisk(operation) || operation.Risk.HasFlag(StorageOperationRisk.LayoutMutation)))
             return SafetyDecision.Deny("O disco contém Windows, boot, sistema, EFI ou recuperação e está protegido.");
 
         PartitionInfo? partition = null;
@@ -38,6 +42,11 @@ public sealed class SafetyService : ISafetyService
             partition = currentSnapshot.FindPartition(operation.DiskNumber, operation.PartitionNumber.Value);
             if (partition is null) return SafetyDecision.Deny("A partição não existe mais. Atualize o inventário.");
             if (IsProtected(partition) || ContainsRunningExecutable(partition)) return SafetyDecision.Deny("Partições de boot, sistema, EFI, MSR, Recovery, ocultas, C: ou que hospedam o aplicativo não podem ser alteradas.");
+            if (!partition.HasStrongIdentity)
+                return SafetyDecision.Deny("Partição sem identidade GPT forte; operações MBR ainda não autorizadas.");
+            if (string.IsNullOrWhiteSpace(operation.ExpectedPartitionIdentity) ||
+                !string.Equals(partition.Identity, operation.ExpectedPartitionIdentity, StringComparison.Ordinal))
+                return SafetyDecision.Deny("A identidade ou geometria da partição mudou. Atualize o inventário.");
         }
 
         if (operation.Type is StorageOperationType.InitializeGpt or StorageOperationType.InitializeMbr)
@@ -63,6 +72,10 @@ public sealed class SafetyService : ISafetyService
             return SafetyDecision.Deny("O label contém caracteres inválidos ou excede 32 caracteres.");
         if (operation.DriveLetter is char letter && (letter < 'D' || letter > 'Z'))
             return SafetyDecision.Deny("Use uma letra entre D e Z. C: permanece sempre protegida.");
+        if (operation.Type == StorageOperationType.SetDriveLetter && operation.DriveLetter is char requested &&
+            currentSnapshot.Partitions.Any(p => (p.DiskNumber != operation.DiskNumber || p.PartitionNumber != operation.PartitionNumber) &&
+                string.Equals(p.DriveLetter, requested.ToString(), StringComparison.OrdinalIgnoreCase)))
+            return SafetyDecision.Deny("A letra solicitada já está em uso.");
         if (operation.Type == StorageOperationType.SetDriveLetter && operation.DriveLetter is null)
             return SafetyDecision.Deny("Informe uma letra entre D e Z.");
         if (operation.Type is StorageOperationType.ResizePartition && operation.SizeBytes is not > 0)
