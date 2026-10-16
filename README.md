@@ -80,3 +80,7 @@ Um novo painel permite escolher **origem** (disco ou partição) e **disco de de
 ### GDM-C12 — Migração do Windows (diagnóstico sem escrita)
 
 O painel permite selecionar a origem do Windows (inclusive **Disco 0 apenas para inspeção**) e um disco de destino **RAW vazio**. O diagnóstico verifica topologia GPT/UEFI (partição Windows NTFS, ESP FAT32, MSR, WinRE), capacidade integral, setores e identidade dos dispositivos, detecta boot potencialmente distribuído por discos e apresenta **BitLocker, BCD, firmware, TPM e VSS como não verificados**. O modo Legacy/MBR exige homologação própria. O checklist não faz backup, cópia, conversão nem preparação de boot; `CanExecute=false` e gate global de escrita fechado. Leia [GDM-C12](docs/GDM-C12.md).
+
+### GDM-C13 — Saúde e diagnósticos (somente leitura)
+
+O painel C13 apresenta estados de saúde Windows dos discos/volumes, temperatura e contadores opcionais de desgaste, horas ligadas e erros reportados por `Get-StorageReliabilityCounter`. Associação física somente por série única; métricas sem suporte ficam **não disponíveis**. O avaliador emite avisos e sempre informa que **S.M.A.R.T. integral, autotestes, superfície e reparo não foram executados**. Selecione um disco e clique **Analisar indicadores**; **F5** atualiza as medições. Não habilita escrita. Ver [GDM-C13](docs/GDM-C13.md).

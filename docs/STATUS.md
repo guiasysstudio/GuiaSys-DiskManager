@@ -131,3 +131,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Checklist de evidência separa **Presente, Ausente e Não verificado**; BitLocker/TPM/BCD/UEFI/VSS/boot real permanecem desconhecidos. Windows Legacy/MBR sem protocolo homologado.
 - Painel WPF com seletor de destino específico e relatório; dados invalidados em mudança de seleção, refresh ou falha; não enfileira nenhuma migração.
 - `WindowsMigrationReport.CanExecute` fixo em `false`; motor real de migração e testes VHDX/boot não implementados. Gate global de escrita **NO-GO**. Relatório: [GDM-C12](GDM-C12.md).
+
+## GDM-C13 — Saúde e diagnósticos (15/10/2026)
+
+- Coleta read-only de temperatura, desgaste, horas e contadores de erros via `Get-StorageReliabilityCounter` somente para mídia associada por série única. Métricas ausentes ou inválidas não são apresentadas como zero.
+- `StorageHealthAssessment`: evidência Windows com estados indeterminado/normal/atenção/crítico, alertas conservadores de volumes e distinção explícita de S.M.A.R.T. integral, que **não foi verificado**.
+- Painel WPF e navegação de saúde, relatório efêmero em memória e invalidação com seleção, atualização e falha. Não existe ação de escrita, autoteste ou reparo.
+- Testes sintéticos de saúde/parser/MVVM adicionados; execução e contagens dependem de CI no HEAD. **NO-GO** para gravação de disco físico e testes destrutivos.
+- Relatório [GDM-C13](GDM-C13.md).

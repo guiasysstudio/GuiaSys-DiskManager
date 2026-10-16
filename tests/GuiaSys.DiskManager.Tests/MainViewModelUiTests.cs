@@ -599,6 +599,69 @@ public sealed class MainViewModelUiTests
         Assert.Empty(vm.PendingOperations);
     }
 
+    [Fact]
+    public async Task Health_inspector_allows_disk_zero_readonly_and_never_enqueues()
+    {
+        var disk = Disk(0) with { HealthStatus = "Healthy", TemperatureC = 43 };
+        var vm = Build(new StaticInventory(new StorageSnapshot([disk], [], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        Assert.True(vm.InspectHealthCommand.CanExecute(null));
+        vm.InspectHealthCommand.Execute(null);
+        Assert.Equal(DiskHealthLevel.Normal, vm.HealthReport!.Level);
+        Assert.False(vm.HealthReport.SmartVerified);
+        Assert.Contains("NÃO certifica", vm.HealthSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Health_selection_and_refresh_invalidate_stale_evidence()
+    {
+        var inv = new SwitchableInventory(Snapshot());
+        var vm = Build(inv);
+        await vm.RefreshAsync();
+        vm.InspectHealthCommand.Execute(null);
+        Assert.NotNull(vm.HealthReport);
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        Assert.Null(vm.HealthReport);
+        vm.SelectedPartition = null;
+        vm.InspectHealthCommand.Execute(null);
+        Assert.NotNull(vm.HealthReport);
+        await vm.RefreshAsync();
+        Assert.Null(vm.HealthReport);
+        Assert.Contains("refaça", vm.HealthSummary);
+        Assert.True(vm.InspectHealthCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Health_inventory_failure_clears_disks_and_disables_inspection()
+    {
+        var inv = new SwitchableInventory(Snapshot());
+        var vm = Build(inv);
+        await vm.RefreshAsync();
+        vm.InspectHealthCommand.Execute(null);
+        inv.Fail = true;
+        await vm.RefreshAsync();
+        Assert.Null(vm.HealthReport);
+        Assert.False(vm.InspectHealthCommand.CanExecute(null));
+        Assert.Empty(vm.Disks);
+        Assert.Contains("indisponível", vm.HealthSummary);
+    }
+
+    [Fact]
+    public async Task Health_report_does_not_persist_after_switching_disks()
+    {
+        var disks = new[] { Disk(3), Disk(4) };
+        var vm = Build(new StaticInventory(new StorageSnapshot(disks, [], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        vm.InspectHealthCommand.Execute(null);
+        Assert.Equal(3, vm.HealthReport!.DiskNumber);
+        vm.SelectedDisk = vm.Disks.Single(d => d.Number == 4);
+        Assert.Null(vm.HealthReport);
+        vm.InspectHealthCommand.Execute(null);
+        Assert.Equal(4, vm.HealthReport!.DiskNumber);
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);
