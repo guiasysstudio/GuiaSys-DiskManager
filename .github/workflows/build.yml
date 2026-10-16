@@ -75,6 +75,9 @@ jobs:
           dotnet run --project tools/GslV1TrustInspector/GslV1TrustInspector.csproj --configuration Release -- --file artifacts/licensing/missing-official-trust.json --expected-project-id prj_0123456789abcdefabcd --expected-key-id sig_synthetic
           if ($LASTEXITCODE -eq 0) { throw 'H02.1 incorrectly accepted a missing trust file.' }
           Write-Host 'PASS: H02.1 rejects missing unverified public-key material.'
+          # GitHub's Windows PowerShell runner propagates LASTEXITCODE unless
+          # this expected negative test explicitly exits with success.
+          exit 0
       - name: H02 inspect pinned public GSL-v1 licensing readiness (offline)
         shell: powershell
         run: .\tools\Test-GslV1TrustReadiness.ps1
