@@ -732,6 +732,111 @@ public sealed class MainViewModelUiTests
         }
     }
 
+    [Fact]
+    public async Task Recovery_capture_requires_explicit_whole_disk_and_stores_no_operations()
+    {
+        var earlier = new StorageSnapshot([Disk()], [Partition()], DateTimeOffset.UtcNow.AddMinutes(-2));
+        var vm = Build(new StaticInventory(earlier));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        Assert.False(vm.CaptureRecoveryBaselineCommand.CanExecute(null));
+        vm.SelectedPartition = null;
+        Assert.True(vm.CaptureRecoveryBaselineCommand.CanExecute(null));
+        vm.CaptureRecoveryBaselineCommand.Execute(null);
+        Assert.NotNull(vm.RecoveryBaseline);
+        Assert.False(vm.CompareRecoveryCommand.CanExecute(null));
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Recovery_after_refresh_detects_missing_gpt_entry_but_never_restores()
+    {
+        var initial = new StorageSnapshot([Disk()], [Partition()], DateTimeOffset.UtcNow.AddMinutes(-3));
+        var inventory = new SwitchableInventory(initial);
+        var vm = Build(inventory);
+        await vm.RefreshAsync();
+        vm.CaptureRecoveryBaselineCommand.Execute(null);
+        Assert.NotNull(vm.RecoveryBaseline);
+        inventory.OverrideSnapshot = new StorageSnapshot([Disk()], [], DateTimeOffset.UtcNow);
+        await vm.RefreshAsync();
+        Assert.NotNull(vm.RecoveryBaseline);
+        Assert.Null(vm.RecoveryReport);
+        Assert.True(vm.CompareRecoveryCommand.CanExecute(null));
+        vm.CompareRecoveryCommand.Execute(null);
+        Assert.Equal(RecoveryEntryState.MissingFree, Assert.Single(vm.RecoveryReport!.Entries).State);
+        Assert.False(vm.RecoveryReport.CanRecover);
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Recovery_selection_change_discards_reference_not_retargets_another_disk()
+    {
+        var data = new StorageSnapshot([Disk(), Disk(4)], [Partition()], DateTimeOffset.UtcNow);
+        var vm = Build(new StaticInventory(data));
+        await vm.RefreshAsync();
+        vm.CaptureRecoveryBaselineCommand.Execute(null);
+        Assert.NotNull(vm.RecoveryBaseline);
+        vm.SelectedDisk = vm.Disks.Single(d => d.Number == 4);
+        Assert.Null(vm.RecoveryBaseline);
+        Assert.Null(vm.RecoveryReport);
+        Assert.False(vm.CompareRecoveryCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Recovery_unavailable_disk_or_inventory_failure_invalidates_reference()
+    {
+        var initial = new StorageSnapshot([Disk()], [Partition()], DateTimeOffset.UtcNow.AddMinutes(-2));
+        var inv = new SwitchableInventory(initial);
+        var vm = Build(inv);
+        await vm.RefreshAsync();
+        vm.CaptureRecoveryBaselineCommand.Execute(null);
+        inv.OverrideSnapshot = new StorageSnapshot([Disk(4)], [], DateTimeOffset.UtcNow);
+        await vm.RefreshAsync();
+        Assert.Null(vm.RecoveryBaseline);
+        vm.CaptureRecoveryBaselineCommand.Execute(null);
+        Assert.NotNull(vm.RecoveryBaseline);
+        inv.Fail = true;
+        await vm.RefreshAsync();
+        Assert.Null(vm.RecoveryBaseline);
+        Assert.False(vm.CaptureRecoveryBaselineCommand.CanExecute(null));
+        Assert.False(vm.CompareRecoveryCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Recovery_report_is_invalidated_by_refresh_and_can_be_discarded()
+    {
+        var first = new StorageSnapshot([Disk()], [Partition()], DateTimeOffset.UtcNow.AddMinutes(-5));
+        var inv = new SwitchableInventory(first);
+        var vm = Build(inv);
+        await vm.RefreshAsync();
+        vm.CaptureRecoveryBaselineCommand.Execute(null);
+        inv.OverrideSnapshot = new StorageSnapshot([Disk()], [], DateTimeOffset.UtcNow.AddMinutes(-1));
+        await vm.RefreshAsync();
+        vm.CompareRecoveryCommand.Execute(null);
+        Assert.NotNull(vm.RecoveryReport);
+        await vm.RefreshAsync();
+        Assert.Null(vm.RecoveryReport);
+        Assert.NotNull(vm.RecoveryBaseline);
+        vm.ClearRecoveryBaselineCommand.Execute(null);
+        Assert.Null(vm.RecoveryBaseline);
+        Assert.False(vm.CompareRecoveryCommand.CanExecute(null));
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Recovery_disk_zero_can_be_captured_readonly()
+    {
+        var data = new StorageSnapshot([Disk(0)], [Partition(0)], DateTimeOffset.UtcNow);
+        var vm = Build(new StaticInventory(data));
+        await vm.RefreshAsync();
+        vm.CaptureRecoveryBaselineCommand.Execute(null);
+        Assert.Equal(0, vm.RecoveryBaseline?.DiskNumber);
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);
