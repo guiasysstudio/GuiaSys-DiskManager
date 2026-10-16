@@ -74,3 +74,7 @@ O `NO-GO` é esperado e correto neste estado. Ver também [GDM-C01](GDM-C01.md),
 ## Decisão
 
 **GO para validações sintéticas e endurecimento do parser ES256, condicionado ao CI no HEAD. NO-GO para ativação real homologada, publicação comercial, confiança de produção e qualquer execução de gravação.** A etapa seguinte depende da conferência do Project ID e do JWK **públicos oficiais** em canal administrativo confiável e da homologação humana H01 já documentada.
+
+### H02.1 — Inspetor de parâmetros públicos de produção (ainda PENDENTE)
+
+O projeto `tools/GslV1TrustInspector` verifica somente JSON público ES256/JWK e vínculo a `projectId`/`keyId` esperados; o SHA-256 gerado é explicitamente **candidato**, não um pin aprovado. O CI usa chave efêmera e nenhuma requisição de rede ao Licensing. Antes de concluir H02.1, a GuiaSys Studio precisa conferir e disponibilizar os dados públicos oficiais e aprovar sua procedência por canal autenticado independente; nenhum campo privado ou licença de cliente é necessário. Consulte [GDM-H02.1](GDM-H02.1.md). A cadeia de confiança no binário permanece vazia até um build aprovado e assinado.

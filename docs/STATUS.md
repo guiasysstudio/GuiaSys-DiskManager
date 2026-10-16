@@ -197,3 +197,10 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Unitários com chave EC efêmera sintética, sem rede; `tools/Test-GslV1TrustReadiness.ps1` gera `gsl-v1-readiness.json` e recusa `-RequireProductionTrust`, publicado como artefato H02 do GitHub Actions.
 - Integração real requer public JWK + ID do projeto por origem oficial independente, novo build assinado e homologação humana trial/licença/revogação/offline. Nenhuma licença produtiva foi utilizada nesta fase.
 - Consulte [GDM-H02](GDM-H02.md). **NO-GO comercial e NO-GO para gravações físicas.**
+
+## GDM-H02.1 — Verificação offline de material público de assinatura (16/10/2026)
+
+- Utilitário `tools/GslV1TrustInspector`: lê somente JSON público, exige `projectId` e `keyId` esperados, reutiliza parser JWK P-256 de H02 e exibe fingerprint SHA-256 **candidato**, com `decision: NO-GO`.
+- CI: `--self-test` com chave pública efêmera e recusa de caminho para arquivo público ausente; nenhum acesso à API GSL ou ao Firebase e nenhuma configuração de produção.
+- Antes de homologar: obter `projectId`, `keyId`, `x/y` públicos do painel oficial, revisar origem fora da banda e, só após assinatura e testes humanos, planejar pin/empacotamento. Confira [GDM-H02.1](GDM-H02.1.md).
+- **NO-GO comercial e para gravações físicas permanece inalterado.**

@@ -112,3 +112,7 @@ Depois do C18, a etapa H01 acrescenta `tools/Test-WindowsReadOnlyPreflight.ps1`:
 ### GDM-H02 — Preparação segura da confiança GuiaSys Licensing
 
 O cliente GSL-v1 agora rejeita documentos públicos JWK excessivos, duplicados ou com campos extras, valida a chave P-256 e exige correspondência com o SHA-256 **fixado pelo publicador no binário** antes de aceitar `gsl-v1-trust.json`. O fingerprint oficial **continua não configurado**; nenhuma ativação real foi homologada. O script `Test-GslV1TrustReadiness.ps1` gera relatório `NO-GO` sem rede, licenças ou chaves privadas e o CI verifica a recusa da liberação. Para a próxima etapa são necessários exclusivamente **project ID, key ID e JWK públicos do painel oficial**, verificados fora de banda; nunca enviar chaves privadas ou licenças de cliente. Ver [GDM-H02](docs/GDM-H02.md).
+
+### GDM-H02.1 — Inspetor offline da chave pública oficial
+
+Foi criada uma ferramenta console para conferir localmente os identificadores públicos e o JSON JWK ES256/P-256 com o mesmo parser utilizado pelo aplicativo, produzindo somente um **fingerprint candidato** (`NO-GO`). Ela não toca no Firebase, não solicita licença real e não altera o fingerprint fixado no executável. O GitHub Actions executa autoteste sintético e comprova a recusa quando não existe o arquivo de chave pública. **O provisionamento real está pendente de dados públicos oficiais verificados independentemente.** Veja [GDM-H02.1](docs/GDM-H02.1.md).

@@ -70,3 +70,18 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-GslV1TrustR
 ```
 
 Não executa requests nem ativa licenças; audita somente constantes públicas e a presença de `gsl-v1-trust.json` no build. Sem fingerprint fixado, a pasta `artifacts/portable` não pode conter uma configuração pública não aprovada. O GitHub Actions faz a verificação e publica `GuiaSys-DiskManager-H02-GSL-NO-GO`. Veja [GDM-H02](GDM-H02.md) para obter e aprovar os **parâmetros públicos** e organizar ensaios reais autorizados; nunca colocar chaves privadas, contas admin ou licenças em commits.
+
+## GDM-H02.1 — Inspeção offline de chave pública (não aprova produção)
+
+A ferramenta `tools/GslV1TrustInspector` reutiliza o parser estrito do app, compila como console .NET 10 e não executa requisições ao Licensing/Firebase. Para usar com JWK **público** já conferido no painel:
+
+```powershell
+dotnet run --project .\tools\GslV1TrustInspector\GslV1TrustInspector.csproj -c Release -- --self-test
+
+dotnet run --project .\tools\GslV1TrustInspector\GslV1TrustInspector.csproj -c Release -- ` 
+  --file "<CAMINHO_ARQUIVO_JSON_PUBLICO>" ` 
+  --expected-project-id "<PROJECT_ID_CONFERIDO>" ` 
+  --expected-key-id "<KEY_ID_CONFERIDO>"
+```
+
+O resultado é sempre `decision: NO-GO`, mesmo com hash válido, porque origem e assinatura do editor não podem ser inferidas apenas de um arquivo. O autoteste e recusa de arquivo inexistente são executados no Actions. **O comando não faz pin automático, não altera dados produtivos nem libera licenças.** Veja [GDM-H02.1](GDM-H02.1.md).
