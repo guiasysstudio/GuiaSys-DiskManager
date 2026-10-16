@@ -78,6 +78,18 @@ jobs:
           # GitHub's Windows PowerShell runner propagates LASTEXITCODE unless
           # this expected negative test explicitly exits with success.
           exit 0
+      - name: H02.1 verify bundled official public JWK and pinned SHA256 (offline)
+        shell: powershell
+        run: |
+          $result = & dotnet run --project tools/GslV1TrustInspector/GslV1TrustInspector.csproj --configuration Release -- --file artifacts/portable/gsl-v1-trust.json --expected-project-id prj_b41909541f924fe5b837 --expected-key-id sig_3828131003da47bda2f7
+          if ($LASTEXITCODE -ne 0) { throw 'H02.1 official public JWK validation failed.' }
+          $report = ($result -join "`n") | ConvertFrom-Json -ErrorAction Stop
+          if ($report.decision -ne 'NO-GO' -or
+              $report.provenanceApproved -ne $false -or
+              $report.candidateCanonicalFingerprintSha256 -cne '6714ec5a65788f4cc937e0f2abd3656362d70ccd6d3cc09aae7e460566ef8d97') {
+            throw 'H02.1 published public key no longer matches publisher-pinned fingerprint.'
+          }
+          Write-Host 'PASS: bundled public JWK/identity/fingerprint verified offline; commercial NO-GO retained.'
       - name: H02 inspect pinned public GSL-v1 licensing readiness (offline)
         shell: powershell
         run: .\tools\Test-GslV1TrustReadiness.ps1
