@@ -70,7 +70,7 @@ public sealed class WindowsMigrationAssessmentTests
     [InlineData("Consistência dos arquivos / VSS", WindowsMigrationEvidence.Unknown)]
     public void Every_boot_encryption_or_snapshot_check_is_explicit(string name, WindowsMigrationEvidence evidence)
     {
-        var check = Assert.Single(Analyze(Valid()).Checks.Where(c => c.Component == name));
+        var check = Assert.Single(Analyze(Valid()).Checks, c => c.Component == name);
         Assert.Equal(evidence, check.Evidence);
     }
 
