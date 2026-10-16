@@ -30,6 +30,8 @@ public sealed class MainViewModel : ObservableObject
     private string _sizeInput = "";
     private string _moveDestinationInput = "";
     private string _movePreviewSummary = "Nenhuma prévia calculada. Nenhuma movimentação será executada.";
+    private DiskConversionReport? _conversionReport;
+    private string _conversionSummary = "Selecione um disco e analise GPT ou MBR. Nenhuma conversão será executada.";
     private string _driveLetterInput = "";
     private string _allocationUnitInput = "";
     private string _selectedFileSystem = "NTFS";
@@ -49,6 +51,10 @@ public sealed class MainViewModel : ObservableObject
         ClearCommand = new RelayCommand(() => { _queue.Clear(); UpdateCommands(); Status = "Fila limpa."; }, () => PendingOperations.Count > 0 && !IsBusy);
         ApplyCommand = new AsyncRelayCommand(() => ApplyAsync(false), () => PendingOperations.Count > 0 && !IsBusy && StorageWriteGate.ReleasedAfterSafetyAudit);
         OpenLogsCommand = new RelayCommand(OpenLogs);
+        InspectGptConversionCommand = new RelayCommand(() => InspectConversion(DiskPartitionScheme.Gpt),
+            () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
+        InspectMbrConversionCommand = new RelayCommand(() => InspectConversion(DiskPartitionScheme.Mbr),
+            () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
         PreviewMoveCommand = new RelayCommand(PreviewSelectedMove,
             () => SelectedOperationType == StorageOperationType.MovePartition &&
                   SelectedPartition is not null && !IsBusy);
@@ -192,6 +198,16 @@ public sealed class MainViewModel : ObservableObject
         set { if (SetProperty(ref _moveDestinationInput, value))
             MovePreviewSummary = "Destino alterado. Refaça a prévia; nenhuma gravação está disponível."; }
     }
+    public DiskConversionReport? ConversionReport
+    {
+        get => _conversionReport;
+        private set => SetProperty(ref _conversionReport, value);
+    }
+    public string ConversionSummary
+    {
+        get => _conversionSummary;
+        private set => SetProperty(ref _conversionSummary, value);
+    }
     public string MovePreviewSummary
     {
         get => _movePreviewSummary;
@@ -211,6 +227,8 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand ApplyCommand { get; }
     public RelayCommand OpenLogsCommand { get; }
     public RelayCommand UseResizeMinimumCommand { get; }
+    public RelayCommand InspectGptConversionCommand { get; }
+    public RelayCommand InspectMbrConversionCommand { get; }
     public RelayCommand PreviewMoveCommand { get; }
     public RelayCommand SuggestMoveDestinationCommand { get; }
     public RelayCommand UseResizeMaximumCommand { get; }
@@ -225,6 +243,7 @@ public sealed class MainViewModel : ObservableObject
         {
             var snapshot = await _inventory.ReadAsync(CancellationToken.None);
             MovePreviewSummary = "Inventário atualizado; prévia anterior invalidada. Nenhuma escrita realizada.";
+            InvalidateConversion("Inventário atualizado; refaça a análise GPT/MBR.");
             // Validate ALL geometry and presentation aggregates before exposing any snapshot.
             var newInsights = InventoryInsights.Build(snapshot);
             _inventoryInsights = newInsights;
@@ -261,6 +280,7 @@ public sealed class MainViewModel : ObservableObject
             // Never leave stale inventory visible as if the device were still present.
             _snapshot = new StorageSnapshot([], [], DateTimeOffset.MinValue);
             MovePreviewSummary = "Inventário indisponível; prévia descartada.";
+            InvalidateConversion("Inventário indisponível; análise de conversão descartada.");
             _inventoryInsights = new InventoryInsights(StorageOverviewMetrics.Empty,
                 new Dictionary<int, DiskSpaceMetrics>());
             OnPropertyChanged(nameof(OverviewMetrics));
@@ -517,6 +537,7 @@ public sealed class MainViewModel : ObservableObject
     {
         if (!_loadingSelection) UpdateContextOperations();
         MovePreviewSummary = "Alvo alterado; refaça a prévia antes de avaliar o destino.";
+        InvalidateConversion("Seleção alterada; refaça a análise GPT/MBR.");
         OnPropertyChanged(nameof(SelectedResizeRange));
         OnPropertyChanged(nameof(ResizeBoundsSummary));
         OnPropertyChanged(nameof(SelectedDiskMetrics));
@@ -554,6 +575,21 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedActionReason));
         OnPropertyChanged(nameof(SelectedActionStatus));
         UpdateCommands();
+    }
+
+    private void InvalidateConversion(string reason)
+    {
+        ConversionReport = null;
+        ConversionSummary = reason + " Nenhuma gravação será executada.";
+    }
+
+    private void InspectConversion(DiskPartitionScheme desired)
+    {
+        if (SelectedDisk is null || SelectedPartition is not null || IsBusy)
+            return;
+        ConversionReport = DiskConversionAssessment.Analyze(_snapshot, SelectedDisk.Number, desired);
+        ConversionSummary = ConversionReport.Summary;
+        Status = "Análise de conversão somente leitura concluída. Sem alteração do armazenamento.";
     }
 
     private void SuggestMoveDestination()
@@ -625,6 +661,8 @@ public sealed class MainViewModel : ObservableObject
         UseResizeMaximumCommand.RaiseCanExecuteChanged();
         PreviewMoveCommand.RaiseCanExecuteChanged();
         SuggestMoveDestinationCommand.RaiseCanExecuteChanged();
+        InspectGptConversionCommand.RaiseCanExecuteChanged();
+        InspectMbrConversionCommand.RaiseCanExecuteChanged();
     }
 }
 
