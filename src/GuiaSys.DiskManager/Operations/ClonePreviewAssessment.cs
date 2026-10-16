@@ -26,7 +26,6 @@ public static class ClonePreviewAssessment
         long bytes = 0;
         long? destinationOffset = null;
         long? destinationExtent = null;
-        var parts = Array.Empty<PartitionInfo>();
 
         if (source is null || target is null)
             return ClonePreviewReport.Block(scope, sourceDiskNumber, sourcePartitionNumber,
@@ -111,7 +110,6 @@ public static class ClonePreviewAssessment
             else
             {
                 bytes = part.Size;
-                parts = [part];
                 if (!string.Equals(source.PartitionStyle, "GPT", StringComparison.OrdinalIgnoreCase) ||
                     !part.HasStrongIdentity ||
                     !string.Equals(part.GptType.Trim().Trim('{', '}'), BasicDataGpt,
