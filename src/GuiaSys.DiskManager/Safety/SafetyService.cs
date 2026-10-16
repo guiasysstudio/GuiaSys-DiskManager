@@ -31,6 +31,12 @@ public sealed class SafetyService : ISafetyService
         if (operation.DiskNumber == 0 && operation.IsMutation)
             return SafetyDecision.Deny("O Disco 0 é somente leitura por política de segurança e não aceita nenhuma alteração.");
 
+        // No block-copy/migration engine, recovery protocol or VHDX homologation exists.
+        // Fail closed even for a geometrically valid C09 simulation, independently of
+        // the global storage-write gate.
+        if (operation.Type == StorageOperationType.MovePartition)
+            return SafetyDecision.Deny("Movimentação é apenas simulação: executor de cópia e recuperação não homologado.");
+
         var diskPartitions = currentSnapshot.Partitions.Where(p => p.DiskNumber == disk.Number).ToArray();
         var containsProtectedPartition = disk.IsBoot || disk.IsSystem || diskPartitions.Any(partition => IsProtected(partition) || ContainsRunningExecutable(partition));
         if (containsProtectedPartition && (AffectsWholeDisk(operation) || operation.Risk.HasFlag(StorageOperationRisk.LayoutMutation)))
@@ -160,7 +166,8 @@ public sealed class SafetyService : ISafetyService
 
     private static bool AffectsWholeDisk(StorageOperation operation) => operation.Risk.HasFlag(StorageOperationRisk.WholeDiskStateChange);
     private static bool RequiresPartition(StorageOperationType type) => type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition
-        or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
+        or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel
+        or StorageOperationType.MovePartition;
     private static bool IsPowerOfTwo(int value) => (value & (value - 1)) == 0;
     private bool ContainsRunningExecutable(PartitionInfo partition) => _executableDriveLetter is char protectedDrive && partition.DriveLetter.Length == 1 && protectedDrive == char.ToUpperInvariant(partition.DriveLetter[0]);
     private static char? GetExecutableDriveLetter()
