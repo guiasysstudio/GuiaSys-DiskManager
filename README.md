@@ -60,3 +60,7 @@ O inventário agora oferece métricas opcionais de setor físico/lógico, tecnol
 ### GDM-C07 — Operações essenciais e contratos de segurança
 
 A preparação de operações agora usa um contrato estrito por tipo, incluindo validação exata de letras, tamanhos, rótulos e parâmetros de formatação, sem reaproveitar campos ocultos de ações anteriores. O `SafetyService` revalida o maior espaço contíguo para criação/expansão e impede alterações de layout quando a identidade GPT está incompleta. A criação de novas partições MBR permanece suspensa até existir verificação independente da identidade da partição; inicialização MBR em RAW vazio ainda pode ser planejada. **Gravações continuam bloqueadas.** Leia [GDM-C07](docs/GDM-C07.md).
+
+### GDM-C08 — Redimensionamento com limites reais do Windows
+
+O painel de redimensionamento apresenta mínimo/máximo e tamanho atual quando `Get-PartitionSupportedSize` retorna uma faixa confiável para partições de dados GPT. O aplicativo cruza o intervalo com o setor lógico e com o espaço contíguo não alocado, sem estimar a capacidade de redução apenas pelo espaço livre do volume. Presets **Usar mínimo/Usar máximo** preenchem os bytes exatos. A política e o script PowerShell revalidam os limites antes de qualquer possibilidade de execução. Se as informações faltarem, redimensionamento não é preparado. **A escrita continua bloqueada.** Consulte [GDM-C08](docs/GDM-C08.md).
