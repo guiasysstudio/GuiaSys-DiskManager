@@ -849,7 +849,7 @@ public sealed class MainViewModelUiTests
         Assert.Equal(segments.Length, vm.PartitionSegments.Count);
         Assert.All(segments.Select((item, index) => (item, index)),
             pair => Assert.Same(pair.item, vm.PartitionSegments[pair.index]));
-        Assert.Single(vm.PartitionSegments.Where(x => x.IsSelected));
+        Assert.Single(vm.PartitionSegments, x => x.IsSelected);
         vm.SelectedPartition = null;
         Assert.All(segments.Select((item, index) => (item, index)),
             pair => Assert.Same(pair.item, vm.PartitionSegments[pair.index]));
