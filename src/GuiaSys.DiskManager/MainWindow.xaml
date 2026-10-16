@@ -38,6 +38,14 @@
         <DataTrigger Binding="{Binding SelectedOperationType}" Value="{x:Static models:StorageOperationType.ResizePartition}"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
       </Style.Triggers>
     </Style>
+    <Style x:Key="ResizeField" TargetType="StackPanel" BasedOn="{StaticResource FormField}">
+      <Setter Property="Visibility" Value="Collapsed"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding SelectedOperationType}" Value="{x:Static models:StorageOperationType.ResizePartition}">
+          <Setter Property="Visibility" Value="Visible"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
     <Style x:Key="FormatField" TargetType="StackPanel" BasedOn="{StaticResource FormField}">
       <Setter Property="Visibility" Value="Collapsed"/>
       <Style.Triggers>
@@ -460,9 +468,29 @@
                           AutomationProperties.Name="Tipo de operação"/>
               </StackPanel>
               <StackPanel Style="{StaticResource SizeField}">
-                <TextBlock Text="Tamanho (ex.: 20 GB)" Style="{StaticResource Caption}" Margin="0,0,0,5"/>
+                <TextBlock Text="Novo tamanho (ex.: 20 GB ou bytes exatos)"
+                           Style="{StaticResource Caption}" Margin="0,0,0,5"/>
                 <TextBox Text="{Binding SizeInput, UpdateSourceTrigger=PropertyChanged}"
                          AutomationProperties.Name="Tamanho de partição"/>
+              </StackPanel>
+              <StackPanel Style="{StaticResource ResizeField}">
+                <Border Background="#1C354A" CornerRadius="8" BorderBrush="{StaticResource OutlineBrush}"
+                        BorderThickness="1" Padding="10">
+                  <StackPanel>
+                    <TextBlock Text="LIMITES CONFIRMADOS PELO WINDOWS"
+                               Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding ResizeBoundsSummary}" Style="{StaticResource Caption}"
+                               Margin="0,7,0,10" TextWrapping="Wrap"/>
+                    <WrapPanel>
+                      <Button Content="Usar mínimo" Command="{Binding UseResizeMinimumCommand}"
+                              ToolTip="Preenche o menor tamanho alinhado, sem executar gravação."/>
+                      <Button Content="Usar máximo" Command="{Binding UseResizeMaximumCommand}"
+                              ToolTip="Preenche o maior tamanho contíguo suportado, sem executar gravação."/>
+                    </WrapPanel>
+                    <TextBlock Text="Esses valores podem mudar: limites, identidade e layout são novamente verificados antes da execução. Gravações continuam bloqueadas."
+                               Style="{StaticResource Caption}" Margin="0,8,0,0"/>
+                  </StackPanel>
+                </Border>
               </StackPanel>
               <StackPanel Style="{StaticResource FormatField}">
                 <TextBlock Text="Sistema de arquivos" Style="{StaticResource Caption}" Margin="0,0,0,5"/>
