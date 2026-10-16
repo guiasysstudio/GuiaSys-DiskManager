@@ -211,7 +211,7 @@ public sealed class MainViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _selectedPartition, value)) return;
-            BuildPartitionMap();
+            UpdatePartitionMapSelection();
             NotifyTargetChanged();
         }
     }
@@ -696,7 +696,20 @@ public sealed class MainViewModel : ObservableObject
         var subtitle = partition is null ? ByteSize.Format(size) : $"{partition.Kind} · {partition.SizeLabel}";
         PartitionSegments.Add(new PartitionSegmentViewModel(partition, title, subtitle,
             partition?.Kind ?? "Unallocated", size, width,
-            partition is not null && SelectedPartition?.PartitionNumber == partition.PartitionNumber));
+            partition is not null && SelectedPartition?.PartitionNumber == partition.PartitionNumber,
+            offset));
+    }
+
+    private void UpdatePartitionMapSelection()
+    {
+        // Do not rebuild ItemsControl here: selection via keyboard/click must retain focus
+        // on the same partition map button, including while clearing unallocated space.
+        foreach (var segment in PartitionSegments)
+            segment.SetSelected(segment.Partition is not null && SelectedPartition is not null &&
+                segment.Partition.DiskNumber == SelectedPartition.DiskNumber &&
+                segment.Partition.PartitionNumber == SelectedPartition.PartitionNumber &&
+                string.Equals(segment.Partition.Identity, SelectedPartition.Identity,
+                    StringComparison.Ordinal));
     }
 
     private void NotifyTargetChanged()

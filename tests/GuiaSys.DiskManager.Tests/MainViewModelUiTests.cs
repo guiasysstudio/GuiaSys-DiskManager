@@ -837,6 +837,49 @@ public sealed class MainViewModelUiTests
         Assert.False(vm.ApplyCommand.CanExecute(null));
     }
 
+    [Fact]
+    public async Task C16_map_selection_preserves_segment_instances_and_focusable_buttons()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        var segments = vm.PartitionSegments.ToArray();
+        Assert.True(segments.Length >= 2);
+        var data = Assert.Single(vm.Partitions);
+        vm.SelectedPartition = data;
+        Assert.Equal(segments.Length, vm.PartitionSegments.Count);
+        Assert.All(segments.Select((item, index) => (item, index)),
+            pair => Assert.Same(pair.item, vm.PartitionSegments[pair.index]));
+        Assert.Single(vm.PartitionSegments.Where(x => x.IsSelected));
+        vm.SelectedPartition = null;
+        Assert.All(segments.Select((item, index) => (item, index)),
+            pair => Assert.Same(pair.item, vm.PartitionSegments[pair.index]));
+        Assert.DoesNotContain(vm.PartitionSegments, x => x.IsSelected);
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public void C16_extent_accessibility_exposes_real_offset_size_and_selection()
+    {
+        var part = Partition();
+        var segment = new PartitionSegmentViewModel(part, "Partição 1", "NTFS", "NTFS",
+            part.Size, 12, false, part.Offset);
+        Assert.Contains("início", segment.AccessibleName);
+        Assert.Contains("Tamanho exato", segment.ToolTip);
+        Assert.Contains("Offset:", segment.ToolTip);
+        var changed = new List<string?>();
+        segment.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        segment.SetSelected(true);
+        Assert.Contains(nameof(PartitionSegmentViewModel.IsSelected), changed);
+        Assert.Contains(nameof(PartitionSegmentViewModel.AccessibleName), changed);
+        Assert.Contains("selecionada", segment.AccessibleName);
+        segment.SetSelected(true);
+        Assert.Equal(2, changed.Count);
+        var free = new PartitionSegmentViewModel(null, "Não alocado", "Livre", "Unallocated",
+            4096, 12, false, 2048);
+        Assert.True(free.IsUnallocated);
+        Assert.Contains("Selecionar disco inteiro", free.AccessibleName);
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);
