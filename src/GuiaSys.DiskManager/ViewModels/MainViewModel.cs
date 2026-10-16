@@ -39,6 +39,9 @@ public sealed class MainViewModel : ObservableObject
     private WindowsMigrationReport? _migrationReport;
     private DiskHealthReport? _healthReport;
     private MaintenanceReport? _maintenanceReport;
+    private RecoveryBaseline? _recoveryBaseline;
+    private RecoveryReport? _recoveryReport;
+    private string _recoverySummary = "C15 · Capture referência GPT antes da perda e compare após F5. Nenhuma varredura ou recuperação.";
     private MaintenanceTask _selectedMaintenanceTask = MaintenanceTask.InspectVolume;
     private string _maintenanceSummary = "C14 · Selecione disco/volume e procedimento para uma prévia de risco sem execução.";
     private string _healthSummary = "C13 · Selecione um disco e consulte os indicadores do Windows. SMART integral não verificado.";
@@ -66,6 +69,14 @@ public sealed class MainViewModel : ObservableObject
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
         InspectMbrConversionCommand = new RelayCommand(() => InspectConversion(DiskPartitionScheme.Mbr),
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
+        CaptureRecoveryBaselineCommand = new RelayCommand(CaptureRecoveryBaseline,
+            () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
+        CompareRecoveryCommand = new RelayCommand(CompareRecovery,
+            () => _recoveryBaseline is not null && SelectedDisk is not null &&
+                string.Equals(SelectedDisk.Identity, _recoveryBaseline.DiskIdentity, StringComparison.Ordinal) &&
+                _snapshot.CapturedAt > _recoveryBaseline.CapturedAt && !IsBusy);
+        ClearRecoveryBaselineCommand = new RelayCommand(ClearRecoveryBaseline,
+            () => _recoveryBaseline is not null && !IsBusy);
         InspectMaintenanceCommand = new RelayCommand(InspectMaintenance,
             () => SelectedDisk is not null && !IsBusy);
         InspectHealthCommand = new RelayCommand(InspectHealth,
@@ -241,6 +252,27 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    public RecoveryBaseline? RecoveryBaseline
+    {
+        get => _recoveryBaseline;
+        private set
+        {
+            if (SetProperty(ref _recoveryBaseline, value)) UpdateCommands();
+        }
+    }
+
+    public RecoveryReport? RecoveryReport
+    {
+        get => _recoveryReport;
+        private set => SetProperty(ref _recoveryReport, value);
+    }
+
+    public string RecoverySummary
+    {
+        get => _recoverySummary;
+        private set => SetProperty(ref _recoverySummary, value);
+    }
+
     public MaintenanceTask SelectedMaintenanceTask
     {
         get => _selectedMaintenanceTask;
@@ -338,6 +370,9 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand InspectMigrationCommand { get; }
     public RelayCommand InspectHealthCommand { get; }
     public RelayCommand InspectMaintenanceCommand { get; }
+    public RelayCommand CaptureRecoveryBaselineCommand { get; }
+    public RelayCommand CompareRecoveryCommand { get; }
+    public RelayCommand ClearRecoveryBaselineCommand { get; }
     public RelayCommand InspectCloneCommand { get; }
     public RelayCommand InspectGptConversionCommand { get; }
     public RelayCommand InspectMbrConversionCommand { get; }
@@ -360,6 +395,7 @@ public sealed class MainViewModel : ObservableObject
             InvalidateMigration("Inventário atualizado; refaça o diagnóstico do Windows.");
             InvalidateHealth("Inventário atualizado; refaça a análise de saúde.");
             InvalidateMaintenance("Inventário atualizado; refaça a prévia de manutenção.");
+            InvalidateRecovery("Inventário atualizado; compare novamente com a referência, se ainda existir.");
             // Validate ALL geometry and presentation aggregates before exposing any snapshot.
             var newInsights = InventoryInsights.Build(snapshot);
             _inventoryInsights = newInsights;
@@ -418,6 +454,7 @@ public sealed class MainViewModel : ObservableObject
             InvalidateMigration("Inventário indisponível; diagnóstico do Windows descartado.");
             InvalidateHealth("Inventário indisponível; análise de saúde descartada.");
             InvalidateMaintenance("Inventário indisponível; prévia de manutenção descartada.");
+            ClearRecoveryBaseline();
             UpdatePreview();
             OnPropertyChanged(nameof(DiskCountLabel));
             OnPropertyChanged(nameof(PartitionCountLabel));
@@ -671,6 +708,11 @@ public sealed class MainViewModel : ObservableObject
         InvalidateMigration("Origem ou partição alterada; refaça a análise do Windows.");
         InvalidateHealth("Seleção alterada; refaça a análise de saúde.");
         InvalidateMaintenance("Disco/partição alterado; refaça a prévia de manutenção.");
+        InvalidateRecovery("Seleção alterada; refaça a comparação.");
+        if (!_loadingSelection && RecoveryBaseline is not null &&
+            (SelectedDisk is null ||
+             !string.Equals(SelectedDisk.Identity, RecoveryBaseline.DiskIdentity, StringComparison.Ordinal)))
+            ClearRecoveryBaseline();
         OnPropertyChanged(nameof(SelectedResizeRange));
         OnPropertyChanged(nameof(ResizeBoundsSummary));
         OnPropertyChanged(nameof(SelectedDiskMetrics));
@@ -708,6 +750,48 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedActionReason));
         OnPropertyChanged(nameof(SelectedActionStatus));
         UpdateCommands();
+    }
+
+    private void InvalidateRecovery(string reason)
+    {
+        RecoveryReport = null;
+        RecoverySummary = reason + " Sem leitura de setores ou recuperação executável.";
+    }
+
+    private void CaptureRecoveryBaseline()
+    {
+        if (SelectedDisk is null || SelectedPartition is not null || IsBusy) return;
+        try
+        {
+            // Reference is collected only at explicit user request and stays in memory.
+            RecoveryBaseline = PartitionRecoveryAssessment.Capture(_snapshot, SelectedDisk.Number);
+            RecoveryReport = null;
+            RecoverySummary = "Referência GPT capturada em memória. Atualize (F5) e compare. " +
+                "Uma partição já perdida antes da captura NÃO será descoberta.";
+            Status = "Referência de metadados salva somente em memória; nenhuma leitura de setores.";
+        }
+        catch (System.IO.InvalidDataException exception)
+        {
+            ClearRecoveryBaseline();
+            ShowError?.Invoke("Referência GPT não capturada", exception.Message);
+        }
+    }
+
+    private void CompareRecovery()
+    {
+        if (RecoveryBaseline is null || SelectedDisk is null || IsBusy ||
+            !string.Equals(SelectedDisk.Identity, RecoveryBaseline.DiskIdentity, StringComparison.Ordinal) ||
+            _snapshot.CapturedAt <= RecoveryBaseline.CapturedAt) return;
+        RecoveryReport = PartitionRecoveryAssessment.Compare(RecoveryBaseline, _snapshot);
+        RecoverySummary = RecoveryReport.Summary;
+        Status = "Comparação GPT concluída somente em memória. Nenhuma partição recuperada.";
+    }
+
+    private void ClearRecoveryBaseline()
+    {
+        RecoveryBaseline = null;
+        RecoveryReport = null;
+        RecoverySummary = "Referência descartada. Capture novamente com o disco inteiro selecionado. Sem gravações.";
     }
 
     private void InvalidateMaintenance(string reason)
@@ -861,6 +945,9 @@ public sealed class MainViewModel : ObservableObject
         InspectMigrationCommand.RaiseCanExecuteChanged();
         InspectHealthCommand.RaiseCanExecuteChanged();
         InspectMaintenanceCommand.RaiseCanExecuteChanged();
+        CaptureRecoveryBaselineCommand.RaiseCanExecuteChanged();
+        CompareRecoveryCommand.RaiseCanExecuteChanged();
+        ClearRecoveryBaselineCommand.RaiseCanExecuteChanged();
     }
 }
 
