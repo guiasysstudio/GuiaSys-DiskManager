@@ -38,8 +38,15 @@ if ($trustBundled -and $pinConfigured) {
         $components = @('GSL-v1', $identity.projectId, $identity.keyId,
             $identity.publicJwk.x, $identity.publicJwk.y)
         $canonical = [string]::Join("`n", [string[]]$components)
-        $fingerprint = [Convert]::ToHexString(
-            [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($canonical))).ToLowerInvariant()
+        # GitHub Windows runner uses Windows PowerShell 5.1 / .NET Framework,
+        # where SHA256.HashData and Convert.ToHexString are unavailable.
+        $sha256 = [Security.Cryptography.SHA256]::Create()
+        try {
+            $digest = $sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($canonical))
+        } finally {
+            $sha256.Dispose()
+        }
+        $fingerprint = [BitConverter]::ToString($digest).Replace('-', '').ToLowerInvariant()
         $matchedPin = [regex]::Match($loader, 'ApprovedPublicKeyFingerprintHex\s*=\s*"([a-fA-F0-9]{64})"\s*;')
         $trustedBundleMatchesPinnedIdentity = $matchedPin.Success -and
             $fingerprint -ceq $matchedPin.Groups[1].Value.ToLowerInvariant() -and
