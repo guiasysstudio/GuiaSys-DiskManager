@@ -107,3 +107,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Introduzido `StorageOperationType.MovePartition` exclusivamente como representação de intenção de alto risco: o botão de fila a bloqueia, a política de segurança nega incondicionalmente, o planejador cria conflito e as camadas de execução rejeitam antes do PowerShell.
 - **Não existe motor de cópia de dados, restauração ou escrita de partições em C09.** A conclusão técnica é da prévia e das proteções, não de movimentação real homologada.
 - Testes sintéticos para limites, colisão, proteção e UI; gate global continua **NO-GO**. Ver [GDM-C09](GDM-C09.md).
+
+## GDM-C10 — Análise GPT/MBR (15/10/2026)
+
+- `DiskConversionAssessment`: verifica viabilidade geométrica e impeditivos sem fazer qualquer conversão; capacidade MBR depende de `2^32 × setor lógico`, com teto de 4 entradas primárias.
+- Mensagens distinguem disco RAW vazio elegível a **planejamento de inicialização** de GPT/MBR com partições já existentes, que demandam motor de migração de dados não disponível.
+- Cartão WPF **C10 · GPT / MBR** com consulta read-only para os dois destinos; invalida resultados antigos após seleção/refresh/falha; não gera `StorageOperation`.
+- Testes sintéticos de setores 512/4096, boot, limites, identidade, RAW, tabelas GPT/MBR e UI; nenhuma conversão real.
+- Gate de gravação **NO-GO**. Detalhes: [GDM-C10](GDM-C10.md).
