@@ -120,3 +120,8 @@ Foi criada uma ferramenta console para conferir localmente os identificadores p�
 ### Atualização H02.1 — domínio oficial e chave pública ES256 do Licensing
 
 O contrato oficial do administrador agora define `https://licencas.guiasys.com.br/` (substituindo `.online`). A chave **pública** ES256 do GuiaSys Disk Manager foi incorporada ao build de desenvolvimento como `gsl-v1-trust.json` mais digest SHA-256 fixado no binário, com testes de correspondência e sem chaves privadas. O GitHub Actions verifica a identidade pública e a presença do arquivo no pacote Windows. Isso resolve a preparação criptográfica estática, **não** a homologação de ativações, revogações e cache em produção: seguem pendentes assinatura digital, testes humanos e liberação comercial. `StorageWriteGate.ReleasedAfterSafetyAudit=false` continua obrigatório. Detalhes: [GDM-H02.1](docs/GDM-H02.1.md).
+
+
+### GDM-H03-UI — Interface de gerenciamento de partições reorganizada (16/10/2026)
+
+A interface Windows recebeu uma faixa azul de ferramentas, cores claras de maior contraste, **tabela de partições acima do mapa** do disco selecionado, lista lateral de discos, painel de ações contextual compacto e fila inferior. A organização é inspirada em gerenciadores como o MiniTool, mas todos os componentes e a identidade visual são próprios da GuiaSys. Preservados F5, Ctrl+1…8, licenciamento, logs e consulta ao GitHub Releases. O verificador de atualizações **não instala executáveis automaticamente**. A auditoria automatizada `tools/Test-DesktopUiContract.ps1` preserva os bindings somente leitura, controles e bloqueio de escrita; a aparência ainda precisa ser testada no Windows em DPI variados. Veja [GDM-H03-UI](docs/GDM-H03-UI.md).

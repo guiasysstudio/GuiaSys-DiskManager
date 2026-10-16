@@ -212,3 +212,13 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Trial informado como desativado **no momento do contrato**, mas o servidor continua autoridade dinâmica. **Sem requisições de produção em H02.1.**
 - Pré-verificação CI de conteúdo + pin + identidade e teste de alteração de chave. Mesmo com pin presente, o relatório comercial permanece `NO-GO`; faltam assinatura, homologação com licença real, Win10/11 e aprovação de escrita em mídia.
 - Ver [GDM-H02.1](GDM-H02.1.md). Nada alterado em `main`, Firebase ou discos físicos.
+
+
+## GDM-H03-UI — Reestruturação visual no Windows (16/10/2026)
+
+- Barra superior azul com o logotipo GuiaSys, inventário, logs, licença e modo seguro, seguida de toolbar com ações rápidas e navegação.
+- Conteúdo principal reordenado: tabela de partições → mapa proporcional + legenda → resumo → diagnósticos; painéis laterais mais compactos.
+- Novo tema claro/azul com maior contraste na navegação. Estatísticas secundárias do mapa ficam recolhidas por padrão.
+- Mantidas todas as ações e proteções MVVM, inclusive `ApplyCommand` indisponível por `StorageWriteGate=false`. Consulta ao GitHub Releases preservada; sem novo mecanismo de atualização automática.
+- CI agora executa `tools/Test-DesktopUiContract.ps1`, valida o XAML e os bindings de leitura. Teste visual em Windows real/DPI é **pendente**; liberação comercial continua **NO-GO**.
+- Registro: [GDM-H03-UI](GDM-H03-UI.md).
