@@ -35,6 +35,9 @@ public sealed class MainViewModel : ObservableObject
     private DiskInfo? _selectedCloneTargetDisk;
     private ClonePreviewReport? _clonePreviewReport;
     private string _clonePreviewSummary = "C11 · Selecione uma origem e um disco de destino diferente. Somente análise, sem escrita.";
+    private DiskInfo? _selectedMigrationTargetDisk;
+    private WindowsMigrationReport? _migrationReport;
+    private string _migrationSummary = "C12 · Selecione o disco do Windows e outro destino para avaliar a migração. Sem escrita.";
     private string _driveLetterInput = "";
     private string _allocationUnitInput = "";
     private string _selectedFileSystem = "NTFS";
@@ -58,6 +61,8 @@ public sealed class MainViewModel : ObservableObject
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
         InspectMbrConversionCommand = new RelayCommand(() => InspectConversion(DiskPartitionScheme.Mbr),
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
+        InspectMigrationCommand = new RelayCommand(InspectMigration,
+            () => SelectedDisk is not null && SelectedMigrationTargetDisk is not null && SelectedPartition is null && !IsBusy);
         InspectCloneCommand = new RelayCommand(InspectClone,
             () => SelectedDisk is not null && SelectedCloneTargetDisk is not null && !IsBusy);
         PreviewMoveCommand = new RelayCommand(PreviewSelectedMove,
@@ -208,6 +213,29 @@ public sealed class MainViewModel : ObservableObject
         get => _conversionReport;
         private set => SetProperty(ref _conversionReport, value);
     }
+    public DiskInfo? SelectedMigrationTargetDisk
+    {
+        get => _selectedMigrationTargetDisk;
+        set
+        {
+            if (!SetProperty(ref _selectedMigrationTargetDisk, value)) return;
+            InvalidateMigration("Destino alterado; refaça a análise de migração.");
+            InspectMigrationCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public WindowsMigrationReport? MigrationReport
+    {
+        get => _migrationReport;
+        private set => SetProperty(ref _migrationReport, value);
+    }
+
+    public string MigrationSummary
+    {
+        get => _migrationSummary;
+        private set => SetProperty(ref _migrationSummary, value);
+    }
+
     public DiskInfo? SelectedCloneTargetDisk
     {
         get => _selectedCloneTargetDisk;
@@ -216,6 +244,7 @@ public sealed class MainViewModel : ObservableObject
             if (!SetProperty(ref _selectedCloneTargetDisk, value)) return;
             InvalidateClone("Destino alterado; refaça a inspeção.");
             InspectCloneCommand.RaiseCanExecuteChanged();
+        InspectMigrationCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -255,6 +284,7 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand ApplyCommand { get; }
     public RelayCommand OpenLogsCommand { get; }
     public RelayCommand UseResizeMinimumCommand { get; }
+    public RelayCommand InspectMigrationCommand { get; }
     public RelayCommand InspectCloneCommand { get; }
     public RelayCommand InspectGptConversionCommand { get; }
     public RelayCommand InspectMbrConversionCommand { get; }
@@ -274,6 +304,7 @@ public sealed class MainViewModel : ObservableObject
             MovePreviewSummary = "Inventário atualizado; prévia anterior invalidada. Nenhuma escrita realizada.";
             InvalidateConversion("Inventário atualizado; refaça a análise GPT/MBR.");
             InvalidateClone("Inventário atualizado; refaça a prévia de clonagem.");
+            InvalidateMigration("Inventário atualizado; refaça o diagnóstico do Windows.");
             // Validate ALL geometry and presentation aggregates before exposing any snapshot.
             var newInsights = InventoryInsights.Build(snapshot);
             _inventoryInsights = newInsights;
@@ -282,10 +313,13 @@ public sealed class MainViewModel : ObservableObject
             var previousIdentity = SelectedDisk?.Identity;
             var previousPartitionIdentity = SelectedPartition?.Identity;
             var previousCloneTargetIdentity = SelectedCloneTargetDisk?.Identity;
+            var previousMigrationTargetIdentity = SelectedMigrationTargetDisk?.Identity;
             _loadingSelection = true;
             try
             {
                 Disks.Clear(); foreach (var disk in snapshot.Disks) Disks.Add(disk);
+                SelectedMigrationTargetDisk = previousMigrationTargetIdentity is null ? null :
+                    Disks.FirstOrDefault(d => string.Equals(d.Identity, previousMigrationTargetIdentity, StringComparison.Ordinal));
                 // Never switch to an arbitrary destination if the previous physical identity disappeared.
                 SelectedCloneTargetDisk = previousCloneTargetIdentity is null ? null :
                     Disks.FirstOrDefault(d => string.Equals(d.Identity, previousCloneTargetIdentity, StringComparison.Ordinal));
@@ -325,6 +359,8 @@ public sealed class MainViewModel : ObservableObject
             InvalidateConversion("Inventário indisponível; análise de conversão descartada.");
             SelectedCloneTargetDisk = null;
             InvalidateClone("Inventário indisponível; prévia de clonagem descartada.");
+            SelectedMigrationTargetDisk = null;
+            InvalidateMigration("Inventário indisponível; diagnóstico do Windows descartado.");
             UpdatePreview();
             OnPropertyChanged(nameof(DiskCountLabel));
             OnPropertyChanged(nameof(PartitionCountLabel));
@@ -575,6 +611,7 @@ public sealed class MainViewModel : ObservableObject
         MovePreviewSummary = "Alvo alterado; refaça a prévia antes de avaliar o destino.";
         InvalidateConversion("Seleção alterada; refaça a análise GPT/MBR.");
         InvalidateClone("Origem alterada; refaça a análise de clonagem.");
+        InvalidateMigration("Origem ou partição alterada; refaça a análise do Windows.");
         OnPropertyChanged(nameof(SelectedResizeRange));
         OnPropertyChanged(nameof(ResizeBoundsSummary));
         OnPropertyChanged(nameof(SelectedDiskMetrics));
@@ -612,6 +649,22 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedActionReason));
         OnPropertyChanged(nameof(SelectedActionStatus));
         UpdateCommands();
+    }
+
+    private void InvalidateMigration(string reason)
+    {
+        MigrationReport = null;
+        MigrationSummary = reason + " Nenhuma migração ou gravação será executada.";
+    }
+
+    private void InspectMigration()
+    {
+        if (SelectedDisk is null || SelectedMigrationTargetDisk is null ||
+            SelectedPartition is not null || IsBusy) return;
+        MigrationReport = WindowsMigrationAssessment.Analyze(_snapshot,
+            SelectedDisk.Number, SelectedMigrationTargetDisk.Number);
+        MigrationSummary = MigrationReport.Summary;
+        Status = "Diagnóstico de migração Windows somente leitura. Sem transferência de dados.";
     }
 
     private void InvalidateClone(string reason)
