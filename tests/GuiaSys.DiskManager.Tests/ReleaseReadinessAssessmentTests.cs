@@ -11,6 +11,7 @@ public sealed class ReleaseReadinessAssessmentTests
         VirtualDiskRunnerRevalidatedForThisRelease: true,
         PhysicalDiskSafetyApproved: true,
         ProductionLicensingEndToEndValidated: true,
+        PublisherPublicSigningKeyAndPackageApproved: true,
         AccessibilityAndDpiSmokeTested: true,
         PublicReleaseUpdateChannelTested: true,
         DistributionAndRollbackApproved: true,
@@ -22,7 +23,7 @@ public sealed class ReleaseReadinessAssessmentTests
         var report = ReleaseReadinessAssessment.Evaluate(new(), "0.1.0-dev");
         Assert.False(report.CommercialGo);
         Assert.Equal(12, report.Findings.Count);
-        Assert.Equal(report.Findings.Count - 1, report.BlockerCount);
+        Assert.Equal(report.Findings.Count, report.BlockerCount);
         Assert.StartsWith("NO-GO", report.Decision);
     }
 
@@ -80,8 +81,18 @@ public sealed class ReleaseReadinessAssessmentTests
         {
             Assert.False(string.IsNullOrWhiteSpace(x.EvidenceRequired));
             Assert.False(string.IsNullOrWhiteSpace(x.Requirement));
-            Assert.Equal(x.Code == "C18-02" ? "PASS" : "BLOCKED", x.Status);
+            Assert.Equal("BLOCKED", x.Status);
         });
+    }
+
+
+    [Fact]
+    public void A_pinned_public_key_alone_never_counts_as_commercial_evidence()
+    {
+        Assert.True(GslV1TrustLoader.HasPinnedTrustFingerprint);
+        var report = ReleaseReadinessAssessment.Evaluate(new(), "1.0.0");
+        Assert.Contains(report.Findings, x => x.Code == "C18-02" && !x.Passed);
+        Assert.False(report.CommercialGo);
     }
 
     [Fact]
