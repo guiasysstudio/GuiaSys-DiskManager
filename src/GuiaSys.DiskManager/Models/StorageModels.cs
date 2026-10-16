@@ -64,6 +64,18 @@ public sealed record PartitionInfo
     public long? VolumeCapacityBytes { get; init; }
     public long? VolumeAvailableBytes { get; init; }
     public string HealthStatus { get; init; } = "Unknown";
+    /// <summary>
+    /// Optional limits returned by Get-PartitionSupportedSize for this captured partition.
+    /// Null means Windows could not confirm the limit, never zero or assumed free space.
+    /// </summary>
+    public long? ResizeMinBytes { get; init; }
+    public long? ResizeMaxBytes { get; init; }
+    public bool HasResizeLimits => ResizeMinBytes is > 0 &&
+        ResizeMaxBytes is long max && max >= ResizeMinBytes.Value;
+    public string ResizeMinLabel => ResizeMinBytes is long bytes && HasResizeLimits
+        ? ByteSize.Format(bytes) : "Indisponível";
+    public string ResizeMaxLabel => ResizeMaxBytes is long bytes && HasResizeLimits
+        ? ByteSize.Format(bytes) : "Indisponível";
     public string SizeLabel => ByteSize.Format(Size);
     public string FreeLabel => HasVolumeUsage ? ByteSize.Format(VolumeAvailableBytes!.Value) : "Não disponível";
     public bool HasVolumeUsage => VolumeCapacityBytes is >= 0 &&
