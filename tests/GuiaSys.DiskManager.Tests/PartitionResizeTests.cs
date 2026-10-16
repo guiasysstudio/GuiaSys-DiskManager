@@ -245,9 +245,10 @@ public sealed class PartitionResizeTests
     [Fact]
     public void Old_windows_json_without_resize_data_does_not_invent_capabilities()
     {
-        var old = JsonSample.Replace("\"ResizeMinBytes\":209715200, \"ResizeMaxBytes\":786432000", "");
-        // Preserve the JSON structure after removing optional fields.
-        old = old.Replace("\"IsOffline\":false,\n            \n", "\"IsOffline\":false\n");
+        var old = JsonSample.Replace(
+            ", \"ResizeMaxBytes\":786432000", "").Replace(
+            ", \"ResizeMinBytes\":209715200", "");
+        // The previous two replacements remove optional numeric fields and their leading commas.
         var snapshot = PowerShellDiskInventoryService.ParseInventory(old, DateTimeOffset.UtcNow);
         Assert.False(snapshot.Partitions[0].HasResizeLimits);
         Assert.False(PartitionResizePolicy.TryResolve(snapshot, snapshot.Partitions[0], out _, out _));
