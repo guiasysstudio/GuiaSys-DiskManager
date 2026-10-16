@@ -182,6 +182,8 @@
                     Tag="DiskMap" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="≡   Partições e volumes"
                     Tag="Partitions" Click="Navigation_Click"/>
+            <Button Style="{StaticResource NavButton}" Content="♡   Saúde e diagnósticos"
+                    Tag="Health" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="⚙   Preparar operação"
                     Tag="Operations" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="☷   Fila de operações"
@@ -419,6 +421,38 @@
                              TextTrimming="CharacterEllipsis" ToolTip="{Binding SelectedPartition.AccessPaths}" Margin="0,4,0,0"/>
                 </StackPanel>
               </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- C13: Windows read-only observations, never SMART pass/fail certification. -->
+          <Border x:Name="HealthSection" Style="{StaticResource Surface}">
+            <StackPanel>
+              <TextBlock Text="C13 · SAÚDE E DIAGNÓSTICOS" Style="{StaticResource SectionTitle}"/>
+              <TextBlock Text="Estados de disco/volume e contadores opcionais de confiabilidade fornecidos pelo Windows."
+                         Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,5,0,8"/>
+              <TextBlock Text="{Binding SelectedDisk.DisplayName}" FontWeight="SemiBold" Margin="0,0,0,9"/>
+              <Button Content="Analisar indicadores · somente leitura"
+                      Command="{Binding InspectHealthCommand}" HorizontalAlignment="Left"
+                      ToolTip="Analisa o inventário em memória; use Atualizar (F5) para coletar novas leituras."
+                      AutomationProperties.Name="Analisar saúde do disco selecionado"/>
+              <TextBlock Text="{Binding HealthSummary}" TextWrapping="Wrap" Margin="0,10,0,8"
+                         FontWeight="SemiBold" AutomationProperties.Name="Resumo da análise de saúde"/>
+              <ItemsControl ItemsSource="{Binding HealthReport.Checks}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border BorderBrush="{StaticResource OutlineBrush}" BorderThickness="0,0,0,1" Padding="0,8,0,8">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Component}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource AccentBrush}" FontSize="12"/>
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="S.M.A.R.T. COMPLETO NÃO VERIFICADO. Nenhum autoteste, CHKDSK, Repair-Volume ou reparo é executado. Uma condição Windows saudável não garante ausência de falhas."
+                         Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" FontSize="11"
+                         FontWeight="SemiBold" Margin="0,10,0,0"/>
             </StackPanel>
           </Border>
         </StackPanel>

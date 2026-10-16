@@ -54,6 +54,9 @@ public partial class MainWindow : Window
             case "Partitions":
                 PartitionsSection.BringIntoView();
                 break;
+            case "Health":
+                HealthSection.BringIntoView();
+                break;
             case "Operations":
                 OperationEditor.BringIntoView();
                 OperationTypeSelector.Focus();

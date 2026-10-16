@@ -37,6 +37,8 @@ public sealed class MainViewModel : ObservableObject
     private string _clonePreviewSummary = "C11 · Selecione uma origem e um disco de destino diferente. Somente análise, sem escrita.";
     private DiskInfo? _selectedMigrationTargetDisk;
     private WindowsMigrationReport? _migrationReport;
+    private DiskHealthReport? _healthReport;
+    private string _healthSummary = "C13 · Selecione um disco e consulte os indicadores do Windows. SMART integral não verificado.";
     private string _migrationSummary = "C12 · Selecione o disco do Windows e outro destino para avaliar a migração. Sem escrita.";
     private string _driveLetterInput = "";
     private string _allocationUnitInput = "";
@@ -61,6 +63,8 @@ public sealed class MainViewModel : ObservableObject
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
         InspectMbrConversionCommand = new RelayCommand(() => InspectConversion(DiskPartitionScheme.Mbr),
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
+        InspectHealthCommand = new RelayCommand(InspectHealth,
+            () => SelectedDisk is not null && !IsBusy);
         InspectMigrationCommand = new RelayCommand(InspectMigration,
             () => SelectedDisk is not null && SelectedMigrationTargetDisk is not null && SelectedPartition is null && !IsBusy);
         InspectCloneCommand = new RelayCommand(InspectClone,
@@ -224,6 +228,18 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    public DiskHealthReport? HealthReport
+    {
+        get => _healthReport;
+        private set => SetProperty(ref _healthReport, value);
+    }
+
+    public string HealthSummary
+    {
+        get => _healthSummary;
+        private set => SetProperty(ref _healthSummary, value);
+    }
+
     public WindowsMigrationReport? MigrationReport
     {
         get => _migrationReport;
@@ -285,6 +301,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand OpenLogsCommand { get; }
     public RelayCommand UseResizeMinimumCommand { get; }
     public RelayCommand InspectMigrationCommand { get; }
+    public RelayCommand InspectHealthCommand { get; }
     public RelayCommand InspectCloneCommand { get; }
     public RelayCommand InspectGptConversionCommand { get; }
     public RelayCommand InspectMbrConversionCommand { get; }
@@ -305,6 +322,7 @@ public sealed class MainViewModel : ObservableObject
             InvalidateConversion("Inventário atualizado; refaça a análise GPT/MBR.");
             InvalidateClone("Inventário atualizado; refaça a prévia de clonagem.");
             InvalidateMigration("Inventário atualizado; refaça o diagnóstico do Windows.");
+            InvalidateHealth("Inventário atualizado; refaça a análise de saúde.");
             // Validate ALL geometry and presentation aggregates before exposing any snapshot.
             var newInsights = InventoryInsights.Build(snapshot);
             _inventoryInsights = newInsights;
@@ -361,6 +379,7 @@ public sealed class MainViewModel : ObservableObject
             InvalidateClone("Inventário indisponível; prévia de clonagem descartada.");
             SelectedMigrationTargetDisk = null;
             InvalidateMigration("Inventário indisponível; diagnóstico do Windows descartado.");
+            InvalidateHealth("Inventário indisponível; análise de saúde descartada.");
             UpdatePreview();
             OnPropertyChanged(nameof(DiskCountLabel));
             OnPropertyChanged(nameof(PartitionCountLabel));
@@ -612,6 +631,7 @@ public sealed class MainViewModel : ObservableObject
         InvalidateConversion("Seleção alterada; refaça a análise GPT/MBR.");
         InvalidateClone("Origem alterada; refaça a análise de clonagem.");
         InvalidateMigration("Origem ou partição alterada; refaça a análise do Windows.");
+        InvalidateHealth("Seleção alterada; refaça a análise de saúde.");
         OnPropertyChanged(nameof(SelectedResizeRange));
         OnPropertyChanged(nameof(ResizeBoundsSummary));
         OnPropertyChanged(nameof(SelectedDiskMetrics));
@@ -649,6 +669,20 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedActionReason));
         OnPropertyChanged(nameof(SelectedActionStatus));
         UpdateCommands();
+    }
+
+    private void InvalidateHealth(string reason)
+    {
+        HealthReport = null;
+        HealthSummary = reason + " Os indicadores são somente leitura e o SMART integral não foi verificado.";
+    }
+
+    private void InspectHealth()
+    {
+        if (SelectedDisk is null || IsBusy) return;
+        HealthReport = StorageHealthAssessment.Analyze(_snapshot, SelectedDisk.Number);
+        HealthSummary = HealthReport.Summary;
+        Status = "Indicadores de saúde Windows analisados sem modificar discos ou executar varreduras.";
     }
 
     private void InvalidateMigration(string reason)
@@ -770,6 +804,8 @@ public sealed class MainViewModel : ObservableObject
         InspectGptConversionCommand.RaiseCanExecuteChanged();
         InspectMbrConversionCommand.RaiseCanExecuteChanged();
         InspectCloneCommand.RaiseCanExecuteChanged();
+        InspectMigrationCommand.RaiseCanExecuteChanged();
+        InspectHealthCommand.RaiseCanExecuteChanged();
     }
 }
 
