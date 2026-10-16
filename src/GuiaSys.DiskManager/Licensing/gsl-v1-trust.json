@@ -1,0 +1,10 @@
+{
+  "projectId": "prj_b41909541f924fe5b837",
+  "keyId": "sig_3828131003da47bda2f7",
+  "publicJwk": {
+    "kty": "EC",
+    "crv": "P-256",
+    "x": "Rb_biptRYMM1wlGZ9ed0HQ5ElFli0pwxcD5RwCBKd7Y",
+    "y": "ZrGce5UqJ5V7skkZISQwqtSaZesJiJcT69ltG9rv-s0"
+  }
+}

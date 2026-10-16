@@ -1,0 +1,45 @@
+<Window x:Class="GuiaSys.DiskManager.LicenseWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Conta e Licença — GuiaSys Disk Manager"
+        Width="590" Height="510" MinWidth="530" MinHeight="470"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource BackgroundBrush}"
+        Foreground="{StaticResource TextBrush}" Icon="Assets/Branding/GuiaSys-DiskManager.ico">
+  <Grid Margin="24">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <StackPanel>
+      <TextBlock Text="GuiaSys Licensing" FontSize="24" FontWeight="Bold"/>
+      <TextBlock Text="GSL-v1 · GuiaSys Disk Manager" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,15"/>
+    </StackPanel>
+    <Border Grid.Row="1" Background="{StaticResource PanelBrush}" CornerRadius="8" Padding="14">
+      <StackPanel>
+        <TextBlock x:Name="StatusText" Text="Verificando estado local..." FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap"/>
+        <TextBlock x:Name="DetailsText" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,9,0,0"/>
+      </StackPanel>
+    </Border>
+    <StackPanel Grid.Row="2" Margin="0,16,0,0">
+      <TextBlock Text="License Key" Foreground="{StaticResource MutedBrush}"/>
+      <PasswordBox x:Name="KeyInput" Margin="0,7,0,9" Padding="10,8"
+                   ToolTip="A chave não será exibida nem registrada nos logs."/>
+      <WrapPanel>
+        <Button x:Name="ActivateButton" Content="Ativar licença" Click="Activate_Click" Background="{StaticResource AccentBrush}" Foreground="#FFFFFF"/>
+        <Button x:Name="TrialButton" Content="Iniciar avaliação" Click="Trial_Click"/>
+        <Button x:Name="ValidateButton" Content="Validar agora" Click="Validate_Click"/>
+      </WrapPanel>
+    </StackPanel>
+    <StackPanel Grid.Row="3" Margin="0,17,0,0">
+      <TextBlock Text="Gerenciamento" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,5"/>
+      <TextBlock Text="O primeiro uso exige internet. Autorizações offline só são aceitas após verificação criptográfica ES256 e dentro do prazo definido pelo servidor." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"/>
+      <Button x:Name="DeactivateButton" Content="Desativar licença neste dispositivo" HorizontalAlignment="Left" Margin="0,14,0,0" Click="Deactivate_Click"/>
+      <TextBlock Text="Alterações em discos físicos permanecem bloqueadas até os módulos de segurança C02–C04." Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,12,0,0"/>
+    </StackPanel>
+    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+      <TextBlock x:Name="BusyText" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="{StaticResource MutedBrush}"/>
+      <Button Content="Fechar" IsCancel="True" Width="95"/>
+    </StackPanel>
+  </Grid>
+</Window>

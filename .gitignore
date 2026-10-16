@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.vs/
+.vscode/
+*.user
+artifacts/
+TestResults/
+*.userprefs
+*.nupkg
+*.snupkg
+*.vhd
+*.vhdx
+.idea/
+/Referencias-OpenSource/
+/Referencias-MiniTool/

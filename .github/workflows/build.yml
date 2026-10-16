@@ -1,0 +1,155 @@
+name: Windows build, tests, portable and installer
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore GuiaSys.DiskManager.slnx
+      - name: Parse embedded PowerShell syntax (no disk commands)
+        shell: powershell
+        run: ./tools/Test-EmbeddedPowerShellSyntax.ps1
+      - name: H03 MiniTool-inspired desktop layout and safety audit (offline)
+        shell: powershell
+        run: .\tools\Test-DesktopUiContract.ps1
+      - name: Build Debug
+        run: dotnet build GuiaSys.DiskManager.slnx --configuration Debug --no-restore
+      - name: Test Debug
+        run: dotnet test GuiaSys.DiskManager.slnx --configuration Debug --no-build --no-restore --logger trx --results-directory TestResults/Debug
+      - name: Build Release
+        run: dotnet build GuiaSys.DiskManager.slnx --configuration Release --no-restore
+      - name: Test Release
+        run: dotnet test GuiaSys.DiskManager.slnx --configuration Release --no-build --no-restore --logger trx --results-directory TestResults/Release
+      - name: Publish self-contained Windows x64
+        run: dotnet publish src/GuiaSys.DiskManager/GuiaSys.DiskManager.csproj -c Release -r win-x64 --self-contained true --no-restore -o artifacts/portable
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+      - name: Compile installer
+        shell: powershell
+        run: .\tools\Build-Installer.ps1
+      - name: Verify distribution payload and write SHA256 manifest
+        shell: powershell
+        run: .\tools\Write-PackageChecksums.ps1
+      - name: Verify published SHA256 checksums
+        shell: powershell
+        run: .\tools\Test-PackageChecksums.ps1
+      - name: H01 read-only Windows package preflight
+        shell: powershell
+        run: .\tools\Test-WindowsReadOnlyPreflight.ps1
+      - name: H01 negative test rejects tampered checksum manifest
+        shell: powershell
+        run: |
+          $lines = @(Get-Content -LiteralPath artifacts/checksums/SHA256SUMS.txt -Encoding UTF8)
+          if ($lines.Count -ne 2) { throw 'Unexpected SHA256SUMS fixture.' }
+          $replacement = if ($lines[0][0] -eq '0') { '1' } else { '0' }
+          $lines[0] = $replacement + $lines[0].Substring(1)
+          $fixture = 'artifacts/smoke/sha256-tampered-test.txt'
+          [IO.File]::WriteAllLines((Join-Path $PWD $fixture), [string[]]$lines,
+            [Text.UTF8Encoding]::new($false))
+          try {
+            .\tools\Test-WindowsReadOnlyPreflight.ps1 -ManifestPath $fixture
+            throw 'CRITICAL: tampered package manifest accepted.'
+          } catch {
+            if ($_.Exception.Message -notlike 'H01_PACKAGE_CHECKSUM_MISMATCH*') {
+              throw
+            }
+            Write-Host 'PASS: H01 rejects tampered checksum without running any package.'
+          }
+      - name: Upload H01 read-only Windows preflight evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-H01-readonly-preflight
+          path: artifacts/smoke/windows-readonly-preflight.json
+          if-no-files-found: error
+      - name: H02.1 public JWK inspector isolated synthetic self-test (offline)
+        shell: powershell
+        run: dotnet run --project tools/GslV1TrustInspector/GslV1TrustInspector.csproj --configuration Release -- --self-test
+      - name: H02.1 refuse absent external trust input (offline)
+        shell: powershell
+        run: |
+          dotnet run --project tools/GslV1TrustInspector/GslV1TrustInspector.csproj --configuration Release -- --file artifacts/licensing/missing-official-trust.json --expected-project-id prj_0123456789abcdefabcd --expected-key-id sig_synthetic
+          if ($LASTEXITCODE -eq 0) { throw 'H02.1 incorrectly accepted a missing trust file.' }
+          Write-Host 'PASS: H02.1 rejects missing unverified public-key material.'
+          # GitHub's Windows PowerShell runner propagates LASTEXITCODE unless
+          # this expected negative test explicitly exits with success.
+          exit 0
+      - name: H02.1 verify bundled official public JWK and pinned SHA256 (offline)
+        shell: powershell
+        run: |
+          $result = & dotnet run --project tools/GslV1TrustInspector/GslV1TrustInspector.csproj --configuration Release -- --file artifacts/portable/gsl-v1-trust.json --expected-project-id prj_b41909541f924fe5b837 --expected-key-id sig_3828131003da47bda2f7
+          if ($LASTEXITCODE -ne 0) { throw 'H02.1 official public JWK validation failed.' }
+          $report = ($result -join "`n") | ConvertFrom-Json -ErrorAction Stop
+          if ($report.decision -ne 'NO-GO' -or
+              $report.provenanceApproved -ne $false -or
+              $report.candidateCanonicalFingerprintSha256 -cne '6714ec5a65788f4cc937e0f2abd3656362d70ccd6d3cc09aae7e460566ef8d97') {
+            throw 'H02.1 published public key no longer matches publisher-pinned fingerprint.'
+          }
+          Write-Host 'PASS: bundled public JWK/identity/fingerprint verified offline; commercial NO-GO retained.'
+      - name: H02 inspect pinned public GSL-v1 licensing readiness (offline)
+        shell: powershell
+        run: .\tools\Test-GslV1TrustReadiness.ps1
+      - name: H02 verify unapproved production trust is denied
+        shell: powershell
+        run: |
+          try {
+            .\tools\Test-GslV1TrustReadiness.ps1 -RequireProductionTrust
+            throw 'CRITICAL: GSL production trust granted without signed publisher evidence.'
+          } catch {
+            if ($_.Exception.Message -notlike 'H02_PRODUCTION_TRUST_NOT_VERIFIED*') {
+              throw
+            }
+            Write-Host 'PASS: H02 production trust denied; no live activation or secrets.'
+          }
+      - name: Upload H02 licensing trust readiness
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-H02-GSL-NO-GO
+          path: artifacts/licensing/gsl-v1-readiness.json
+          if-no-files-found: error
+      - name: Record C18 commercial release readiness (read-only)
+        shell: powershell
+        run: .\tools\Test-CommercialReleaseGate.ps1
+      - name: Verify commercial release gate fails closed for unapproved dev build
+        shell: powershell
+        run: |
+          try {
+            .\tools\Test-CommercialReleaseGate.ps1 -RequireCommercialGo
+            throw 'CRITICAL: commercial gate unexpectedly authorized development build.'
+          } catch {
+            if ($_.Exception.Message -notlike 'Commercial distribution BLOCKED by GDM-C18*') {
+              throw
+            }
+            Write-Host 'PASS: commercial release denied with explicit unmet requirements.'
+          }
+      - name: Upload C18 readiness audit
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-C18-NO-GO-audit
+          path: artifacts/readiness/commercial-readiness.json
+          if-no-files-found: error
+      - name: Upload checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-win-x64-sha256
+          path: artifacts/checksums/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Upload portable application
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-win-x64-portable
+          path: artifacts/portable/
+          if-no-files-found: error
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-win-x64-setup
+          path: artifacts/setup/*.exe
+          if-no-files-found: error
