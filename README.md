@@ -108,3 +108,7 @@ O gate C18 gera um relatório JSON verificável no GitHub Actions com **12 requi
 ### GDM-H01 — Pré-homologação Windows (sem tocar discos)
 
 Depois do C18, a etapa H01 acrescenta `tools/Test-WindowsReadOnlyPreflight.ps1`: verifica nomes/versionamento dos pacotes Windows, checksum SHA-256, status Authenticode e arquitetura **sem executar instalador, aplicativo ou comandos de disco**. O CI inclui teste negativo com manifesto SHA-256 adulterado e publica `GuiaSys-DiskManager-H01-readonly-preflight`. O resultado é **NO-GO comercial**: instalação/desinstalação real, UI/teclado/NVDA e Windows 10/11 aguardam ensaios humanos. Instruções e matriz de testes: [GDM-H01](docs/GDM-H01.md).
+
+### GDM-H02 — Preparação segura da confiança GuiaSys Licensing
+
+O cliente GSL-v1 agora rejeita documentos públicos JWK excessivos, duplicados ou com campos extras, valida a chave P-256 e exige correspondência com o SHA-256 **fixado pelo publicador no binário** antes de aceitar `gsl-v1-trust.json`. O fingerprint oficial **continua não configurado**; nenhuma ativação real foi homologada. O script `Test-GslV1TrustReadiness.ps1` gera relatório `NO-GO` sem rede, licenças ou chaves privadas e o CI verifica a recusa da liberação. Para a próxima etapa são necessários exclusivamente **project ID, key ID e JWK públicos do painel oficial**, verificados fora de banda; nunca enviar chaves privadas ou licenças de cliente. Ver [GDM-H02](docs/GDM-H02.md).

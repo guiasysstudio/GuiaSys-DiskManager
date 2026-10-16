@@ -59,3 +59,14 @@ Get-Content .\artifacts\smoke\windows-readonly-preflight.json
 O script valida hashes, versões e Authenticode **sem executar nenhum pacote, sem solicitar administração e sem alterar discos**. É permitido apontar os caminhos explicitamente com `-PortablePath`, `-InstallerPath`, `-ManifestPath` e `-OutputPath`. Para exigir duas assinaturas Authenticode válidas (atualmente pendentes), use `-RequireValidSignatures` e espere erro neste build de desenvolvimento. SHA256 de arquivo e manifesto baixados do mesmo local **não garante identidade do editor**.
 
 A pipeline usa ainda uma fixture de manifesto adulterado para provar falha explícita e publica `GuiaSys-DiskManager-H01-readonly-preflight`. Instalação e smoke real no Windows 10/11 continuam **fora da execução do CI**. Consulte [GDM-H01](GDM-H01.md).
+
+## GDM-H02 — Pré-verificação offline de confiança GuiaSys Licensing
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-GslV1TrustReadiness.ps1
+Get-Content .\artifacts\licensing\gsl-v1-readiness.json
+# Deve falhar até haver dados reais, origem independente e homologação:
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-GslV1TrustReadiness.ps1 -RequireProductionTrust
+```
+
+Não executa requests nem ativa licenças; audita somente constantes públicas e a presença de `gsl-v1-trust.json` no build. Sem fingerprint fixado, a pasta `artifacts/portable` não pode conter uma configuração pública não aprovada. O GitHub Actions faz a verificação e publica `GuiaSys-DiskManager-H02-GSL-NO-GO`. Veja [GDM-H02](GDM-H02.md) para obter e aprovar os **parâmetros públicos** e organizar ensaios reais autorizados; nunca colocar chaves privadas, contas admin ou licenças em commits.

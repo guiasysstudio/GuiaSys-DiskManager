@@ -189,3 +189,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - CI valida pacotes e prova recusa de manifesto adulterado em fixture separada; publica `GuiaSys-DiskManager-H01-readonly-preflight` com JSON de evidência **NO-GO**.
 - Testes humanos Windows 10/11, UI em zoom variados, NVDA/Narrator, licença, instalação/upgrade/desinstalação **continuam pendentes**. Veja [GDM-H01](GDM-H01.md).
 - `main` preservada, `StorageWriteGate` fechado, nenhum release comercial.
+
+## GDM-H02 — Hardening GSL-v1 e pré-homologação (16/10/2026)
+
+- Parser estrito com limite 8 KiB e verificação de chave pública ES256/P-256; rejeita campos duplicados, extras, JWK privado, caracteres incorretos, base64url não canônico. SHA-256 canônico deve corresponder a um **pin fixo embutido** e jamais é confiado somente por ter sido calculado localmente.
+- `ApprovedPublicKeyFingerprintHex` **continua vazio intencionalmente**; `StorageWriteGate` continua falso.
+- Unitários com chave EC efêmera sintética, sem rede; `tools/Test-GslV1TrustReadiness.ps1` gera `gsl-v1-readiness.json` e recusa `-RequireProductionTrust`, publicado como artefato H02 do GitHub Actions.
+- Integração real requer public JWK + ID do projeto por origem oficial independente, novo build assinado e homologação humana trial/licença/revogação/offline. Nenhuma licença produtiva foi utilizada nesta fase.
+- Consulte [GDM-H02](GDM-H02.md). **NO-GO comercial e NO-GO para gravações físicas.**
