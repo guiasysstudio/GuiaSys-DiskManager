@@ -465,6 +465,28 @@
               </ItemsControl>
             </StackPanel>
           </Border>
+          <!-- Conversion feasibility is informational only: no conversion operation is queued. -->
+          <Border Style="{StaticResource Surface}" Background="#183143">
+            <StackPanel>
+              <TextBlock Text="C10 · GPT / MBR" Style="{StaticResource SectionTitle}"/>
+              <TextBlock Text="Análise de conversão de disco (somente leitura). Selecione o disco inteiro, sem partição."
+                         Style="{StaticResource Caption}" Margin="0,5,0,9"/>
+              <WrapPanel>
+                <Button Content="Analisar → GPT"
+                        Command="{Binding InspectGptConversionCommand}"
+                        ToolTip="Inspeção sem modificar a tabela de partições"/>
+                <Button Content="Analisar → MBR"
+                        Command="{Binding InspectMbrConversionCommand}"
+                        ToolTip="Inspeção de limites MBR por tamanho do setor"/>
+              </WrapPanel>
+              <TextBlock Text="{Binding ConversionSummary}" TextWrapping="Wrap"
+                         FontSize="12" Margin="0,12,0,9"
+                         AutomationProperties.Name="Resultado da análise de conversão"/>
+              <TextBlock Text="CONVERSÃO COM DADOS NÃO IMPLEMENTADA. O resultado não habilita escrita, não altera partições nem executa MBR2GPT."
+                         Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"
+                         FontSize="11" FontWeight="SemiBold"/>
+            </StackPanel>
+          </Border>
           <Border x:Name="OperationEditor" Style="{StaticResource Surface}">
             <StackPanel>
               <TextBlock Text="Configuração" Style="{StaticResource SectionTitle}" Margin="0,0,0,12"/>
