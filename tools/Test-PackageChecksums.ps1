@@ -17,17 +17,18 @@ if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
 $lines = @(Get-Content -LiteralPath $ManifestPath -Encoding UTF8)
 if ($lines.Count -ne 2) { throw 'SHA256 manifest must contain exactly two entries.' }
 $packages = [ordered]@{
-    'GuiaSys.DiskManager.exe' = Join-Path $root 'artifacts\portable\GuiaSys.DiskManager.exe'
+    'GuiaSys.DiskManager.exe' = (Join-Path $root 'artifacts\portable\GuiaSys.DiskManager.exe')
     "GuiaSys-DiskManager-Setup-$version-x64.exe" =
-        Join-Path $root "artifacts\setup\GuiaSys-DiskManager-Setup-$version-x64.exe"
+        (Join-Path $root "artifacts\setup\GuiaSys-DiskManager-Setup-$version-x64.exe")
 }
 $known = @{}
 foreach ($line in $lines) {
-    if ($line -cnotmatch '\A([a-f0-9]{64})  ([a-zA-Z0-9._-]+)\z') {
+    if ($line -cmatch '\A([a-f0-9]{64})  ([a-zA-Z0-9._-]+)\z') {
+        $checksum = $Matches[1]
+        $name = $Matches[2]
+    } else {
         throw 'Invalid or unsafe SHA256 manifest line.'
     }
-    $checksum = $Matches[1]
-    $name = $Matches[2]
     if (-not $packages.Contains($name) -or $known.ContainsKey($name)) {
         throw "Duplicate or unexpected package name: $name"
     }
