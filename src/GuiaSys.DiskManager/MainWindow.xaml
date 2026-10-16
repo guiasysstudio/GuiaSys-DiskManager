@@ -300,8 +300,24 @@
             </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Border Background="#FFFFFF" BorderBrush="#D4E0EF" BorderThickness="1"
-                        CornerRadius="9" Padding="10,11" ToolTip="{Binding IdentityStrengthLabel}">
+                <Border BorderThickness="1" CornerRadius="8" Padding="9,9"
+                        ToolTip="{Binding IdentityStrengthLabel}">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="Background" Value="#FFFFFF"/>
+                      <Setter Property="BorderBrush" Value="#D4E0EF"/>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                          <Setter Property="Background" Value="#E4F1FF"/>
+                          <Setter Property="BorderBrush" Value="#176AC2"/>
+                          <Setter Property="BorderThickness" Value="2"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding HasAmbiguousUniqueId}" Value="True">
+                          <Setter Property="BorderBrush" Value="#B37518"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
                   <StackPanel>
                     <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"/>
