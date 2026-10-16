@@ -38,6 +38,8 @@ public static class ContextOperationPolicy
         {
             if (partition is null)
                 return new(type, label, false, "Selecione uma partição para redimensionar.");
+            if (!partition.HasStrongIdentity)
+                return new(type, label, false, "Partição sem identidade GPT forte; não é possível redimensionar.");
             if (!PartitionResizePolicy.TryResolve(snapshot, partition, out var limits, out var why))
                 return new(type, label, false, why);
             if (limits?.SuggestedSizeBytes is not long size)
