@@ -280,7 +280,6 @@ public sealed class MainViewModel : ObservableObject
             // Never leave stale inventory visible as if the device were still present.
             _snapshot = new StorageSnapshot([], [], DateTimeOffset.MinValue);
             MovePreviewSummary = "Inventário indisponível; prévia descartada.";
-            InvalidateConversion("Inventário indisponível; análise de conversão descartada.");
             _inventoryInsights = new InventoryInsights(StorageOverviewMetrics.Empty,
                 new Dictionary<int, DiskSpaceMetrics>());
             OnPropertyChanged(nameof(OverviewMetrics));
@@ -289,6 +288,7 @@ public sealed class MainViewModel : ObservableObject
             Partitions.Clear();
             PartitionSegments.Clear();
             UpdateContextOperations();
+            InvalidateConversion("Inventário indisponível; análise de conversão descartada.");
             UpdatePreview();
             OnPropertyChanged(nameof(DiskCountLabel));
             OnPropertyChanged(nameof(PartitionCountLabel));
