@@ -75,6 +75,25 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
             throw 'GPT_DISK_REQUIRED'
           }
         }
+        if ([string]$request.Type -eq 'ResizePartition') {
+          # Defense in depth: query LIVE Windows-supported bounds immediately before
+          # Resize-Partition, after identity and protected-layout verification.
+          if ($null -eq $partition -or $null -eq $request.SizeBytes) {
+            throw 'RESIZE_TARGET_OR_SIZE_MISSING'
+          }
+          $newSize = [uint64]$request.SizeBytes
+          $sector = [uint64]$disk.LogicalSectorSize
+          if ($sector -lt 512 -or $sector -gt 65536 -or
+              ($sector -band ($sector - 1)) -ne 0) { throw 'RESIZE_SECTOR_UNVERIFIED' }
+          if ($newSize -le 0 -or $newSize -eq [uint64]$partition.Size -or
+              $newSize % $sector -ne 0) { throw 'RESIZE_SIZE_NOT_ALIGNED_OR_UNCHANGED' }
+          $actualBounds = Get-PartitionSupportedSize -DiskNumber $disk.Number -PartitionNumber $partition.PartitionNumber -ErrorAction Stop
+          if ($null -eq $actualBounds -or $null -eq $actualBounds.SizeMin -or $null -eq $actualBounds.SizeMax -or
+              $actualBounds.SizeMin -le 0 -or $actualBounds.SizeMin -gt $actualBounds.SizeMax -or
+              $newSize -lt [uint64]$actualBounds.SizeMin -or $newSize -gt [uint64]$actualBounds.SizeMax) {
+            throw 'RESIZE_WINDOWS_SUPPORTED_RANGE_CHANGED'
+          }
+        }
         switch ([string]$request.Type) {
           'SetDiskOnline' { Set-Disk -Number $disk.Number -IsOffline $false -ErrorAction Stop }
           'SetDiskOffline' { Set-Disk -Number $disk.Number -IsOffline $true -ErrorAction Stop }
