@@ -177,7 +177,7 @@ public sealed class AllDiskMapTests
             "EFI", efi.Size, 0);
         var msrMap = new PartitionSegmentViewModel(msr, "MSR", "MSR",
             "MSR", msr.Size, 0);
-        Assert.Equal("(EFI)", efiMap.MapTypeLabel);
+        Assert.Equal("(FAT32)", efiMap.MapTypeLabel);
         Assert.Equal("(MSR)", msrMap.MapTypeLabel);
         Assert.Equal("Não alocado", free.MapTypeLabel);
         Assert.Contains("MB", efiMap.MapSizeLabel);
