@@ -13,7 +13,7 @@ public sealed class EssentialOperationsTests
     private static DiskInfo Disk(string style = "GPT") => new()
     {
         Number = 6, UniqueId = "c07-synthetic-vhdx", FriendlyName = "Fictitious",
-        Size = 1000 * Mb, PartitionStyle = style
+        Size = 1000 * Mb, PartitionStyle = style, LogicalSectorSize = 512
     };
     private static PartitionInfo Part(int number = 1, long offset = 100 * Mb, long size = 300 * Mb,
         string letter = "F") => new()
@@ -220,11 +220,15 @@ public sealed class EssentialOperationsTests
     [Fact]
     public void Partition_expansion_cannot_cross_occupied_extent_even_on_direct_safety_call()
     {
-        var first = Part();
-        var next = Part(2, offset: 500 * Mb, size: 300 * Mb, letter: "G");
+        const long MiB = 1_048_576;
+        var first = Part(size: 300 * MiB) with
+        {
+            ResizeMinBytes = 200 * MiB, ResizeMaxBytes = 600 * MiB
+        };
+        var next = Part(2, offset: 500 * MiB, size: 300 * MiB, letter: "G");
         var operation = Op(StorageOperationType.ResizePartition, first);
-        Assert.False(Safety.Evaluate(operation with { SizeBytes = 401 * Mb }, State("GPT", first, next)).Allowed);
-        Assert.True(Safety.Evaluate(operation with { SizeBytes = 400 * Mb }, State("GPT", first, next)).Allowed);
+        Assert.False(Safety.Evaluate(operation with { SizeBytes = 410 * MiB }, State("GPT", first, next)).Allowed);
+        Assert.True(Safety.Evaluate(operation with { SizeBytes = 400 * MiB }, State("GPT", first, next)).Allowed);
     }
 
     [Theory]
