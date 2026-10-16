@@ -92,6 +92,24 @@ As opções bloqueadas na captura não são só defeitos visuais: refletem uma p
 
 **F24 — Auditoria final e matriz comercial.** Revisar conjunto real de features contratadas, privacy/LGPD, créditos/licenças de componentes, regressão completa Debug/Release, ensaio humano em Windows 10/11, recuperação dos logs, evidências de VHDX e **gates C18-01…12** por versão/sha. **Aceite:** todos os itens exigidos para a edição efetivamente oferecida aprovados por responsável humano; só então construir e assinar release comercial. Nenhum CI verde isolado constitui GO.
 
+## Funcionalidades adicionais de gerenciadores como o MiniTool — ainda fora da interface atual
+
+A semelhança visual **não implica paridade funcional**. Os itens abaixo **não aparecem no enum de operações executáveis do programa atual** e, portanto, não podem ser anunciados como entregues. Precisam de priorização de produto antes de entrar no escopo de uma edição futura:
+
+| Capacidade candidata | Situação e dependência |
+|---|---|
+| Mesclar/dividir partições sem perder dados | **NÃO IMPLEMENTADA**; requer movimentação/cópia de arquivos, limites NTFS/partição, backup e recuperação |
+| Copiar partição com sistema de arquivos, em vez de prévia | **NÃO IMPLEMENTADA**; dependerá do motor F18 |
+| Alinhamento 4K/reparo de desalinhamento | **NÃO IMPLEMENTADO**; não é apenas mudar a posição apresentada no gráfico; requer movimentar setores e garantir consistência |
+| Converter sistema de arquivos preservando dados | **NÃO IMPLEMENTADO**; não prometer conversões NTFS/FAT32/exFAT irrestritas |
+| Ocultar/exibir partição, propriedades avançadas, GUID/tipo, reconstruir MBR/BCD | **NÃO IMPLEMENTADO**; configurações de boot e atributos GPT exigem políticas separadas |
+| Teste de superfície, benchmarking e comparação de performance | **NÃO IMPLEMENTADOS**; não confundir indicadores SMART disponíveis com varredura setorial |
+| Ambiente inicializável WinPE/recuperação offline | **NÃO IMPLEMENTADO**; poderá ser necessário a operações no volume do Windows, com assinatura/mídia/licenças próprias |
+| Suporte total a discos dinâmicos, Storage Spaces, BitLocker bloqueado, ReFS, RAID de hardware | **NÃO HOMOLOGADO**; inventariar não equivale a autorizar mudanças |
+| Backup/restore de imagens e reparo de sistemas de arquivos | **NÃO IMPLEMENTADOS** como motores verificáveis; avaliar escopo, licenciamento e requisitos de recuperação |
+
+**Decisão de produto pendente:** quais capacidades adicionais serão obrigatórias na edição comercial e quais serão oferecidas somente em versões futuras. Não usar as ferramentas/código de outros produtos como garantia de licença ou segurança para copiar implementações.
+
 ## Priorização e releases
 
 **Primeira versão utilizável e segura:** F01–F15, F20, F23, F24, com todas as operações básicas individualmente homologadas ou **explicitamente marcadas não suportadas**. O bloqueio físico não será removido prematuramente. Não incluir como “disponível” as ações F16–F19, F21–F22 até cada motor e teste de aceite existir.
