@@ -183,7 +183,7 @@ public sealed class AllDiskMapTests
         Assert.Contains("MB", efiMap.MapSizeLabel);
         Assert.Contains("MB", msrMap.MapSizeLabel);
         Assert.Contains("MB", free.MapSizeLabel);
-        var ntfs = new PartitionSegmentViewModel(Part(1, 3, 1_000_000, 10_000_000),
+        var ntfs = new PartitionSegmentViewModel(Part(1, 3, 1_000_000, 10_000_000) with { DriveLetter = "C" },
             "C:", "NTFS", "NTFS", 10_000_000, 0);
         Assert.Equal("C:(NTFS)", ntfs.MapTypeLabel);
     }
