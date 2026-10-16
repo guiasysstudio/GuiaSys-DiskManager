@@ -26,3 +26,7 @@ Nenhum software elimina o risco intrínseco de manutenção de discos. Drivers p
 ## Relato de vulnerabilidade
 
 Não publique dados pessoais, serial completo de hardware ou logs sensíveis em issues públicas. Redija informações do ambiente antes de compartilhar um diagnóstico.
+
+## GDM-C18 — Bloqueios de liberação
+
+O `StorageWriteGate` continua **desabilitado** e `GslV1TrustLoader` não aceita trust de produção sem fingerprint público pinado no executável. **Nenhuma gravação física foi liberada.** `Test-CommercialReleaseGate.ps1` audita o build sem executar comandos de armazenamento. O JSON `commercial-readiness.json` documenta os 12 bloqueios e pendências de produção: assinatura, testes Windows reais, VHDX administrativo atualizado, licença real, segurança em mídia descartável e aprovação humana. A opção `-RequireCommercialGo` deve falhar no código de desenvolvimento. CI verde é evidência técnica de build, não autorização de release ou garantia contra perda de dados. Detalhes: [GDM-C18](GDM-C18.md).

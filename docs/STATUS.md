@@ -174,3 +174,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - `Build-Installer.ps1` exige versão `X.Y.Z` e executável Windows com versão correspondente. CI gera e testa `SHA256SUMS.txt` para portable + instalador versionado; terceiro artifact contém checksums. Assinatura de código ainda **pendente**.
 - Testes sintéticos do verificador de versão e validação de artefatos em GitHub Actions. Resultados devem ser confirmados no HEAD. Documentado em [GDM-C17](GDM-C17.md).
 - **NO-GO** para publicar release comercial/auto-instalar/desbloquear gravações físicas antes de C18 e homologação de upgrade, uninstall e assinatura.
+
+## GDM-C18 — Auditoria e decisão de comercialização (16/10/2026)
+
+- **Resultado: NO-GO para comercialização, gravações físicas e auto-instalação.** Build ainda `0.1.0-dev`, `StorageWriteGate.ReleasedAfterSafetyAudit=false` e `GslV1TrustLoader.ApprovedPublicKeyFingerprintHex=""`.
+- Matriz imutável de **12 requisitos** no domínio de release; teste garante que licença válida e evidências sintéticas não liberam os dois bloqueios compilados.
+- Script `Test-CommercialReleaseGate.ps1` (não destrutivo) produz `commercial-readiness.json` com pendências; o modo `-RequireCommercialGo` falha explicitamente. CI registra e testa essa negação e publica o JSON como artefato.
+- Assinatura Authenticode, instalação/upgrade/desinstalação Windows real, licença GSL real, NVDA/zoom, VHDX elevado, testes controlados de hardware e aprovação humana **ainda pendentes**.
+- C18 **não** modifica `main`, não cria release/tag e não executa writes. Resultado completo: [GDM-C18](GDM-C18.md). CI verde não altera a decisão comercial.

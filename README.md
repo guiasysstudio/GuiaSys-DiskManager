@@ -2,7 +2,7 @@
 
 Gerenciador gráfico de discos e partições para Windows 10 e Windows 11 x64, desenvolvido pela **GuiaSys Studio** em C# 14, .NET 10, WPF e MVVM.
 
-> Versão de desenvolvimento 0.1.0. **Operações de gravação temporariamente bloqueadas na reconstrução** até os gates C02–C04 de identidade e segurança. Inventário continua disponível somente para leitura; nenhuma licença libera gravações nessa fase.
+> **GDM-C18 — NO-GO comercial.** Versão de desenvolvimento `0.1.0-dev`. O produto possui mecanismos de leitura, prévias e componentes de escrita protegidos por um gate global **fechado**. Nenhuma licença, teste unitário ou build CI autoriza gravações físicas, atualização automática ou distribuição comercial. Confiança GSL-v1 real, assinatura Authenticode e homologação Windows/hardware estão pendentes. Consulte [GDM-C18](docs/GDM-C18.md).
 
 ## Recursos atuais
 
@@ -100,3 +100,7 @@ O mapa de partições agora usa **botões acessíveis por teclado** (Tab + Enter
 ### GDM-C17 — Instalador, verificações de atualização e pacote Windows
 
 O menu **Sobre → Verificar atualização** consulta manualmente releases públicas estáveis do repositório oficial. URLs, versões e nomes de instalador são validados de modo estrito antes de habilitar **Abrir versão oficial**. **Não há download ou instalação automática.** O Inno Setup mantém o AppId e a pasta de dados pessoais fica fora da desinstalação; o build valida versão de executable/instalador e publica checksums SHA-256, também verificados no CI. Repositório privado não oferece releases públicas anônimas: a checagem do cliente não usa token. A assinatura Authenticode, testes de upgrade/desinstalação e lançamento comercial aguardam C18. Ver [GDM-C17](docs/GDM-C17.md).
+
+### GDM-C18 — Auditoria de lançamento comercial (NO-GO)
+
+O gate C18 gera um relatório JSON verificável no GitHub Actions com **12 requisitos obrigatórios de liberação**. O código de avaliação consulta o estado compilado do gate de escrita (`false`) e a ausência de fingerprint GSL público fixado no build; testes sintéticos não podem liberar essas barreiras. O script `tools/Test-CommercialReleaseGate.ps1` mede versão/assinatura local quando disponíveis, **não inventa validações externas** e bloqueia `-RequireCommercialGo`. A pipeline publica o artefato `GuiaSys-DiskManager-C18-NO-GO-audit`. O pipeline verde é um resultado de engenharia, **não um lançamento autorizado**. Veja o [relatório GDM-C18](docs/GDM-C18.md).

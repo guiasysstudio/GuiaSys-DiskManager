@@ -33,3 +33,16 @@ Execute `tools\Build-Installer.ps1` depois da publicação. A versão é lida de
 - A aplicação **somente** consulta releases públicas oficiais via HTTPS e abre a página validada no navegador. Não baixa nem executa instaladores; repositório privado não possui consulta pública autenticada automática.
 - Antes de publicar para clientes, exigir assinatura de código e instalação/atualização/desinstalação testadas em Windows 10/11, incluindo perfil do usuário e licença. Não publicar versão comercial somente com CI.
 - Ver [GDM-C17](GDM-C17.md) para o protocolo manual de release e limites de segurança.
+
+## Gate de comercialização GDM-C18 (NÃO libera produção)
+
+Após `dotnet test`, publish win-x64, Inno Setup e verificação do manifesto SHA-256, execute:
+
+```powershell
+.\tools\Test-CommercialReleaseGate.ps1
+Get-Content .\artifacts\readiness\commercial-readiness.json
+# Opcional: comprovar bloqueio comercial; o comando DEVE falhar nesta branch:
+.\tools\Test-CommercialReleaseGate.ps1 -RequireCommercialGo
+```
+
+O CI de desenvolvimento registra o relatório como artefato `GuiaSys-DiskManager-C18-NO-GO-audit` e considera correto o `NO-GO`; um `success` no CI não permite publicar uma versão comercial. O modo obrigatório deve integrar um workflow de distribuição **separado**, com assinatura e evidência humana auditada. Não invente dados da licença, não habilite `StorageWriteGate` e não rode testes de escrita em discos físicos. Ver [GDM-C18](GDM-C18.md).
