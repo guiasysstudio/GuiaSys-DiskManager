@@ -16,7 +16,7 @@ O GDM-C10 implementa um **diagnóstico de compatibilidade geométrica e de risco
 - Para destino **MBR**, calcula endereçamento clássico LBA de 32 bits usando o **tamanho real do setor lógico** (não supõe sempre 512 B): limite de endereçamento = `(2^32) × tamanho_do_setor`, recusando disco que exceda esse tamanho. Trata esse teste como representabilidade, não autorização de conversão. Recusa mais de 4 entradas primárias e extents existentes desalinhados; alerta que GUIDs/tipos GPT não se transferem literalmente para MBR.
 - Para destino **GPT**, alerta sobre firmware UEFI/Legacy, boot, tipos de partição estendidos/MBR e necessidade de motor especializado.
 - Sempre presume que uma partição existente pode conter dados, mesmo que o filesystem ou contadores de volume estejam ausentes. A análise **nunca** oferece gravação ou conversão segura sem backup.
-- Para **RAW sem partições**, a análise pode informar **candidato a inicialização** em GPT/MBR, que é diferente de converter discos já particionados. A implementação anterior permite planejar `InitializeGpt`/`InitializeMbr` apenas para RAW vazio, e o bloqueio global de gravações permanece inalterado.
+- Para **RAW sem partições**, a análise pode informar **candidato a inicialização** em GPT/MBR, que é diferente de converter discos já particionados. Além disso, a política autoritativa `SafetyService` agora exige **relatório válido de inicialização RAW** antes de aceitar o planejamento `InitializeGpt`/`InitializeMbr`: setor desconhecido, tamanho desalinhado ou disco MBR além de `2^32 × setor lógico` são recusados. O bloqueio global de gravações permanece inalterado.
 - Para discos que já possuem o esquema escolhido, identifica não-operação, evitando instruções enganosas.
 
 ## Interface WPF
