@@ -28,6 +28,8 @@ public sealed class MainViewModel : ObservableObject
     private string _status = "Pronto.";
     private string _labelInput = "";
     private string _sizeInput = "";
+    private string _moveDestinationInput = "";
+    private string _movePreviewSummary = "Nenhuma prévia calculada. Nenhuma movimentação será executada.";
     private string _driveLetterInput = "";
     private string _allocationUnitInput = "";
     private string _selectedFileSystem = "NTFS";
@@ -42,11 +44,17 @@ public sealed class MainViewModel : ObservableObject
         _planner = new OperationPlanner(safety);
         PendingOperations = _queue.Pending;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsBusy);
-        QueueCommand = new RelayCommand(QueueSelectedOperation, () => SelectedDisk is not null && !IsBusy && SelectedOperationAvailability?.IsAvailable == true);
+        QueueCommand = new RelayCommand(QueueSelectedOperation, () => SelectedDisk is not null && !IsBusy && SelectedOperationAvailability?.IsAvailable == true && SelectedOperationType != StorageOperationType.MovePartition);
         UndoCommand = new RelayCommand(() => { _queue.UndoLast(); UpdateCommands(); }, () => PendingOperations.Count > 0 && !IsBusy);
         ClearCommand = new RelayCommand(() => { _queue.Clear(); UpdateCommands(); Status = "Fila limpa."; }, () => PendingOperations.Count > 0 && !IsBusy);
         ApplyCommand = new AsyncRelayCommand(() => ApplyAsync(false), () => PendingOperations.Count > 0 && !IsBusy && StorageWriteGate.ReleasedAfterSafetyAudit);
         OpenLogsCommand = new RelayCommand(OpenLogs);
+        PreviewMoveCommand = new RelayCommand(PreviewSelectedMove,
+            () => SelectedOperationType == StorageOperationType.MovePartition &&
+                  SelectedPartition is not null && !IsBusy);
+        SuggestMoveDestinationCommand = new RelayCommand(SuggestMoveDestination,
+            () => SelectedOperationType == StorageOperationType.MovePartition &&
+                  SelectedPartition is not null && !IsBusy);
         UseResizeMinimumCommand = new RelayCommand(() => SetResizeSize(useMaximum: false),
             () => SelectedOperationType == StorageOperationType.ResizePartition && SelectedResizeRange?.CanShrink == true && !IsBusy);
         UseResizeMaximumCommand = new RelayCommand(() => SetResizeSize(useMaximum: true),
@@ -68,7 +76,8 @@ public sealed class MainViewModel : ObservableObject
         new(StorageOperationType.CreatePartition, "Criar partição"), new(StorageOperationType.DeletePartition, "Excluir partição"),
         new(StorageOperationType.FormatPartition, "Formatar partição"), new(StorageOperationType.SetDriveLetter, "Atribuir/trocar letra"),
         new(StorageOperationType.RemoveDriveLetter, "Remover letra"), new(StorageOperationType.ResizePartition, "Redimensionar partição"),
-        new(StorageOperationType.SetVolumeLabel, "Alterar label")
+        new(StorageOperationType.SetVolumeLabel, "Alterar label"),
+        new(StorageOperationType.MovePartition, "Mover partição · prévia")
     ];
     public string[] FileSystems { get; } = ["NTFS", "FAT32", "exFAT"];
     public bool IsAdministrator { get; } = AdministratorService.IsAdministrator();
@@ -117,7 +126,9 @@ public sealed class MainViewModel : ObservableObject
             : "Selecione um dispositivo na coluna esquerda.";
     public ContextOperationChoice? SelectedOperationAvailability => ContextOperations.FirstOrDefault(x => x.Type == SelectedOperationType);
     public string SelectedActionReason => SelectedOperationAvailability?.Reason ?? "Selecione uma operação.";
-    public string SelectedActionStatus => SelectedOperationAvailability?.IsAvailable == true
+    public string SelectedActionStatus => SelectedOperationType == StorageOperationType.MovePartition
+        ? "SOMENTE PRÉVIA · cópia de dados e gravação indisponíveis"
+        : SelectedOperationAvailability?.IsAvailable == true
         ? "Alvo compatível · valide os parâmetros para planejar"
         : "Indisponível para o alvo selecionado";
     public string CapturedAtLabel => _snapshot.CapturedAt == DateTimeOffset.MinValue ? "" : $"Atualizado {_snapshot.CapturedAt:HH:mm:ss}";
@@ -175,6 +186,17 @@ public sealed class MainViewModel : ObservableObject
     }
     public string LabelInput { get => _labelInput; set => SetProperty(ref _labelInput, value); }
     public string SizeInput { get => _sizeInput; set => SetProperty(ref _sizeInput, value); }
+    public string MoveDestinationInput
+    {
+        get => _moveDestinationInput;
+        set { if (SetProperty(ref _moveDestinationInput, value))
+            MovePreviewSummary = "Destino alterado. Refaça a prévia; nenhuma gravação está disponível."; }
+    }
+    public string MovePreviewSummary
+    {
+        get => _movePreviewSummary;
+        private set => SetProperty(ref _movePreviewSummary, value);
+    }
     public string DriveLetterInput { get => _driveLetterInput; set => SetProperty(ref _driveLetterInput, value); }
     public string AllocationUnitInput { get => _allocationUnitInput; set => SetProperty(ref _allocationUnitInput, value); }
     public string SelectedFileSystem { get => _selectedFileSystem; set => SetProperty(ref _selectedFileSystem, value); }
@@ -189,6 +211,8 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand ApplyCommand { get; }
     public RelayCommand OpenLogsCommand { get; }
     public RelayCommand UseResizeMinimumCommand { get; }
+    public RelayCommand PreviewMoveCommand { get; }
+    public RelayCommand SuggestMoveDestinationCommand { get; }
     public RelayCommand UseResizeMaximumCommand { get; }
 
     public Func<IReadOnlyList<StorageOperation>, bool, Task<bool>>? ConfirmOperationsAsync { get; set; }
@@ -200,6 +224,7 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var snapshot = await _inventory.ReadAsync(CancellationToken.None);
+            MovePreviewSummary = "Inventário atualizado; prévia anterior invalidada. Nenhuma escrita realizada.";
             // Validate ALL geometry and presentation aggregates before exposing any snapshot.
             var newInsights = InventoryInsights.Build(snapshot);
             _inventoryInsights = newInsights;
@@ -235,6 +260,7 @@ public sealed class MainViewModel : ObservableObject
             _logger.Error("storage.inventory.failed", exception);
             // Never leave stale inventory visible as if the device were still present.
             _snapshot = new StorageSnapshot([], [], DateTimeOffset.MinValue);
+            MovePreviewSummary = "Inventário indisponível; prévia descartada.";
             _inventoryInsights = new InventoryInsights(StorageOverviewMetrics.Empty,
                 new Dictionary<int, DiskSpaceMetrics>());
             OnPropertyChanged(nameof(OverviewMetrics));
@@ -256,6 +282,12 @@ public sealed class MainViewModel : ObservableObject
     private void QueueSelectedOperation()
     {
         if (SelectedDisk is null) return;
+        if (SelectedOperationType == StorageOperationType.MovePartition)
+        {
+            Status = "Movimentação não pode entrar na fila: prévia não executável.";
+            ShowError?.Invoke("Movimentação bloqueada", Status);
+            return;
+        }
         var type = SelectedOperationType;
         var needsSize = type is StorageOperationType.CreatePartition or StorageOperationType.ResizePartition;
         var needsLetter = type == StorageOperationType.SetDriveLetter;
@@ -484,6 +516,7 @@ public sealed class MainViewModel : ObservableObject
     private void NotifyTargetChanged()
     {
         if (!_loadingSelection) UpdateContextOperations();
+        MovePreviewSummary = "Alvo alterado; refaça a prévia antes de avaliar o destino.";
         OnPropertyChanged(nameof(SelectedResizeRange));
         OnPropertyChanged(nameof(ResizeBoundsSummary));
         OnPropertyChanged(nameof(SelectedDiskMetrics));
@@ -510,7 +543,7 @@ public sealed class MainViewModel : ObservableObject
         // Never silently replace an explicitly selected resize operation with a
         // different mutation if Windows limits vanish after a refresh.
         if (selected?.IsAvailable != true &&
-            SelectedOperationType != StorageOperationType.ResizePartition)
+            SelectedOperationType is not (StorageOperationType.ResizePartition or StorageOperationType.MovePartition))
         {
             var preferred = ContextOperations.FirstOrDefault(c => c.IsAvailable &&
                 c.Type == StorageOperationType.SetVolumeLabel)
@@ -521,6 +554,38 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedActionReason));
         OnPropertyChanged(nameof(SelectedActionStatus));
         UpdateCommands();
+    }
+
+    private void SuggestMoveDestination()
+    {
+        if (SelectedDisk is null || SelectedPartition is null ||
+            SelectedOperationType != StorageOperationType.MovePartition) return;
+        var candidate = PartitionMovePreview.SuggestDestination(_snapshot,
+            SelectedDisk.Number, SelectedPartition.PartitionNumber);
+        if (candidate is not long offset)
+        {
+            MovePreviewSummary = "Nenhuma faixa não alocada integral, alinhada e segura foi identificada.";
+            return;
+        }
+        MoveDestinationInput = $"{offset} B";
+        PreviewSelectedMove();
+    }
+
+    private void PreviewSelectedMove()
+    {
+        if (SelectedDisk is null || SelectedPartition is null ||
+            SelectedOperationType != StorageOperationType.MovePartition) return;
+        if (!TryParseSize(MoveDestinationInput, out var offset))
+        {
+            MovePreviewSummary = "Destino inválido: informe o deslocamento absoluto, em bytes, MB ou GB.";
+            return;
+        }
+        var preview = PartitionMovePreview.Analyze(_snapshot,
+            SelectedDisk.Number, SelectedPartition.PartitionNumber, offset);
+        MovePreviewSummary = preview.Summary;
+        Status = preview.CanPreview
+            ? "Prévia geométrica válida; não existe operação de cópia/executável."
+            : "Prévia recusada: " + preview.Reason;
     }
 
     private void SetResizeSize(bool useMaximum)
@@ -558,6 +623,8 @@ public sealed class MainViewModel : ObservableObject
         QueueCommand.RaiseCanExecuteChanged(); UndoCommand.RaiseCanExecuteChanged(); ClearCommand.RaiseCanExecuteChanged(); ApplyCommand.RaiseCanExecuteChanged(); RefreshCommand.RaiseCanExecuteChanged();
         UseResizeMinimumCommand.RaiseCanExecuteChanged();
         UseResizeMaximumCommand.RaiseCanExecuteChanged();
+        PreviewMoveCommand.RaiseCanExecuteChanged();
+        SuggestMoveDestinationCommand.RaiseCanExecuteChanged();
     }
 }
 
