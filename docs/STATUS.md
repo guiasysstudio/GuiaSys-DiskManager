@@ -99,3 +99,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - `SafetyService` valida os limites do snapshot de execução e script PowerShell reconsulta faixa suportada imediatamente antes do comando `Resize-Partition`. Nenhuma chamada de escrita foi feita.
 - Cenários de teste sintéticos para extremos, alinhamento, geometry, VHDX simulados e limites desaparecidos. Smoke visual e VHDX real ainda pendentes.
 - Gate de escrita permanece **NO-GO**. Relatório técnico: [GDM-C08](GDM-C08.md).
+
+## GDM-C09 — Movimentação: estudo seguro sem escrita (15/10/2026)
+
+- `PartitionMovePreview`: simulação de destino absoluto para partições GPT identificadas, somente para intervalos totalmente não alocados, sem sobreposição origem/destino; alinhamento de 1 MiB e seleção determinística de faixa.
+- Novo painel WPF "Mover partição · prévia" com entrada de posição e botões "Sugerir destino" e "Analisar geometria"; resultados invalidados quando muda o alvo ou inventário.
+- Introduzido `StorageOperationType.MovePartition` exclusivamente como representação de intenção de alto risco: o botão de fila a bloqueia, a política de segurança nega incondicionalmente, o planejador cria conflito e as camadas de execução rejeitam antes do PowerShell.
+- **Não existe motor de cópia de dados, restauração ou escrita de partições em C09.** A conclusão técnica é da prévia e das proteções, não de movimentação real homologada.
+- Testes sintéticos para limites, colisão, proteção e UI; gate global continua **NO-GO**. Ver [GDM-C09](GDM-C09.md).
