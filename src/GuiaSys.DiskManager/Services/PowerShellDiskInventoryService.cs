@@ -47,6 +47,34 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
           $partition = $_
           $volume = $null
           try { $volume = $partition | Get-Volume -ErrorAction Stop } catch { }
+          # Optional, read-only capability probe. A failed/unsupported query never
+          # guesses a minimum or maximum. Limit cost to non-system GPT data volumes.
+          $resizeMin = $null; $resizeMax = $null
+          $ownerDisk = @($windowsDisks | Where-Object { $_.Number -eq $partition.DiskNumber } | Select-Object -First 1)
+          $gptKind = ([string]$partition.GptType).Trim([char[]]@('{','}'))
+          if ([int]$partition.DiskNumber -gt 0 -and $ownerDisk.Count -eq 1 -and
+              [string]$ownerDisk[0].PartitionStyle -ieq 'GPT' -and
+              -not $ownerDisk[0].IsOffline -and -not $ownerDisk[0].IsReadOnly -and
+              -not $partition.IsBoot -and -not $partition.IsSystem -and
+              -not $partition.IsHidden -and -not $partition.IsOffline -and -not $partition.IsReadOnly -and
+              [string]$partition.DriveLetter -ne 'C' -and
+              $gptKind -ieq 'ebd0a0a2-b9e5-4433-87c0-68b6b72699c7' -and
+              -not [string]::IsNullOrWhiteSpace([string]$partition.Guid)) {
+            try {
+              $sizeBounds = Get-PartitionSupportedSize -DiskNumber ([int]$partition.DiskNumber) -PartitionNumber ([int]$partition.PartitionNumber) -ErrorAction Stop
+              if ($sizeBounds -and $sizeBounds.SizeMin -gt 0 -and
+                  $sizeBounds.SizeMax -ge $sizeBounds.SizeMin -and
+                  $sizeBounds.SizeMax -le [long]::MaxValue -and
+                  $sizeBounds.SizeMin -le [uint64]$partition.Size -and
+                  $sizeBounds.SizeMax -ge [uint64]$partition.Size) {
+                $resizeMin = [int64]$sizeBounds.SizeMin
+                $resizeMax = [int64]$sizeBounds.SizeMax
+              }
+            } catch {
+              # Unsupported filesystem, storage driver, encryption or access failure:
+              # display 'unavailable', prohibit resize preparation.
+            }
+          }
           [pscustomobject]@{
             DiskNumber=[int]$partition.DiskNumber; PartitionNumber=[int]$partition.PartitionNumber
             PartitionGuid=if ($partition.Guid) {[string]$partition.Guid} else {''}
@@ -60,6 +88,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
             VolumeSizeRemaining=if ($volume) {[int64]$volume.SizeRemaining} else {[int64]0}
             VolumeCapacityBytes=if ($volume -and $volume.Size -gt 0 -and $volume.SizeRemaining -ge 0 -and $volume.SizeRemaining -le $volume.Size) {[int64]$volume.Size} else {$null}
             VolumeAvailableBytes=if ($volume -and $volume.Size -gt 0 -and $volume.SizeRemaining -ge 0 -and $volume.SizeRemaining -le $volume.Size) {[int64]$volume.SizeRemaining} else {$null}
+            ResizeMinBytes=$resizeMin; ResizeMaxBytes=$resizeMax
             HealthStatus=if ($volume) {[string]$volume.HealthStatus} else {'Unknown'}
           }
         })
@@ -114,7 +143,8 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         Type = ReadRequiredString(item, "Type"), Offset = ReadRequiredLong(item, "Offset"), Size = ReadRequiredLong(item, "Size"), IsBoot = ReadRequiredBool(item, "IsBoot"), IsSystem = ReadRequiredBool(item, "IsSystem"),
         IsHidden = ReadRequiredBool(item, "IsHidden"), IsReadOnly = ReadRequiredBool(item, "IsReadOnly"), IsOffline = ReadRequiredBool(item, "IsOffline"), FileSystem = ReadString(item, "FileSystem"),
         Label = ReadString(item, "Label"), VolumeSizeRemaining = ReadLongOrDefault(item, "VolumeSizeRemaining"),
-        VolumeCapacityBytes = ReadNullableLong(item, "VolumeCapacityBytes"), VolumeAvailableBytes = ReadNullableLong(item, "VolumeAvailableBytes"), HealthStatus = ReadString(item, "HealthStatus", "Unknown")
+        VolumeCapacityBytes = ReadNullableLong(item, "VolumeCapacityBytes"), VolumeAvailableBytes = ReadNullableLong(item, "VolumeAvailableBytes"),
+        ResizeMinBytes = ReadNullableLong(item, "ResizeMinBytes"), ResizeMaxBytes = ReadNullableLong(item, "ResizeMaxBytes"), HealthStatus = ReadString(item, "HealthStatus", "Unknown")
     };
 
     internal static IEnumerable<JsonElement> Elements(JsonElement element) => element.ValueKind switch { JsonValueKind.Array => element.EnumerateArray(), JsonValueKind.Object => [element], _ => [] };
@@ -181,6 +211,10 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
             throw new InvalidDataException("Identidade GUID duplicada no mesmo disco.");
         if (partitions.Any(p => !string.IsNullOrWhiteSpace(p.PartitionGuid) && !p.HasStrongIdentity))
             throw new InvalidDataException("GUID de partição inválido.");
+        if (partitions.Any(p => (p.ResizeMinBytes is null) != (p.ResizeMaxBytes is null) ||
+            (p.ResizeMinBytes is not null && (!p.HasResizeLimits ||
+             p.ResizeMinBytes.Value > p.Size || p.ResizeMaxBytes!.Value < p.Size))))
+            throw new InvalidDataException("Limites de redimensionamento inconsistentes no inventário.");
     }
 
     private static InvalidDataException InvalidField(string key, string expected) => new($"Campo obrigatório '{key}' ausente ou inválido; esperado {expected}.");
