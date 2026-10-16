@@ -23,6 +23,12 @@ public static class ContextOperationPolicy
         if (!partitionTarget && partition is not null)
             return new(type, label, false, "Esta ação utiliza o disco inteiro. Desmarque a partição.");
 
+        if (type == StorageOperationType.MovePartition)
+            return new(type, label, partition?.HasStrongIdentity == true,
+                partition?.HasStrongIdentity == true
+                    ? "Somente prévia geométrica: não pode ser enfileirada nem executada."
+                    : "Partição sem identidade GPT forte; prévia indisponível.");
+
         // Synthetic, non-destructive parameters are used ONLY for evaluating UI availability.
         // Real user inputs are checked again when enqueued and independently in the executor.
         var freeLetter = Enumerable.Range('D', 'Z' - 'D' + 1)
@@ -68,7 +74,8 @@ public static class ContextOperationPolicy
     public static bool RequiresPartition(StorageOperationType type) =>
         type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition
             or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter
-            or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
+            or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel
+            or StorageOperationType.MovePartition;
 }
 
 public sealed record ContextOperationChoice(
