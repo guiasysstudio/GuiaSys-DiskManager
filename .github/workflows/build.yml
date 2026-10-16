@@ -66,6 +66,27 @@ jobs:
           name: GuiaSys-DiskManager-H01-readonly-preflight
           path: artifacts/smoke/windows-readonly-preflight.json
           if-no-files-found: error
+      - name: H02 inspect pinned public GSL-v1 licensing readiness (offline)
+        shell: powershell
+        run: .\tools\Test-GslV1TrustReadiness.ps1
+      - name: H02 verify unapproved production trust is denied
+        shell: powershell
+        run: |
+          try {
+            .\tools\Test-GslV1TrustReadiness.ps1 -RequireProductionTrust
+            throw 'CRITICAL: GSL production trust granted without signed publisher evidence.'
+          } catch {
+            if ($_.Exception.Message -notlike 'H02_PRODUCTION_TRUST_NOT_VERIFIED*') {
+              throw
+            }
+            Write-Host 'PASS: H02 production trust denied; no live activation or secrets.'
+          }
+      - name: Upload H02 licensing trust readiness
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-H02-GSL-NO-GO
+          path: artifacts/licensing/gsl-v1-readiness.json
+          if-no-files-found: error
       - name: Record C18 commercial release readiness (read-only)
         shell: powershell
         run: .\tools\Test-CommercialReleaseGate.ps1
