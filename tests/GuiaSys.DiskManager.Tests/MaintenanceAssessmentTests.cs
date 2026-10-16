@@ -111,6 +111,18 @@ public sealed class MaintenanceAssessmentTests
         Assert.Contains(report.Checks, c => c.Detail.Contains("não escolher TRIM"));
     }
 
+    [Theory]
+    [InlineData("ssd", "ReTrim")]
+    [InlineData("hDd", "desfragmentação")]
+    public void Media_type_is_compared_case_insensitively_without_bus_guessing(string media, string expected)
+    {
+        var report = MaintenanceAssessment.Analyze(Snapshot(Disk() with { MediaType = media }),
+            4, 1, MaintenanceTask.OptimizeVolume);
+        Assert.Contains(report.Checks, c => c.Component == "Tipo de manutenção" &&
+            c.Detail.Contains(expected, StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(report.Warnings, w => w.Contains("Tecnologia física não confirmada"));
+    }
+
     [Fact]
     public void Filesystem_inspection_does_not_claim_to_have_run_chkdsk()
     {

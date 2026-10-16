@@ -172,7 +172,8 @@ public static class MaintenanceAssessment
                     ? "Possível desfragmentação HDD; necessidade real não verificada."
                     : "Tecnologia indeterminada: não escolher TRIM nem desfragmentação por suposição.";
                 checks.Add(new("Tipo de manutenção", "Não executada", method));
-                if (media is not ("SSD" or "HDD"))
+                if (!media.Equals("SSD", StringComparison.OrdinalIgnoreCase) &&
+                    !media.Equals("HDD", StringComparison.OrdinalIgnoreCase))
                     warnings.Add("Tecnologia física não confirmada; NVMe/SATA/USB isoladamente não provam SSD/HDD.");
                 warnings.Add("Otimização pode escrever no volume e causar atividade intensa; não foi avaliada fragmentação.");
                 break;
