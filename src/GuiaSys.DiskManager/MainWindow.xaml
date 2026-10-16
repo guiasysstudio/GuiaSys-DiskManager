@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:GuiaSys.DiskManager.ViewModels"
         xmlns:models="clr-namespace:GuiaSys.DiskManager.Models"
+        xmlns:controls="clr-namespace:GuiaSys.DiskManager.Controls"
         Title="GuiaSys Disk Manager" Width="1500" Height="920" FontFamily="Segoe UI" FontSize="13"
         MinWidth="1100" MinHeight="700" WindowStartupLocation="CenterScreen"
         Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource TextBrush}"
@@ -378,73 +379,151 @@
             </DockPanel>
           </Border>
 
-          <Border x:Name="DiskMapSection" Focusable="True" AutomationProperties.Name="Mapa proporcional do disco" Style="{StaticResource Surface}">
+          <!-- H03-02: MiniTool-like read-only overview of ALL disks.
+               Each row owns only Windows-validated half-open extents. -->
+          <Border x:Name="DiskMapSection" Focusable="True"
+                  AutomationProperties.Name="Mapa de todos os discos e partições"
+                  Style="{StaticResource Surface}">
             <StackPanel>
-              <Grid Margin="0,0,0,14">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <DockPanel Margin="0,0,0,10" LastChildFill="True">
+                <Border DockPanel.Dock="Right" CornerRadius="5" Background="#E4F3FF"
+                        Padding="9,4" VerticalAlignment="Center">
+                  <TextBlock Text="TODOS OS DISCOS · SOMENTE LEITURA" Foreground="#125A9C"
+                             FontWeight="SemiBold" FontSize="10"/>
+                </Border>
                 <StackPanel>
-                  <TextBlock Text="Mapa visual de partições" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock Text="{Binding SelectedTargetTitle}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
+                  <TextBlock Text="Mapa dos discos" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Text="Clique no disco ou em uma partição para selecionar e analisar. Nada é alterado."
+                             Style="{StaticResource Caption}" Margin="0,3,0,0"/>
                 </StackPanel>
-              </Grid>
-              <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                            Focusable="False" Padding="0,0,0,7"
-                             AutomationProperties.Name="Mapa: Tab para percorrer, Enter ou espaço para selecionar.">
-                <ItemsControl ItemsSource="{Binding PartitionSegments}">
-                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:PartitionSegmentViewModel}">
-                      <Button Style="{StaticResource PartitionBlock}"
-                              Width="{Binding Width}" ToolTip="{Binding ToolTip}"
-                              Click="PartitionSegment_Click" Focusable="True"
-                              AutomationProperties.Name="{Binding AccessibleName}"
-                              AutomationProperties.HelpText="{Binding ToolTip}">
-                        <StackPanel>
-                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                     TextTrimming="CharacterEllipsis"/>
-                          <TextBlock Text="{Binding Subtitle}" FontSize="11"
-                                     Foreground="#284C74" Margin="0,5,0,0"
-                                     TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                      </Button>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
-              <WrapPanel Margin="0,8,0,0">
+              </DockPanel>
+              <ItemsControl ItemsSource="{Binding DiskMapRows}"
+                            AutomationProperties.Name="Discos e suas partições proporcionais">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="{x:Type vm:DiskMapRowViewModel}">
+                    <Border Margin="0,0,0,8" CornerRadius="6" BorderThickness="1">
+                      <Border.Style>
+                        <Style TargetType="Border">
+                          <Setter Property="Background" Value="#F9FCFF"/>
+                          <Setter Property="BorderBrush" Value="#CADCEE"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                              <Setter Property="BorderBrush" Value="#176AC2"/>
+                              <Setter Property="BorderThickness" Value="2"/>
+                              <Setter Property="Background" Value="#EEF6FF"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <Grid Margin="4,4,4,4" MinHeight="77">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="174"/>
+                          <ColumnDefinition Width="1"/>
+                          <ColumnDefinition Width="*" MinWidth="100"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Tag="{Binding Disk}" Click="DiskRow_Click"
+                                Background="Transparent" BorderThickness="0"
+                                HorizontalContentAlignment="Left" Padding="8,5"
+                                Focusable="True"
+                                AutomationProperties.Name="{Binding Disk.DisplayName}"
+                                ToolTip="{Binding Disk.IdentityStrengthLabel}">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Label}" FontWeight="Bold" FontSize="13"
+                                       Foreground="#163E67"/>
+                            <TextBlock Text="{Binding Summary}" Foreground="#2166AA"
+                                       FontSize="11" Margin="0,3,0,0"/>
+                            <TextBlock Text="{Binding DeviceLabel}" Foreground="#5C718A"
+                                       FontSize="10" TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding DeviceLabel}"/>
+                            <TextBlock Text="{Binding SafetyLabel}" Foreground="#8A520C"
+                                       FontSize="10" TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding SafetyLabel}"/>
+                          </StackPanel>
+                        </Button>
+                        <Border Grid.Column="1" Background="#CFDDEC" Margin="0,5"/>
+                        <ItemsControl Grid.Column="2" ItemsSource="{Binding Segments}"
+                                      Margin="6,2,3,2"
+                                      ClipToBounds="True"
+                                      AutomationProperties.Name="Partições proporcionais do disco">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <controls:ProportionalPartitionPanel/>
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="{x:Type ContentPresenter}">
+                              <Setter Property="controls:ProportionalPartitionPanel.ExtentBytes"
+                                      Value="{Binding Size}"/>
+                            </Style>
+                          </ItemsControl.ItemContainerStyle>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PartitionSegmentViewModel}">
+                              <Button Style="{StaticResource PartitionBlock}"
+                                      ToolTip="{Binding ToolTip}"
+                                      Click="PartitionSegment_Click" Focusable="True"
+                                      AutomationProperties.Name="{Binding AccessibleName}"
+                                      AutomationProperties.HelpText="{Binding ToolTip}">
+                                <Grid ClipToBounds="True" MinWidth="0">
+                                  <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                  </Grid.RowDefinitions>
+                                  <!-- Real volume usage only; hidden when Windows supplies no counters. -->
+                                  <ProgressBar Grid.Row="0" Height="5" MinWidth="0"
+                                               Minimum="0" Maximum="100" IsHitTestVisible="False"
+                                               Focusable="False" Margin="0,0,0,5"
+                                               Background="#C3DDF2" Foreground="#1579C7"
+                                               Value="{Binding UsagePercent, Mode=OneWay}">
+                                    <ProgressBar.Style>
+                                      <Style TargetType="ProgressBar">
+                                        <Style.Triggers>
+                                          <DataTrigger Binding="{Binding HasVolumeUsage}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                          </DataTrigger>
+                                        </Style.Triggers>
+                                      </Style>
+                                    </ProgressBar.Style>
+                                  </ProgressBar>
+                                  <TextBlock Grid.Row="1" Text="{Binding Title}"
+                                             FontWeight="SemiBold" FontSize="11"
+                                             TextTrimming="CharacterEllipsis" Foreground="#153F6B"/>
+                                  <TextBlock Grid.Row="2" Text="{Binding Subtitle}"
+                                             FontSize="10" Foreground="#315778"
+                                             TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                </Grid>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <WrapPanel Margin="1,4,0,0">
                 <Rectangle Fill="#8EC5F7" Width="12" Height="12" RadiusX="2" RadiusY="2" Margin="0,0,6,0"/>
-                <TextBlock Text="Dados / NTFS" Style="{StaticResource Caption}" Margin="0,0,16,0"/>
+                <TextBlock Text="Dados / NTFS" Style="{StaticResource Caption}" Margin="0,0,14,0"/>
                 <Rectangle Fill="#A8E1D6" Width="12" Height="12" RadiusX="2" RadiusY="2" Margin="0,0,6,0"/>
-                <TextBlock Text="EFI / sistema" Style="{StaticResource Caption}" Margin="0,0,16,0"/>
+                <TextBlock Text="EFI / sistema" Style="{StaticResource Caption}" Margin="0,0,14,0"/>
+                <Rectangle Fill="#F3C58D" Width="12" Height="12" RadiusX="2" RadiusY="2" Margin="0,0,6,0"/>
+                <TextBlock Text="Recuperação" Style="{StaticResource Caption}" Margin="0,0,14,0"/>
                 <Rectangle Fill="#D9E1EA" Width="12" Height="12" RadiusX="2" RadiusY="2" Margin="0,0,6,0"/>
                 <TextBlock Text="Não alocado" Style="{StaticResource Caption}"/>
               </WrapPanel>
-              <TextBlock Text="Mapa proporcional de leitura. Tamanhos e offsets exatos aparecem ao posicionar o cursor."
+              <TextBlock Text="Faixas proporcionais com largura mínima para partições pequenas. Ocupação de arquivos mostrada apenas quando informada pelo Windows."
                          Style="{StaticResource Caption}" Margin="0,7,0,0"/>
-              <Expander Header="Detalhes de ocupação e geometria" IsExpanded="False"
+              <Expander Header="Detalhes do disco selecionado" IsExpanded="False"
                         Foreground="{StaticResource TextBrush}" Background="Transparent"
-                        BorderBrush="{StaticResource OutlineBrush}" Margin="0,8,0,0"
-                        AutomationProperties.Name="Detalhes opcionais de distribuição do disco">
-                <StackPanel Margin="4,7,4,5">
-              <TextBlock Text="{Binding SelectedLayoutSummary}" Foreground="{StaticResource AccentBrush}"
-                         FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,9,0,9"/>
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding SelectedUsageSummary}" Style="{StaticResource Caption}"/>
-                <TextBlock Grid.Column="1" Text="{Binding SelectedUnallocatedLabel, StringFormat=Não alocado: {0}}"
-                           Foreground="{StaticResource AccentBrush}" FontSize="12"/>
-              </Grid>
-              <ProgressBar Height="9" Minimum="0" Maximum="100"
-                           Value="{Binding SelectedAllocatedPercent, Mode=OneWay}" Margin="0,7,0,5"
-                           Background="#E3EEF9" Foreground="{StaticResource AccentBrush}"
-                           ToolTip="Porcentagem da capacidade particionada, não corresponde à ocupação de arquivos"/>
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding SelectedAllocatedLabel, StringFormat=Particionado: {0}}"
-                           Style="{StaticResource Caption}"/>
-                <TextBlock Grid.Column="1" Text="{Binding SelectedLargestFreeLabel, StringFormat=Maior faixa livre: {0}}"
-                           Style="{StaticResource Caption}" HorizontalAlignment="Right"/>
-              </Grid>
+                        BorderBrush="{StaticResource OutlineBrush}" Margin="0,7,0,0">
+                <StackPanel Margin="4,5,4,3">
+                  <TextBlock Text="{Binding SelectedTargetTitle}" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding SelectedLayoutSummary}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
+                  <TextBlock Text="{Binding SelectedUsageSummary}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
+                  <ProgressBar Minimum="0" Maximum="100" Height="7" Margin="0,5,0,0"
+                               Value="{Binding SelectedAllocatedPercent, Mode=OneWay}"
+                               Background="#E3EEF9" Foreground="{StaticResource AccentBrush}"
+                               ToolTip="Capacidade particionada, não ocupação de arquivos"/>
                 </StackPanel>
               </Expander>
             </StackPanel>
