@@ -68,3 +68,7 @@ O painel de redimensionamento apresenta mínimo/máximo e tamanho atual quando `
 ### GDM-C09 — Movimentação de partições (prévia geométrica, não executável)
 
 A interface permite escolher uma partição GPT, informar uma posição absoluta e visualizar a **prévia de movimentação** para uma área integralmente não alocada. O programa verifica identidade forte, Disco 0, partições protegidas, alinhamento de 1 MiB, limites e colisões; pode sugerir uma faixa segura próxima. **Não há cópia física, movimentação de bytes ou exclusão/recriação de partições**. A ação não entra na fila, e a camada de segurança, o coordenador e o executor a recusam independentemente do gate global. Esta etapa **não promete suporte executável a mover partições**. Consulte [GDM-C09](docs/GDM-C09.md).
+
+### GDM-C10 — Diagnóstico GPT / MBR (somente leitura)
+
+O painel analisa o esquema atual e o destino GPT ou MBR, verifica tamanho do setor, limite LBA de 32 bits do MBR, quantidade de partições, identidade, proteção e geometria, e apresenta alertas de perda de dados/boot. Distingue **inicializar RAW vazio** de **converter discos com partições**. Não usa `Clear-Disk`, `MBR2GPT`, troca de GUID ou exclusão/recriação de partições. **Conversão com preservação de dados não implementada**; nenhum diagnóstico gera operação de escrita. O gate de gravação permanece fechado. Detalhes: [GDM-C10](docs/GDM-C10.md).
