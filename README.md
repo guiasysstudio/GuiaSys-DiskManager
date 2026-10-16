@@ -64,3 +64,7 @@ A preparação de operações agora usa um contrato estrito por tipo, incluindo 
 ### GDM-C08 — Redimensionamento com limites reais do Windows
 
 O painel de redimensionamento apresenta mínimo/máximo e tamanho atual quando `Get-PartitionSupportedSize` retorna uma faixa confiável para partições de dados GPT. O aplicativo cruza o intervalo com o setor lógico e com o espaço contíguo não alocado, sem estimar a capacidade de redução apenas pelo espaço livre do volume. Presets **Usar mínimo/Usar máximo** preenchem os bytes exatos. A política e o script PowerShell revalidam os limites antes de qualquer possibilidade de execução. Se as informações faltarem, redimensionamento não é preparado. **A escrita continua bloqueada.** Consulte [GDM-C08](docs/GDM-C08.md).
+
+### GDM-C09 — Movimentação de partições (prévia geométrica, não executável)
+
+A interface permite escolher uma partição GPT, informar uma posição absoluta e visualizar a **prévia de movimentação** para uma área integralmente não alocada. O programa verifica identidade forte, Disco 0, partições protegidas, alinhamento de 1 MiB, limites e colisões; pode sugerir uma faixa segura próxima. **Não há cópia física, movimentação de bytes ou exclusão/recriação de partições**. A ação não entra na fila, e a camada de segurança, o coordenador e o executor a recusam independentemente do gate global. Esta etapa **não promete suporte executável a mover partições**. Consulte [GDM-C09](docs/GDM-C09.md).
