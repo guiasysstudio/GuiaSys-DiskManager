@@ -24,6 +24,10 @@ public sealed class SafeExecutionCoordinator(
     {
         ArgumentNullException.ThrowIfNull(op);
         var timer = Stopwatch.StartNew();
+        if (op.Type == StorageOperationType.MovePartition)
+            return new OperationResult(op.Id, false,
+                "Movimentação C09 não executável: não existe motor de cópia/homologação.",
+                timer.Elapsed, StorageExecutionOutcome.Rejected);
         if (!StorageWriteGate.ReleasedAfterSafetyAudit)
             return new OperationResult(op.Id, false, "Executor bloqueado por segurança.",
                 timer.Elapsed, StorageExecutionOutcome.Rejected);
