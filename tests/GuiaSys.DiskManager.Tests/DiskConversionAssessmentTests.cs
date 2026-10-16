@@ -222,6 +222,56 @@ public sealed class DiskConversionAssessmentTests
     }
 
     [Fact]
+    public void Raw_mbr_initialization_preflight_refuses_512_sector_disk_above_2tib()
+    {
+        const long max = ((long)uint.MaxValue + 1) * 512;
+        var disk = Disk("RAW", size: max + 512);
+        var snapshot = State(disk);
+        var op = new StorageOperation
+        {
+            Type = StorageOperationType.InitializeMbr,
+            DiskNumber = 5, ExpectedDiskIdentity = disk.Identity
+        };
+        var decision = Safety.Evaluate(op, snapshot);
+        Assert.False(decision.Allowed);
+        Assert.Contains("MBR", decision.Reason);
+        Assert.Contains("não endereça", decision.Reason);
+        Assert.False(new OperationPlanner(Safety).Plan(snapshot, [op]).CanApply);
+    }
+
+    [Fact]
+    public void Raw_disk_missing_logical_sector_is_blocked_from_initialization_draft()
+    {
+        var disk = Disk("RAW", sector: null);
+        var snapshot = State(disk);
+        foreach (var operationType in new[]
+            { StorageOperationType.InitializeMbr, StorageOperationType.InitializeGpt })
+        {
+            var operation = new StorageOperation
+            {
+                Type = operationType, DiskNumber = 5, ExpectedDiskIdentity = disk.Identity
+            };
+            Assert.False(Safety.Evaluate(operation, snapshot).Allowed);
+        }
+    }
+
+    [Fact]
+    public void Raw_mbr_on_4kn_disk_within_its_sector_based_limit_is_plan_eligible_but_gate_closed()
+    {
+        const long max = ((long)uint.MaxValue + 1) * 4096;
+        var disk = Disk("RAW", size: max, sector: 4096);
+        var snapshot = State(disk);
+        var op = new StorageOperation
+        {
+            Type = StorageOperationType.InitializeMbr,
+            DiskNumber = 5, ExpectedDiskIdentity = disk.Identity
+        };
+        Assert.True(Safety.Evaluate(op, snapshot).Allowed);
+        Assert.True(new OperationPlanner(Safety).Plan(snapshot, [op]).CanApply);
+        Assert.False(StorageWriteGate.ReleasedAfterSafetyAudit);
+    }
+
+    [Fact]
     public void Conversion_inspection_never_authorizes_initialize_on_populated_gpt_or_mbr()
     {
         var p = Partition();
