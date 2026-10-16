@@ -73,7 +73,6 @@ public sealed class GslV1OfficialIntegrationTests
     [Fact]
     public void Full_server_jwk_extensions_require_explicit_public_only_normalization()
     {
-        using var raw = JsonDocument.Parse(OfficialPublicDocument());
         var json = OfficialPublicDocument().Replace(
             "\"crv\":\"P-256\"", "\"crv\":\"P-256\",\"ext\":true",
             StringComparison.Ordinal);
