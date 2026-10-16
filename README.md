@@ -92,3 +92,7 @@ O painel **Manutenção (prévia)** analisa cinco categorias: verificação de v
 ### GDM-C15 — Investigação de partições perdidas (comparação somente leitura)
 
 O painel **Partições perdidas (prévia)** permite **capturar explicitamente um baseline de entradas GPT** de um disco íntegro, atualizar o inventário (F5) e comparar o estado posterior do **mesmo dispositivo por UniqueId**. São destacados GUIDs persistentes, alterados ou ausentes; faixas anteriores que agora estão não alocadas são **apenas indícios de alteração da tabela**, nunca prova de dados recuperáveis. Referência e laudo ficam em memória e são invalidados na troca de alvo ou falha. **Não há varredura de setores, recuperação de arquivos, restauração GPT nem gravação.** Leia [GDM-C15](docs/GDM-C15.md).
+
+### GDM-C16 — Acessibilidade e navegação segura da interface WPF
+
+O mapa de partições agora usa **botões acessíveis por teclado** (Tab + Enter/Espaço), com rótulos de automação, tamanhos/offsets explícitos e seleção `INotifyPropertyChanged` que não recria os controles focados. **Ctrl+1…8** navega pelos oito painéis e F5 continua apenas relendo o inventário. A interface permanece somente leitura para análises; o planejamento e o bloqueio de gravações são preservados. Teste interativo de foco, Narrator/NVDA e escalas Windows ainda requer homologação humana. Consulte [GDM-C16](docs/GDM-C16.md).

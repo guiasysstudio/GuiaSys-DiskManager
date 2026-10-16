@@ -157,3 +157,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Referência apenas em RAM; comando requer disco inteiro, atualização posterior, geometria consistente. Descarta referência quando troca dispositivo ou há falha de inventário, invalida relatórios no refresh.
 - `RecoveryReport.CanRecover=false` em todas as situações; **nenhum novo escritor/operador na fila**. Disco 0 somente leitura.
 - Testes de avaliação e de ciclo de vida MVVM; o resultado verificável é o CI do HEAD. Ver [GDM-C15](GDM-C15.md). **NO-GO para recuperação executável/gravação física**.
+
+## GDM-C16 — Acessibilidade e usabilidade WPF (16/10/2026)
+
+- Mapa proporcional passou de `Border` com clique exclusivo de mouse para **`Button` focalizável**, com seleção Tab/Enter/Espaço, tooltip real e `AutomationProperties.Name/HelpText` contendo offset e tamanho.
+- Segmentos observáveis (`IsSelected`) são mantidos na coleção ao selecionar/limpar partição, evitando perder foco por reconstrução desnecessária da árvore visual.
+- Atalhos `Ctrl+1..8` (com numpad) para navegação por área; mapeamento isolado em função pura, sem capturar texto/Alt/Shift.
+- Seções com âncoras de foco e nomes UI Automation; status apresenta texto completo em tooltip e `LiveSetting=Polite` — **comportamento do leitor de tela pendente de smoke real**.
+- Testes MVVM e atalhos adicionados; contar os aprovados somente após CI deste HEAD. **Gravações permanecem bloqueadas**, e ainda faltam ensaios visuais/zoom/contraste/Narrator/NVDA. Relatório [GDM-C16](GDM-C16.md).
