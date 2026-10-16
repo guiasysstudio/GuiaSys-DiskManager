@@ -15,6 +15,15 @@ public sealed record DiskInfo
     public string HealthStatus { get; init; } = "Unknown";
     public string OperationalStatus { get; init; } = "Unknown";
     public int? TemperatureC { get; init; }
+    // C13: optional Windows StorageReliabilityCounter values, never raw SMART.
+    // All unavailable metrics are null rather than a fabricated zero.
+    public bool ReliabilityCountersAvailable { get; init; }
+    public int? WearPercent { get; init; }
+    public long? PowerOnHours { get; init; }
+    public long? ReadErrorsTotal { get; init; }
+    public long? ReadErrorsUncorrected { get; init; }
+    public long? WriteErrorsTotal { get; init; }
+    public long? WriteErrorsUncorrected { get; init; }
     /// <summary>Sector sizes as reported by MSFT_Disk; null means unavailable.</summary>
     public int? LogicalSectorSize { get; init; }
     public int? PhysicalSectorSize { get; init; }

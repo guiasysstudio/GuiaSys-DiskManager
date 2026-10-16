@@ -10,6 +10,30 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     private const string Script = """
         $ErrorActionPreference = 'Stop'
         [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+        # Providers may return unsupported numbers/UInt64.MaxValue.
+        function Safe-CounterLong($value) {
+          if ($null -eq $value) { return $null }
+          try {
+            $raw = [string]$value
+            if ($raw -notmatch '^[0-9]+$') { return $null }
+            $parsed = [uint64]::Parse($raw, [Globalization.CultureInfo]::InvariantCulture)
+            if ($parsed -gt [long]::MaxValue) { return $null }
+            return [long]$parsed
+          } catch { return $null }
+        }
+        function Safe-CounterPercent($value) {
+          $n = Safe-CounterLong $value
+          if ($null -ne $n -and $n -le 100) { return [int]$n }
+          return $null
+        }
+        function Safe-CounterTemperature($value) {
+          if ($null -eq $value) { return $null }
+          try {
+            $n = [int]$value
+            if ($n -ge -20 -and $n -le 125) { return $n }
+          } catch {}
+          return $null
+        }
         $physicalDisks = @(Get-PhysicalDisk -ErrorAction SilentlyContinue)
         $windowsDisks = @(Get-Disk -ErrorAction Stop)
         $disks = @($windowsDisks | ForEach-Object {
@@ -30,13 +54,23 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
               $physical = $physicalCandidates[0]
             }
           }
-          $temperature = $null
-          if ($physical) { try { $temperature = ($physical | Get-StorageReliabilityCounter -ErrorAction Stop).Temperature } catch { } }
+          $reliability = $null
+          if ($physical) {
+            try { $reliability = $physical | Get-StorageReliabilityCounter -ErrorAction Stop } catch { }
+          }
           [pscustomobject]@{
             Number=[int]$disk.Number; UniqueId=[string]$disk.UniqueId; FriendlyName=[string]$disk.FriendlyName
             Manufacturer=[string]$disk.Manufacturer; SerialNumber=[string]$disk.SerialNumber
             PartitionStyle=[string]$disk.PartitionStyle; BusType=[string]$disk.BusType; MediaType=if ($physical) {[string]$physical.MediaType} else {'Unspecified'}
-            HealthStatus=[string]$disk.HealthStatus; OperationalStatus=[string]($disk.OperationalStatus -join ', '); TemperatureC=$temperature
+            HealthStatus=[string]$disk.HealthStatus; OperationalStatus=[string]($disk.OperationalStatus -join ', ')
+            TemperatureC=(Safe-CounterTemperature $(if ($reliability) {$reliability.Temperature} else {$null}))
+            ReliabilityCountersAvailable=[bool]($null -ne $reliability)
+            WearPercent=(Safe-CounterPercent $(if ($reliability) {$reliability.Wear} else {$null}))
+            PowerOnHours=(Safe-CounterLong $(if ($reliability) {$reliability.PowerOnHours} else {$null}))
+            ReadErrorsTotal=(Safe-CounterLong $(if ($reliability) {$reliability.ReadErrorsTotal} else {$null}))
+            ReadErrorsUncorrected=(Safe-CounterLong $(if ($reliability) {$reliability.ReadErrorsUncorrected} else {$null}))
+            WriteErrorsTotal=(Safe-CounterLong $(if ($reliability) {$reliability.WriteErrorsTotal} else {$null}))
+            WriteErrorsUncorrected=(Safe-CounterLong $(if ($reliability) {$reliability.WriteErrorsUncorrected} else {$null}))
             LogicalSectorSize=if ($disk.LogicalSectorSize -gt 0) {[int]$disk.LogicalSectorSize} else {$null}
             PhysicalSectorSize=if ($disk.PhysicalSectorSize -gt 0) {[int]$disk.PhysicalSectorSize} else {$null}
             Size=[int64]$disk.Size; IsBoot=[bool]$disk.IsBoot; IsSystem=[bool]$disk.IsSystem
@@ -134,6 +168,13 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         Number = ReadRequiredInt(item, "Number"), UniqueId = ReadString(item, "UniqueId"), FriendlyName = ReadString(item, "FriendlyName", "Dispositivo sem nome"),
         Manufacturer = ReadString(item, "Manufacturer"), SerialNumber = ReadString(item, "SerialNumber"), PartitionStyle = ReadRequiredString(item, "PartitionStyle"),
         BusType = ReadString(item, "BusType", "Unknown"), MediaType = ReadString(item, "MediaType", "Unspecified"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"), TemperatureC = ReadNullableInt(item, "TemperatureC"), LogicalSectorSize = ReadNullableInt(item, "LogicalSectorSize"), PhysicalSectorSize = ReadNullableInt(item, "PhysicalSectorSize"),
+        ReliabilityCountersAvailable = ReadOptionalBool(item, "ReliabilityCountersAvailable"),
+        WearPercent = ReadDiagnosticPercent(item, "WearPercent"),
+        PowerOnHours = ReadDiagnosticCounter(item, "PowerOnHours"),
+        ReadErrorsTotal = ReadDiagnosticCounter(item, "ReadErrorsTotal"),
+        ReadErrorsUncorrected = ReadDiagnosticCounter(item, "ReadErrorsUncorrected"),
+        WriteErrorsTotal = ReadDiagnosticCounter(item, "WriteErrorsTotal"),
+        WriteErrorsUncorrected = ReadDiagnosticCounter(item, "WriteErrorsUncorrected"),
         Size = ReadRequiredLong(item, "Size"), IsBoot = ReadRequiredBool(item, "IsBoot"), IsSystem = ReadRequiredBool(item, "IsSystem"), IsOffline = ReadRequiredBool(item, "IsOffline"), IsReadOnly = ReadRequiredBool(item, "IsReadOnly")
     };
 
@@ -184,6 +225,23 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         if (!item.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null) return null;
         if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var result)) return result;
         throw InvalidField(key, "inteiro de 64 bits ou null");
+    }
+
+    private static bool ReadOptionalBool(JsonElement item, string key) =>
+        item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.True;
+
+    // Invalid optional hardware metrics are unknown, not zero or fatal inventory errors.
+    internal static long? ReadDiagnosticCounter(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.Number ||
+            !value.TryGetInt64(out var count) || count < 0) return null;
+        return count;
+    }
+
+    internal static int? ReadDiagnosticPercent(JsonElement item, string key)
+    {
+        var count = ReadDiagnosticCounter(item, key);
+        return count is >= 0 and <= 100 ? (int)count.Value : null;
     }
 
     private static long ReadLongOrDefault(JsonElement item, string key) => item.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var result) ? result : 0;
