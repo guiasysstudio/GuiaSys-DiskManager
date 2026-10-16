@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json.Nodes;
 using GuiaSys.DiskManager.Models;
 using GuiaSys.DiskManager.Operations;
 using GuiaSys.DiskManager.Safety;
@@ -245,9 +246,11 @@ public sealed class PartitionResizeTests
     [Fact]
     public void Old_windows_json_without_resize_data_does_not_invent_capabilities()
     {
-        var old = JsonSample.Replace(
-            ",\n            \"ResizeMinBytes\":209715200, \"ResizeMaxBytes\":786432000", "");
-        Assert.DoesNotContain("ResizeMinBytes", old);
+        var node = JsonNode.Parse(JsonSample)!.AsObject();
+        var partition = node["Partitions"]![0]!.AsObject();
+        Assert.True(partition.Remove("ResizeMinBytes"));
+        Assert.True(partition.Remove("ResizeMaxBytes"));
+        var old = node.ToJsonString();
         var snapshot = PowerShellDiskInventoryService.ParseInventory(old, DateTimeOffset.UtcNow);
         Assert.False(snapshot.Partitions[0].HasResizeLimits);
         Assert.False(PartitionResizePolicy.TryResolve(snapshot, snapshot.Partitions[0], out _, out _));
