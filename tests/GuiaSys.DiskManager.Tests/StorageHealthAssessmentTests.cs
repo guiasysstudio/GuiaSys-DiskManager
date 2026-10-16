@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using GuiaSys.DiskManager.Models;
 using GuiaSys.DiskManager.Services;
 
@@ -159,18 +160,20 @@ public sealed class StorageHealthAssessmentTests
     [Fact]
     public void Missing_optional_metrics_remain_null_without_lying()
     {
-        var json = WindowsJson.Replace(", \"WearPercent\": 92", "", StringComparison.Ordinal)
-            .Replace(", \"PowerOnHours\": 12345", "", StringComparison.Ordinal);
-        var disk = Assert.Single(PowerShellDiskInventoryService.ParseInventory(json, At).Disks);
+        var json = JsonNode.Parse(WindowsJson)!.AsObject();
+        var hardware = json["Disks"]!.AsArray()[0]!.AsObject();
+        Assert.True(hardware.Remove("WearPercent"));
+        Assert.True(hardware.Remove("PowerOnHours"));
+        var disk = Assert.Single(PowerShellDiskInventoryService.ParseInventory(json.ToJsonString(), At).Disks);
         Assert.Null(disk.WearPercent);
         Assert.Null(disk.PowerOnHours);
     }
 
     [Theory]
-    [InlineData("101", "null")]
-    [InlineData("-1", "null")]
-    [InlineData("\"unsupported\"", "null")]
-    public void Out_of_range_or_invalid_optional_wear_is_unknown(string replacement, string _)
+    [InlineData("101")]
+    [InlineData("-1")]
+    [InlineData("\"unsupported\"")]
+    public void Out_of_range_or_invalid_optional_wear_is_unknown(string replacement)
     {
         var json = WindowsJson.Replace("\"WearPercent\": 92", "\"WearPercent\": " + replacement, StringComparison.Ordinal);
         var disk = Assert.Single(PowerShellDiskInventoryService.ParseInventory(json, At).Disks);
@@ -191,14 +194,13 @@ public sealed class StorageHealthAssessmentTests
     [Fact]
     public void Legacy_inventory_without_c13_fields_remains_compatible()
     {
-        var json = WindowsJson.Replace("\"ReliabilityCountersAvailable\": true, ", "", StringComparison.Ordinal)
-            .Replace("\"WearPercent\": 92, ", "", StringComparison.Ordinal)
-            .Replace("\"PowerOnHours\": 12345, ", "", StringComparison.Ordinal)
-            .Replace("\"ReadErrorsTotal\": 12, ", "", StringComparison.Ordinal)
-            .Replace("\"ReadErrorsUncorrected\": 0, ", "", StringComparison.Ordinal)
-            .Replace("\"WriteErrorsTotal\": 4, ", "", StringComparison.Ordinal)
-            .Replace(", \"WriteErrorsUncorrected\": 2", "", StringComparison.Ordinal);
-        var disk = Assert.Single(PowerShellDiskInventoryService.ParseInventory(json, At).Disks);
+        var json = JsonNode.Parse(WindowsJson)!.AsObject();
+        var hardware = json["Disks"]!.AsArray()[0]!.AsObject();
+        foreach (var field in new[] { "ReliabilityCountersAvailable", "WearPercent",
+            "PowerOnHours", "ReadErrorsTotal", "ReadErrorsUncorrected",
+            "WriteErrorsTotal", "WriteErrorsUncorrected" })
+            Assert.True(hardware.Remove(field));
+        var disk = Assert.Single(PowerShellDiskInventoryService.ParseInventory(json.ToJsonString(), At).Disks);
         Assert.False(disk.ReliabilityCountersAvailable);
         Assert.Null(disk.WearPercent);
     }
