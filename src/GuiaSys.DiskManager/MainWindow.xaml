@@ -300,10 +300,11 @@
             </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Border BorderThickness="1" CornerRadius="8" Padding="9,9"
+                <Border CornerRadius="8" Padding="9,9"
                         ToolTip="{Binding IdentityStrengthLabel}">
                   <Border.Style>
                     <Style TargetType="Border">
+                      <Setter Property="BorderThickness" Value="1"/>
                       <Setter Property="Background" Value="#FFFFFF"/>
                       <Setter Property="BorderBrush" Value="#D4E0EF"/>
                       <Style.Triggers>
