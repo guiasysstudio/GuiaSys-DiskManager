@@ -57,6 +57,9 @@ public partial class MainWindow : Window
             case "Health":
                 HealthSection.BringIntoView();
                 break;
+            case "Recovery":
+                RecoverySection.BringIntoView();
+                break;
             case "Maintenance":
                 MaintenanceSection.BringIntoView();
                 break;
