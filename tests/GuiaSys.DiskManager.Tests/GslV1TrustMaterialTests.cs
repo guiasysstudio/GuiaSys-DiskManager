@@ -166,7 +166,7 @@ public sealed class GslV1TrustMaterialTests
     public void Known_protocol_id_is_public_but_never_an_override_for_physical_writes()
     {
         Assert.Equal("GSL-v1", GslV1Protocol.Version);
-        Assert.True(GslV1Protocol.IntegrationCode.StartsWith("GSLI-", StringComparison.Ordinal));
+        Assert.StartsWith("GSLI-", GslV1Protocol.IntegrationCode);
         var allowed = new GslLicenseDecision(true, GslLicenseStatus.ActiveLicense, "synthetic");
         Assert.False(StorageWriteGate.Allows(allowed));
     }
