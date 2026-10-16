@@ -50,11 +50,12 @@ if ($lines.Count -ne 2) {
 }
 $known = @{}
 foreach ($line in $lines) {
-    if ($line -cnotmatch '\A([0-9a-f]{64})  ([A-Za-z0-9._-]+)\z') {
+    if ($line -cmatch '\A([0-9a-f]{64})  ([A-Za-z0-9._-]+)\z') {
+        $hash = $Matches[1]
+        $name = $Matches[2]
+    } else {
         throw 'H01_MANIFEST_INVALID: unrecognized SHA256 entry format.'
     }
-    $hash = $Matches[1]
-    $name = $Matches[2]
     if ($name -cne $portableName -and $name -cne $installerName) {
         throw 'H01_MANIFEST_INVALID: unexpected package name.'
     }
