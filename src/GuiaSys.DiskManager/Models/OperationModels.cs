@@ -14,7 +14,9 @@ public enum StorageOperationType
     SetDriveLetter,
     RemoveDriveLetter,
     ResizePartition,
-    SetVolumeLabel
+    SetVolumeLabel,
+    // C09 preview-only: no storage writer exists and SafetyService always denies dispatch.
+    MovePartition
 }
 
 [Flags]
@@ -37,6 +39,8 @@ public sealed record StorageOperation
     public required string ExpectedDiskIdentity { get; init; }
     public string? ExpectedPartitionIdentity { get; init; }
     public long? SizeBytes { get; init; }
+    /// <summary>Byte offset on the same disk. C09 preview only, not executable.</summary>
+    public long? TargetOffsetBytes { get; init; }
     public string FileSystem { get; init; } = "NTFS";
     public string Label { get; init; } = "";
     public char? DriveLetter { get; init; }
@@ -60,6 +64,8 @@ public sealed record StorageOperation
             => StorageOperationRisk.Destructive,
         StorageOperationType.ResizePartition
             => StorageOperationRisk.LayoutMutation,
+        StorageOperationType.MovePartition
+            => StorageOperationRisk.LayoutMutation | StorageOperationRisk.Destructive,
         StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter or StorageOperationType.SetVolumeLabel
             => StorageOperationRisk.MetadataMutation,
         _ => StorageOperationRisk.None
@@ -85,6 +91,7 @@ public sealed record StorageOperation
         StorageOperationType.SetDriveLetter => $"Atribuir letra {DriveLetter}: à Partição {PartitionNumber}",
         StorageOperationType.RemoveDriveLetter => $"Remover letra da Partição {PartitionNumber}",
         StorageOperationType.ResizePartition => $"Redimensionar Partição {PartitionNumber} para {ByteSize.Format(SizeBytes ?? 0)}",
+        StorageOperationType.MovePartition => $"Simulação NÃO EXECUTÁVEL: Partição {PartitionNumber} → deslocamento {ByteSize.Format(TargetOffsetBytes ?? -1)}",
         StorageOperationType.SetVolumeLabel => $"Definir label “{Label}” na Partição {PartitionNumber}",
         _ => Type.ToString()
     };
