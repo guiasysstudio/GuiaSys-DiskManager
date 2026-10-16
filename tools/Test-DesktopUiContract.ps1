@@ -51,8 +51,12 @@ $patterns = @(
     'Click="DiskRow_Click"',
     'ItemsSource="{Binding DiskMapRows}"',
     'ItemsSource="{Binding Segments}"',
-    '<controls:ProportionalPartitionPanel/>',
+    'HorizontalScrollBarVisibility="Auto"',
+    'MapTypeLabel',
+    'MapSizeLabel',
+    '<controls:ProportionalPartitionPanel',
     'Value="{Binding UsagePercent, Mode=OneWay}"',
+    'ViewportWidth="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}"',
     'Value="{Binding SelectedAllocatedPercent, Mode=OneWay}"',
     'Value="{Binding Progress, Mode=OneWay}"',
     'IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"'

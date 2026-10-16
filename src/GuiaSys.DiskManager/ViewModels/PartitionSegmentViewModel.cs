@@ -47,8 +47,8 @@ public sealed class PartitionSegmentViewModel : ObservableObject
     public string MapTypeLabel => Partition is null ? "Não alocado" :
         Partition.Kind switch
         {
-            "Recovery" => "(Recuperação)",
-            "EFI" => "(EFI)",
+            "Recovery" => "(Recup.)",
+            "EFI" => Partition.FileSystem.Equals("FAT32", StringComparison.OrdinalIgnoreCase) ? "(FAT32)" : "(EFI)",
             "MSR" => "(MSR)",
             _ => Partition.DriveLetter.Length > 0
                 ? $"{Partition.DriveLetter.TrimEnd(':')}:({Partition.FileSystem switch { "" => "Outro", var fs => fs }})"
