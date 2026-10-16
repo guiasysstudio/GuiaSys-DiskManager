@@ -495,6 +495,110 @@ public sealed class MainViewModelUiTests
         Assert.False(vm.InspectCloneCommand.CanExecute(null));
     }
 
+    private static StorageSnapshot WindowsMigrationFixture() => new(
+        [Disk(0) with { Size = 40_000_000_000, IsBoot = true, IsSystem = true },
+         Disk(9) with { Size = 60_000_000_000, PartitionStyle = "RAW" }],
+        [Partition(0) with
+         {
+             PartitionNumber = 1, PartitionGuid = "8857b9f9-eceb-49a5-9ab4-b7b8923fb001",
+             GptType = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+             Offset = 1_048_576, Size = 260 * 1_048_576, IsSystem = true,
+             IsBoot = false, DriveLetter = "", FileSystem = "FAT32"
+         },
+         Partition(0) with
+         {
+             PartitionNumber = 2, PartitionGuid = "8857b9f9-eceb-49a5-9ab4-b7b8923fb002",
+             GptType = "e3c9e316-0b5c-4db8-817d-f92df00215ae",
+             Offset = 261 * 1_048_576, Size = 16 * 1_048_576,
+             DriveLetter = "", FileSystem = ""
+         },
+         Partition(0) with
+         {
+             PartitionNumber = 3, PartitionGuid = "8857b9f9-eceb-49a5-9ab4-b7b8923fb003",
+             Offset = 277 * 1_048_576, Size = 30_000_000_000, IsBoot = true,
+             IsSystem = false, DriveLetter = "C", FileSystem = "NTFS"
+         }],
+        DateTimeOffset.UtcNow);
+
+    [Fact]
+    public async Task Migration_inspector_allows_disk_zero_as_readonly_source_and_never_enqueues()
+    {
+        var vm = Build(new StaticInventory(WindowsMigrationFixture()));
+        await vm.RefreshAsync();
+        Assert.Equal(0, vm.SelectedDisk!.Number);
+        Assert.False(vm.InspectMigrationCommand.CanExecute(null));
+        vm.SelectedMigrationTargetDisk = vm.Disks.Single(d => d.Number == 9);
+        Assert.True(vm.InspectMigrationCommand.CanExecute(null));
+        vm.InspectMigrationCommand.Execute(null);
+        Assert.NotNull(vm.MigrationReport);
+        Assert.True(vm.MigrationReport.TopologyLooksPlausible);
+        Assert.False(vm.MigrationReport.CanExecute);
+        Assert.Contains("SEM MIGRAÇÃO EXECUTÁVEL", vm.MigrationSummary);
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Migration_requires_whole_disk_selection_and_does_not_transfer_files()
+    {
+        var vm = Build(new StaticInventory(WindowsMigrationFixture()));
+        await vm.RefreshAsync();
+        vm.SelectedMigrationTargetDisk = vm.Disks.Single(d => d.Number == 9);
+        vm.SelectedPartition = Assert.Single(vm.Partitions.Where(p => p.IsBoot));
+        Assert.False(vm.InspectMigrationCommand.CanExecute(null));
+        Assert.Null(vm.MigrationReport);
+        vm.SelectedPartition = null;
+        vm.InspectMigrationCommand.Execute(null);
+        Assert.NotNull(vm.MigrationReport);
+        Assert.False(vm.MigrationReport.CanExecute);
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Migration_selection_change_and_inventory_refresh_invalidate_evidence()
+    {
+        var inv = new SwitchableInventory(WindowsMigrationFixture());
+        var vm = Build(inv);
+        await vm.RefreshAsync();
+        vm.SelectedMigrationTargetDisk = vm.Disks.Single(d => d.Number == 9);
+        vm.InspectMigrationCommand.Execute(null);
+        Assert.NotNull(vm.MigrationReport);
+        await vm.RefreshAsync();
+        Assert.Equal(9, vm.SelectedMigrationTargetDisk?.Number);
+        Assert.Null(vm.MigrationReport);
+        Assert.Contains("refaça", vm.MigrationSummary);
+        vm.InspectMigrationCommand.Execute(null);
+        Assert.NotNull(vm.MigrationReport);
+        vm.SelectedMigrationTargetDisk = null;
+        Assert.Null(vm.MigrationReport);
+        Assert.False(vm.InspectMigrationCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Removed_migration_target_is_not_silently_swapped_for_another_disk()
+    {
+        var inv = new SwitchableInventory(WindowsMigrationFixture());
+        var vm = Build(inv);
+        await vm.RefreshAsync();
+        vm.SelectedMigrationTargetDisk = vm.Disks.Single(d => d.Number == 9);
+        var original = WindowsMigrationFixture();
+        inv.OverrideSnapshot = original with
+        {
+            Disks = [original.Disks[0], Disk(8) with
+            {
+                Size = 60_000_000_000, PartitionStyle = "RAW"
+            }]
+        };
+        await vm.RefreshAsync();
+        Assert.Null(vm.SelectedMigrationTargetDisk);
+        Assert.Null(vm.MigrationReport);
+        Assert.False(vm.InspectMigrationCommand.CanExecute(null));
+        inv.Fail = true;
+        await vm.RefreshAsync();
+        Assert.Contains("indisponível", vm.MigrationSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(vm.PendingOperations);
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);
