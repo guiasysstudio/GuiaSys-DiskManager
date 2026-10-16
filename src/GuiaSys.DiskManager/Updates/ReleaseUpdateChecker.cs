@@ -24,7 +24,7 @@ public sealed class ReleaseUpdateChecker(HttpClient client)
     private const int MaxResponseBytes = 128 * 1024;
     private static readonly Regex VersionTag = new(
         @"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$",
-        RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+        RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
     public async Task<UpdateCheckResult> CheckAsync(Version installed, CancellationToken cancellationToken = default)
     {
