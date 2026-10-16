@@ -40,28 +40,46 @@ public partial class MainWindow : Window
     private void ClearPartition_Click(object sender, RoutedEventArgs e) =>
         _viewModel.SelectedPartition = null;
 
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        var target = NavigationShortcuts.Resolve(e.Key, Keyboard.Modifiers);
+        if (target is null) return;
+        NavigateTo(target);
+        e.Handled = true;
+    }
+
     private void Navigation_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string target }) return;
+        if (sender is Button { Tag: string target }) NavigateTo(target);
+    }
+
+    private void NavigateTo(string target)
+    {
         switch (target)
         {
             case "Overview":
-                WorkAreaScroll.ScrollToTop();
+                OverviewSection.BringIntoView();
+                OverviewSection.Focus();
                 break;
             case "DiskMap":
                 DiskMapSection.BringIntoView();
+                DiskMapSection.Focus();
                 break;
             case "Partitions":
                 PartitionsSection.BringIntoView();
+                PartitionsGrid.Focus();
                 break;
             case "Health":
                 HealthSection.BringIntoView();
+                HealthSection.Focus();
                 break;
             case "Recovery":
                 RecoverySection.BringIntoView();
+                RecoverySection.Focus();
                 break;
             case "Maintenance":
                 MaintenanceSection.BringIntoView();
+                MaintenanceSection.Focus();
                 break;
             case "Operations":
                 OperationEditor.BringIntoView();
@@ -69,14 +87,15 @@ public partial class MainWindow : Window
                 break;
             case "Queue":
                 QueueSection.BringIntoView();
+                QueueSection.Focus();
                 break;
         }
     }
 
-    private void PartitionSegment_Click(object sender, MouseButtonEventArgs e)
+    private void PartitionSegment_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not PartitionSegmentViewModel segment) return;
-        // Selecting unallocated space selects the whole disk, never an invented partition.
+        // An unallocated segment selects the disk, never an invented partition.
         _viewModel.SelectedPartition = segment.Partition;
         e.Handled = true;
     }
