@@ -41,6 +41,9 @@ public static class PartitionMovePreview
             (sector.Value & (sector.Value - 1)) != 0 ||
             AlignmentBytes % sector.Value != 0)
             return MovePreviewDecision.Reject("Tamanho do setor lógico ausente ou inconsistente.");
+        if (part.Offset < 0 || part.Size <= 0 || part.Offset > disk.Size ||
+            part.Size > disk.Size - part.Offset)
+            return MovePreviewDecision.Reject("Origem com geometria inválida; atualize o inventário.");
         if (requestedOffset % AlignmentBytes != 0)
             return MovePreviewDecision.Reject("O destino precisa estar alinhado a 1 MiB.");
         if (requestedOffset == part.Offset)
@@ -97,7 +100,7 @@ public static class PartitionMovePreview
                 options.Add(target);
         }
         return options.OrderBy(target => AbsoluteDistance(target, part.Offset))
-            .ThenBy(target => target).Cast<long?>().FirstOrDefault();
+            .ThenBy(target => target).Select(target => (long?)target).FirstOrDefault();
     }
 
     public static bool IntervalsOverlap(long a, long lenA, long b, long lenB) =>
