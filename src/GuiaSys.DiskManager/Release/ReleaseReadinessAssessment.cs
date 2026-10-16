@@ -39,10 +39,14 @@ public static class ReleaseReadinessAssessment
         ReleaseVerificationEvidence evidence, string? version)
     {
         ArgumentNullException.ThrowIfNull(evidence);
-        var stableVersion = System.Version.TryParse(version, out var parsed) &&
-            parsed.Build >= 0 && parsed.Revision == -1 && parsed.Major >= 1;
-        // Until a distinct release process exists, 0.x development versions remain pre-commercial.
-        // This is a policy, not a technical impossibility; release policy changes require a reviewed commit.
+        // InformationalVersion is required to be a strict three-part stable SemVer.
+        // Development suffixes such as 0.1.0-dev fail closed; no arbitrary 1.0 minimum.
+        var stableVersion = version is not null &&
+            System.Text.RegularExpressions.Regex.IsMatch(version,
+                @"\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\z",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+                TimeSpan.FromSeconds(1)) &&
+            System.Version.TryParse(version, out _);
         var gate = new List<ReleaseGateFinding>
         {
             new("C18-01", "Bloqueio de escrita liberado mediante auditoria de segurança",
@@ -53,7 +57,7 @@ public static class ReleaseReadinessAssessment
                 "Project ID, kid, JWK público e SHA-256 conferidos com GuiaSys Licensing em produção."),
             new("C18-03", "Versão comercial estável e revisada",
                 stableVersion,
-                "Version/AssemblyVersion/FileVersion alinhados com release assinada (>=1.0.0)."),
+                "Version/AssemblyVersion/FileVersion/InformationalVersion alinhados com tag estável."),
             new("C18-04", "Executáveis Authenticode assinados e cadeia conferida",
                 evidence.SignedPortableAndInstaller,
                 "WinVerifyTrust/Get-AuthenticodeSignature para portátil e instalador finais."),
