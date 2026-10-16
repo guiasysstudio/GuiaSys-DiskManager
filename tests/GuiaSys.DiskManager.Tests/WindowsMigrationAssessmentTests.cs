@@ -53,7 +53,7 @@ public sealed class WindowsMigrationAssessmentTests
         var result = Analyze(state);
         Assert.True(result.TopologyLooksPlausible);
         Assert.False(result.CanExecute);
-        Assert.Equal(7, result.Checks.Count);
+        Assert.Equal(8, result.Checks.Count);
         Assert.Equal(state.CapturedAt, result.CapturedAt);
         Assert.Contains("SEM MIGRAÇÃO EXECUTÁVEL", result.Summary);
         Assert.False(StorageWriteGate.ReleasedAfterSafetyAudit);
