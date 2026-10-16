@@ -189,7 +189,7 @@ public static class MaintenanceAssessment
 
             case MaintenanceTask.WipeVolumeFreeSpace:
                 checks.Add(new("Apagamento de espaço livre", "Não executado",
-                    "Nenhum bloco, arquivo ou metadado foi modificado. Espaço livre não significa dados recuperáveis.");
+                    "Nenhum bloco, arquivo ou metadado foi modificado. Espaço livre não significa dados recuperáveis."));
                 checks.Add(new("Garantias de eliminação", "Não verificadas",
                     "TRIM, remapeamento SSD, snapshots, cópias, criptografia e blocos reservados impedem garantia por sobrescrita."));
                 warnings.Add("Não existe rotina homologada de sobrescrita segura de espaço livre. O sistema NÃO apaga dados.");
