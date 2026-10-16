@@ -525,6 +525,20 @@
               <Button Content="Verificar requisitos do Windows" Command="{Binding InspectMigrationCommand}"
                       HorizontalAlignment="Left" Margin="0,10,0,6"
                       ToolTip="Analisa ESP, MSR, Windows, recuperação, setores e destino RAW sem realizar cópia"/>
+              <ItemsControl ItemsSource="{Binding MigrationReport.Checks}" Margin="0,8,0,8">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border BorderBrush="{StaticResource OutlineBrush}" BorderThickness="0,0,0,1"
+                            Padding="0,6,0,6">
+                      <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="{Binding Component}" FontSize="12"/>
+                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource AccentBrush}" FontSize="11"/>
+                        <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Style="{StaticResource Caption}"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
               <TextBlock Text="{Binding MigrationSummary}" TextWrapping="Wrap" FontSize="12"
                          Margin="0,9,0,8" AutomationProperties.Name="Relatório de migração Windows"/>
               <TextBlock Text="SOMENTE METADADOS. Boot real, BitLocker, BCD, TPM, VSS, WinRE e restauração não são homologados. NÃO EXECUTA MIGRAÇÃO."
