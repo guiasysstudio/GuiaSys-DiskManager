@@ -507,7 +507,10 @@ public sealed class MainViewModel : ObservableObject
             ContextOperations.Add(ContextOperationPolicy.Evaluate(choice.Type, choice.Display,
                 SelectedDisk, SelectedPartition, _snapshot, _safety));
         var selected = ContextOperations.FirstOrDefault(c => c.Type == SelectedOperationType);
-        if (selected?.IsAvailable != true)
+        // Never silently replace an explicitly selected resize operation with a
+        // different mutation if Windows limits vanish after a refresh.
+        if (selected?.IsAvailable != true &&
+            SelectedOperationType != StorageOperationType.ResizePartition)
         {
             var preferred = ContextOperations.FirstOrDefault(c => c.IsAvailable &&
                 c.Type == StorageOperationType.SetVolumeLabel)
