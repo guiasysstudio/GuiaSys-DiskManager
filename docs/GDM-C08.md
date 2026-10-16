@@ -33,13 +33,14 @@ Resultados com geometria inconsistente, evidência ausente, sem opção de alter
 - **OperationPlanner:** barra operações dependentes posteriores à alteração de geometria. O planejamento não presume que as demais partições permaneçam no mesmo estado após resize.
 - **ContextOperationPolicy:** exibe redimensionamento como ação disponível **somente se existir um tamanho alternativo** compatível; partição sem GUID forte continua indisponível por identidade, e janela de tamanhos indisponível é comunicada ao usuário.
 - **MainViewModel/WPF:** mostra tamanho atual, mínimo/máximo confirmados, setor lógico e direção possível (reduzir, expandir ou ambas). Botões **Usar mínimo / Usar máximo** preenchem o valor exato em **bytes**, não um valor arredondado em GB, e não executam operações. Se os limites desaparecerem após atualização, a ação permanece selecionada, porém desabilitada; o usuário não é redirecionado silenciosamente para outra operação.
+- **OperationPostconditionVerifier:** após comando que porventura seja futuramente autorizado, o resultado só será classificado como `Verified` se o tamanho da partição for exatamente o pedido, GUID/offset/tipo e demais partições permanecerem íntegros, o sistema de arquivos permanecer o mesmo e `Get-Volume.Size` for conhecido **antes e depois** e tiver mudado na direção solicitada. Ausência da métrica ou FS inalterado em capacidade com partição redimensionada produz `Indeterminate` e **não autoriza repetir automaticamente**.
 - **PowerShellStorageOperationExecutor:** defesa adicional **imediatamente antes** do cmdlet `Resize-Partition`: reconsulta `Get-PartitionSupportedSize`, recusa limites inválidos/mudados, exige setor lógico válido, tamanho diferente e alinhamento. As condições anteriores de identidade e layout protegido continuam vigentes. Esse segundo controle não elimina TOCTOU entre consulta e operação por outros processos.
 
 ## Casos de teste
 
 Testes sintéticos do `PartitionResizePolicy`, do `SafetyService`, do `OperationPlanner`, do parser de inventário e do `MainViewModel`: limites ausentes/malformados, setor desconhecido, limites desalinhados, disco/partição protegidos, espaço adjacente ocupado, mínimo/máximo válidos, tamanho atual sem alteração, seleção de presets, stale refresh, partição substituída, não repetição de resize sem inventário e gate sempre fechado.
 
-GitHub Actions Windows compila WPF em Debug e Release, executa xUnit, publica binário win-x64 self-contained, produz instalador Inno Setup e disponibiliza artefatos. A quantidade de testes e o SHA final devem ser verificados após o último commit.
+GitHub Actions Windows executa ainda uma verificação **não executante** da sintaxe dos dois scripts PowerShell incorporados, usando o parser AST nativo. Em seguida compila WPF em Debug e Release, executa xUnit, publica binário win-x64 self-contained, produz instalador Inno Setup e disponibiliza artefatos. A quantidade de testes e o SHA final devem ser verificados após o último commit.
 
 ## Limitações e homologação pendente
 
