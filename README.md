@@ -84,3 +84,7 @@ O painel permite selecionar a origem do Windows (inclusive **Disco 0 apenas para
 ### GDM-C13 — Saúde e diagnósticos (somente leitura)
 
 O painel C13 apresenta estados de saúde Windows dos discos/volumes, temperatura e contadores opcionais de desgaste, horas ligadas e erros reportados por `Get-StorageReliabilityCounter`. Associação física somente por série única; métricas sem suporte ficam **não disponíveis**. O avaliador emite avisos e sempre informa que **S.M.A.R.T. integral, autotestes, superfície e reparo não foram executados**. Selecione um disco e clique **Analisar indicadores**; **F5** atualiza as medições. Não habilita escrita. Ver [GDM-C13](docs/GDM-C13.md).
+
+### GDM-C14 — Manutenção (prévia de riscos, sem execução)
+
+O painel **Manutenção (prévia)** analisa cinco categorias: verificação de volume por metadados do Windows, potencial de otimização, revisão de arquivos temporários, apagamento do espaço livre e apagamento integral do disco. O relatório diferencia alterações, risco destrutivo, volumes protegidos, mídia/FS desconhecidos, identidade e uso do volume, mas **não executa CHKDSK, TRIM, varreduras, exclusão, limpeza ou apagamento**. A fila e a allowlist de escrita não incluem ações de manutenção; `CanExecute=false` para todas as prévias e o gate global permanece fechado. Detalhes: [GDM-C14](docs/GDM-C14.md).

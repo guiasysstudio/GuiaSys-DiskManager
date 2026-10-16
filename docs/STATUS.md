@@ -139,3 +139,12 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Painel WPF e navegação de saúde, relatório efêmero em memória e invalidação com seleção, atualização e falha. Não existe ação de escrita, autoteste ou reparo.
 - Testes sintéticos de saúde/parser/MVVM adicionados; execução e contagens dependem de CI no HEAD. **NO-GO** para gravação de disco físico e testes destrutivos.
 - Relatório [GDM-C13](GDM-C13.md).
+
+## GDM-C14 — Manutenção (15–16/10/2026)
+
+- `MaintenanceAssessment` e `MaintenanceReport` oferecem matriz determinística **somente de metadados** para verificação de volume, otimização/TRIM/defrag, limpeza de temporários, espaço livre e apagar disco inteiro.
+- Não lê diretórios pessoais, não executa ferramenta de reparo, não enfileira limpeza nem faz escrita. Não existe executor ou liberação de `CanExecute` para essas tarefas.
+- Proteções de disco 0/sistema/EFI/MSR/Recovery, ausência de identidade, geometria inválida, volume read-only/offline e classificação SSD/HDD conservadora.
+- UI WPF com seleção do tipo, risco, impedimentos e evidências; laudo invalidado em seleção/refresh/falha.
+- Testes sintéticos e MVVM adicionados; resultado definitivo deve ser associado ao CI do commit de fechamento C14.
+- Documentação: [GDM-C14](GDM-C14.md). Gate de escrita **NO-GO** e testes físicos/destrutivos pendentes.
