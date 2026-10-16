@@ -487,6 +487,29 @@
                          FontSize="11" FontWeight="SemiBold"/>
             </StackPanel>
           </Border>
+          <!-- C11 previews require two independently selected disks and never queue any copy. -->
+          <Border Style="{StaticResource Surface}" Background="#173044">
+            <StackPanel>
+              <TextBlock Text="C11 · CLONAGEM (SOMENTE PRÉVIA)" Style="{StaticResource SectionTitle}"/>
+              <TextBlock Text="Origem: disco selecionado à esquerda; selecione uma partição para estudar apenas aquela partição."
+                         Style="{StaticResource Caption}" Margin="0,5,0,9" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding SelectedTargetTitle}" Style="{StaticResource Caption}"
+                         Margin="0,0,0,10" TextWrapping="Wrap"/>
+              <TextBlock Text="Disco de destino" Style="{StaticResource Caption}" Margin="0,0,0,6"/>
+              <ComboBox ItemsSource="{Binding Disks}" SelectedItem="{Binding SelectedCloneTargetDisk, Mode=TwoWay}"
+                        DisplayMemberPath="DisplayName"
+                        AutomationProperties.Name="Selecionar disco de destino para prévia de clonagem"/>
+              <Button Content="Analisar clonagem · sem gravar" Command="{Binding InspectCloneCommand}"
+                      HorizontalAlignment="Left" Margin="0,10,0,6"
+                      ToolTip="Somente simulação geométrica; não copia setores e não enfileira operação"/>
+              <TextBlock Text="{Binding ClonePreviewSummary}" TextWrapping="Wrap"
+                         FontSize="12" Margin="0,9,0,7"
+                         AutomationProperties.Name="Resultado da análise de clonagem"/>
+              <TextBlock Text="EXECUÇÃO BLOQUEADA: origem e destino não serão modificados. Não existe cópia, VSS, restauração nem verificação de hash implementadas."
+                         Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"
+                         FontSize="11" FontWeight="SemiBold"/>
+            </StackPanel>
+          </Border>
           <Border x:Name="OperationEditor" Style="{StaticResource Surface}">
             <StackPanel>
               <TextBlock Text="Configuração" Style="{StaticResource SectionTitle}" Margin="0,0,0,12"/>
