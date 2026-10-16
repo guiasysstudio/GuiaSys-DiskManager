@@ -35,6 +35,9 @@ jobs:
       - name: Verify distribution payload and write SHA256 manifest
         shell: powershell
         run: .\tools\Write-PackageChecksums.ps1
+      - name: Verify published SHA256 checksums
+        shell: powershell
+        run: .\tools\Test-PackageChecksums.ps1
       - name: Upload checksums
         uses: actions/upload-artifact@v7
         with:
