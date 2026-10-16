@@ -70,6 +70,19 @@ public sealed class StorageHealthAssessmentTests
         Assert.False(report.SmartVerified);
     }
 
+    [Theory]
+    [InlineData("Online", DiskHealthLevel.Normal)]
+    [InlineData("Unknown", DiskHealthLevel.Normal)]
+    [InlineData("Degraded", DiskHealthLevel.Warning)]
+    [InlineData("Online, Lost Communication", DiskHealthLevel.Warning)]
+    [InlineData("Failed", DiskHealthLevel.Warning)]
+    [InlineData("Offline", DiskHealthLevel.Warning)]
+    public void Operational_driver_alerts_are_not_hidden_by_healthy_flag(string operational, DiskHealthLevel expected)
+    {
+        var disk = Disk() with { HealthStatus = "Healthy", OperationalStatus = operational };
+        Assert.Equal(expected, StorageHealthAssessment.Analyze(Snapshot(disk), 0).Level);
+    }
+
     [Fact]
     public void Unsupported_temperature_value_is_unknown_not_an_alarm()
     {
@@ -189,6 +202,19 @@ public sealed class StorageHealthAssessmentTests
         var disk = Assert.Single(PowerShellDiskInventoryService.ParseInventory(json, At).Disks);
         Assert.Null(disk.PowerOnHours);
         Assert.Null(disk.ReadErrorsTotal);
+    }
+
+    [Theory]
+    [InlineData("999")]
+    [InlineData("-999")]
+    [InlineData("2147483648")]
+    [InlineData("\"bad sensor\"")]
+    public void Malformed_optional_temperature_does_not_discard_inventory(string value)
+    {
+        var json = WindowsJson.Replace("\"TemperatureC\": 45",
+            "\"TemperatureC\": " + value, StringComparison.Ordinal);
+        var disk = Assert.Single(PowerShellDiskInventoryService.ParseInventory(json, At).Disks);
+        Assert.Null(disk.TemperatureC);
     }
 
     [Fact]

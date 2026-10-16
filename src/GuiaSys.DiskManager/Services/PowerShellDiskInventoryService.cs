@@ -167,7 +167,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     {
         Number = ReadRequiredInt(item, "Number"), UniqueId = ReadString(item, "UniqueId"), FriendlyName = ReadString(item, "FriendlyName", "Dispositivo sem nome"),
         Manufacturer = ReadString(item, "Manufacturer"), SerialNumber = ReadString(item, "SerialNumber"), PartitionStyle = ReadRequiredString(item, "PartitionStyle"),
-        BusType = ReadString(item, "BusType", "Unknown"), MediaType = ReadString(item, "MediaType", "Unspecified"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"), TemperatureC = ReadNullableInt(item, "TemperatureC"), LogicalSectorSize = ReadNullableInt(item, "LogicalSectorSize"), PhysicalSectorSize = ReadNullableInt(item, "PhysicalSectorSize"),
+        BusType = ReadString(item, "BusType", "Unknown"), MediaType = ReadString(item, "MediaType", "Unspecified"), HealthStatus = ReadString(item, "HealthStatus", "Unknown"), OperationalStatus = ReadString(item, "OperationalStatus", "Unknown"), TemperatureC = ReadDiagnosticTemperature(item, "TemperatureC"), LogicalSectorSize = ReadNullableInt(item, "LogicalSectorSize"), PhysicalSectorSize = ReadNullableInt(item, "PhysicalSectorSize"),
         ReliabilityCountersAvailable = ReadOptionalBool(item, "ReliabilityCountersAvailable"),
         WearPercent = ReadDiagnosticPercent(item, "WearPercent"),
         PowerOnHours = ReadDiagnosticCounter(item, "PowerOnHours"),
@@ -236,6 +236,13 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
         if (!item.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.Number ||
             !value.TryGetInt64(out var count) || count < 0) return null;
         return count;
+    }
+
+    internal static int? ReadDiagnosticTemperature(JsonElement item, string key)
+    {
+        if (!item.TryGetProperty(key, out var value) || value.ValueKind != JsonValueKind.Number ||
+            !value.TryGetInt32(out var temperature) || temperature is < -20 or > 125) return null;
+        return temperature;
     }
 
     internal static int? ReadDiagnosticPercent(JsonElement item, string key)

@@ -30,10 +30,12 @@ public static class StorageHealthAssessment
         checks.Add(new("Saúde do dispositivo (Get-Disk)", Label(state),
             $"Windows: {Readable(disk.HealthStatus)}. Não equivale a um teste SMART completo."));
 
-        if (disk.IsOffline)
+        var operationalAlert = HasOperationalAlert(disk.OperationalStatus);
+        if (disk.IsOffline || operationalAlert)
         {
             Promote(DiskHealthLevel.Warning);
-            checks.Add(new("Acesso ao disco", "Atenção", "Dispositivo offline: disponibilidade dos volumes não confirmada."));
+            checks.Add(new("Acesso ao disco", "Atenção",
+                $"Dispositivo offline: {disk.IsOffline}. Estado operacional Windows: {Readable(disk.OperationalStatus)}. Confirme acessibilidade e controlador."));
         }
         else
             checks.Add(new("Acesso ao disco", disk.IsReadOnly ? "Somente leitura" : "Online",
@@ -93,6 +95,16 @@ public static class StorageHealthAssessment
         };
         return new(diskNumber, snapshot.CapturedAt, level, summary, checks);
     }
+
+    private static bool HasOperationalAlert(string? status) =>
+        (status ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Any(s => s.Equals("Failed", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Degraded", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Lost Communication", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("No Contact", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Not Ready", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("No Media", StringComparison.OrdinalIgnoreCase) ||
+                s.Equals("Offline", StringComparison.OrdinalIgnoreCase));
 
     private static DiskHealthLevel Normalize(string? status) => (status ?? "").Trim().ToUpperInvariant() switch
     {
