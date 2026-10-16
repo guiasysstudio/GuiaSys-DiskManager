@@ -48,15 +48,19 @@ $patterns = @(
     'Click="License_Click"',
     'Click="About_Click"',
     'Click="PartitionSegment_Click"',
+    'Click="DiskRow_Click"',
+    'ItemsSource="{Binding DiskMapRows}"',
+    'ItemsSource="{Binding Segments}"',
+    '<controls:ProportionalPartitionPanel/>',
+    'Value="{Binding UsagePercent, Mode=OneWay}"',
     'Value="{Binding SelectedAllocatedPercent, Mode=OneWay}"',
-    'Value="{Binding SelectedPartition.UsagePercent, Mode=OneWay}"',
     'Value="{Binding Progress, Mode=OneWay}"',
     'IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"'
 )
 foreach ($anchor in $patterns) {
     if (-not $xml.Contains($anchor)) { throw "H03_UI_COMMAND_OR_SAFETY_BINDING_MISSING: $anchor" }
 }
-if ($xml -match 'Value="\{Binding\s+(?:SelectedAllocatedPercent|SelectedPartition\.UsagePercent|Progress)\}"') {
+if ($xml -match 'Value="\{Binding\s+(?:SelectedAllocatedPercent|SelectedPartition\.UsagePercent|UsagePercent|Progress)\}"') {
     throw 'H03_UI_READONLY_BINDING_NOT_ONEWAY'
 }
 if (-not $theme.Contains('Color="#14283F"') -or
@@ -66,5 +70,5 @@ if (-not $theme.Contains('Color="#14283F"') -or
 if ($gate -cnotmatch 'ReleasedAfterSafetyAudit\s*=>\s*false\s*;') {
     throw 'H03_UI_WRITE_GATE_CHANGED'
 }
-Write-Host 'PASS: H03 desktop layout XML, main pane order, read-only bindings, navigation and closed write gate.'
+Write-Host 'PASS: H03 desktop UI XML; all-disk proportional rows, read-only usage bindings, navigation and closed write gate.'
 Write-Host 'NOTE: Window screenshot, contrast, responsive sizing and manual Windows tests are still required.'
