@@ -46,6 +46,14 @@
         </DataTrigger>
       </Style.Triggers>
     </Style>
+    <Style x:Key="MoveField" TargetType="StackPanel" BasedOn="{StaticResource FormField}">
+      <Setter Property="Visibility" Value="Collapsed"/>
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding SelectedOperationType}" Value="{x:Static models:StorageOperationType.MovePartition}">
+          <Setter Property="Visibility" Value="Visible"/>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
     <Style x:Key="FormatField" TargetType="StackPanel" BasedOn="{StaticResource FormField}">
       <Setter Property="Visibility" Value="Collapsed"/>
       <Style.Triggers>
@@ -489,6 +497,31 @@
                     </WrapPanel>
                     <TextBlock Text="Esses valores podem mudar: limites, identidade e layout são novamente verificados antes da execução. Gravações continuam bloqueadas."
                                Style="{StaticResource Caption}" Margin="0,8,0,0"/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+              <StackPanel Style="{StaticResource MoveField}">
+                <Border Background="#2E2930" BorderBrush="#A27B47" BorderThickness="1"
+                        CornerRadius="8" Padding="11">
+                  <StackPanel>
+                    <TextBlock Text="C09 · MOVIMENTAÇÃO APENAS SIMULADA"
+                               Foreground="{StaticResource WarningBrush}" FontSize="12" FontWeight="Bold"
+                               TextWrapping="Wrap" Margin="0,0,0,7"/>
+                    <TextBlock Text="Destino: posição absoluta a partir do início do disco, não tamanho da partição. Ex.: 3 GB ou 3145728000 B."
+                               Style="{StaticResource Caption}" Margin="0,0,0,7"/>
+                    <TextBox Text="{Binding MoveDestinationInput, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Deslocamento de destino em bytes"/>
+                    <WrapPanel Margin="0,9,0,8">
+                      <Button Content="Sugerir destino" Command="{Binding SuggestMoveDestinationCommand}"
+                              ToolTip="Sugere uma faixa inteiramente não alocada, sem copiar dados"/>
+                      <Button Content="Analisar geometria" Command="{Binding PreviewMoveCommand}"
+                              ToolTip="Calcula somente a prévia; jamais escreve no disco"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding MovePreviewSummary}" TextWrapping="Wrap"
+                               Foreground="{StaticResource TextBrush}" FontSize="12"/>
+                    <TextBlock Text="SEM EXECUÇÃO: não existe motor homologado de cópia, verificação de integridade e recuperação. A ação não entra na fila."
+                               Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap"
+                               FontSize="11" Margin="0,9,0,0"/>
                   </StackPanel>
                 </Border>
               </StackPanel>
