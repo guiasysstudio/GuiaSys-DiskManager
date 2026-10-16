@@ -127,6 +127,10 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
 
     public Task<OperationResult> ExecuteAsync(StorageOperation operation, CancellationToken cancellationToken)
     {
+        if (operation.Type == StorageOperationType.MovePartition)
+            return Task.FromResult(new OperationResult(operation.Id, false,
+                "Prévia C09 sem mecanismo de movimentação; nenhuma escrita iniciada.",
+                TimeSpan.Zero, StorageExecutionOutcome.Rejected));
         var coordinator = new SafeExecutionCoordinator(logger, inventory, safety, licensing,
             journal ?? new OperationJournal(),
             (target, token) => PowerShellProcessRunner.RunEncodedAsync(Script,
