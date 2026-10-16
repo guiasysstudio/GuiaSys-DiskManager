@@ -36,10 +36,10 @@ public static class ContextOperationPolicy
         long? suggestedResize = null;
         if (type == StorageOperationType.ResizePartition)
         {
-            if (partition is null ||
-                !PartitionResizePolicy.TryResolve(snapshot, partition, out var limits, out var why))
-                return new(type, label, false, partition is null
-                    ? "Selecione uma partição para redimensionar." : why);
+            if (partition is null)
+                return new(type, label, false, "Selecione uma partição para redimensionar.");
+            if (!PartitionResizePolicy.TryResolve(snapshot, partition, out var limits, out var why))
+                return new(type, label, false, why);
             if (limits?.SuggestedSizeBytes is not long size)
                 return new(type, label, false, "O Windows não oferece alteração de tamanho para esta partição.");
             suggestedResize = size;
