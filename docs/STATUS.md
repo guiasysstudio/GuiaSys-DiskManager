@@ -115,3 +115,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Cartão WPF **C10 · GPT / MBR** com consulta read-only para os dois destinos; invalida resultados antigos após seleção/refresh/falha; não gera `StorageOperation`.
 - Testes sintéticos de setores 512/4096, boot, limites, identidade, RAW, tabelas GPT/MBR e UI; nenhuma conversão real.
 - Gate de gravação **NO-GO**. Detalhes: [GDM-C10](GDM-C10.md).
+
+## GDM-C11 — Clonagem: prévia não executável (15/10/2026)
+
+- `ClonePreviewAssessment`: diagnóstico read-only dos pares origem/destino de discos inteiros ou de partições, sem inventar operações de escrita.
+- Para **disco inteiro**, origem particionada GPT/MBR, destino RAW vazio, identidade forte/diferente e capacidade integral suficiente (não apenas espaço usado). Para **partição**, GPT básica, filesystem conhecido e faixa não alocada contígua alinhada a 1 MiB em outro disco GPT.
+- Proteções: Disco 0, sistema/boot, EFI/MSR/Recovery, setores lógicos incompatíveis, ID duplicado, disco offline/destino somente leitura, espaço insuficiente, geometria sobreposta e incertezas de setor físico.
+- Interface WPF: seleção explícita de destino, relatório de bloqueios/avisos; invalidação ao mudar origem/destino/inventário; nenhuma ação de fila ou executor adicionada.
+- **Clonagem real e preservação de boot não implementadas**. Testes sintéticos de geometria/seleção; VHDX real e smoke WPF pendentes. Gate **NO-GO**. Detalhes: [GDM-C11](GDM-C11.md).
