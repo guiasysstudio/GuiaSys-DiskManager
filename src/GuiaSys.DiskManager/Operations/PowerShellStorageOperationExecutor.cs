@@ -70,6 +70,20 @@ public sealed class PowerShellStorageOperationExecutor(IAppLogger logger,
           if ([string]$disk.PartitionStyle -ine 'RAW' -or @($otherParts).Count -ne 0 -or
               $disk.IsOffline -or $disk.IsReadOnly) { throw 'DISK_NOT_EMPTY_RAW' }
         }
+        if ([string]$request.Type -in @('InitializeGpt','InitializeMbr')) {
+          # Independent C10 check against the LIVE physical device before initialization.
+          # 32-bit classic MBR addresses 2^32 logical sectors, not a fixed 2 TB.
+          $sectorSize = [uint64]$disk.LogicalSectorSize
+          if ($sectorSize -lt 512 -or $sectorSize -gt 65536 -or
+              ($sectorSize -band ($sectorSize - 1)) -ne 0 -or
+              [uint64]$disk.Size % $sectorSize -ne 0) {
+            throw 'RAW_INITIALIZATION_SECTOR_UNVERIFIED'
+          }
+          if ([string]$request.Type -eq 'InitializeMbr' -and
+              [uint64]$disk.Size -gt (([uint64]4294967296) * $sectorSize)) {
+            throw 'MBR_CLASSIC_CAPACITY_EXCEEDED'
+          }
+        }
         if ([string]$request.Type -eq 'CreatePartition') {
           if ([string]$disk.PartitionStyle -ine 'GPT' -or $disk.IsOffline -or $disk.IsReadOnly) {
             throw 'GPT_DISK_REQUIRED'
