@@ -8,7 +8,8 @@ $version = [string]$props.Project.PropertyGroup.Version
 if ($version -cnotmatch '\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\z') {
     throw "Version must be a stable three-component SemVer (e.g. 0.2.0): $version"
 }
-if ([int]$Matches[1] -gt 65535 -or [int]$Matches[2] -gt 65535 -or [int]$Matches[3] -gt 65535) {
+$versionParts = $version.Split('.')
+if ([int]$versionParts[0] -gt 65535 -or [int]$versionParts[1] -gt 65535 -or [int]$versionParts[2] -gt 65535) {
     throw 'Inno Setup Windows version components must not exceed 65535.'
 }
 
