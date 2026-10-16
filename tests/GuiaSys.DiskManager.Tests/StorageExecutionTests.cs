@@ -124,14 +124,54 @@ public sealed class StorageExecutionTests
     [Fact]
     public void Resize_requires_requested_size_and_same_partition_guid_and_offset()
     {
-        var p = Part();
+        var p = Part() with
+        {
+            VolumeCapacityBytes = 1_900_000_000,
+            VolumeAvailableBytes = 500_000_000
+        };
+        var after = p with
+        {
+            Size = 1_500_000_000,
+            VolumeCapacityBytes = 1_400_000_000,
+            VolumeAvailableBytes = 400_000_000
+        };
         var op = Op(StorageOperationType.ResizePartition, p, size: 1_500_000_000);
         Assert.True(OperationPostconditionVerifier.Verify(op, State(null, p),
-            State(null, p with { Size = 1_500_000_000 })).Verified);
+            State(null, after)).Verified);
         Assert.False(OperationPostconditionVerifier.Verify(op, State(null, p),
-            State(null, p with { Size = 1_500_000_001 })).Verified);
+            State(null, after with { Size = 1_500_000_001 })).Verified);
         Assert.False(OperationPostconditionVerifier.Verify(op, State(null, p),
-            State(null, p with { Offset = p.Offset + 512, Size = 1_500_000_000 })).Verified);
+            State(null, after with { Offset = p.Offset + 512 })).Verified);
+    }
+
+    [Fact]
+    public void Resize_postcondition_rejects_successful_geometry_without_filesystem_capacity_proof()
+    {
+        var original = Part() with
+        {
+            VolumeCapacityBytes = 1_900_000_000,
+            VolumeAvailableBytes = 800_000_000
+        };
+        var operation = Op(StorageOperationType.ResizePartition, original, size: 2_500_000_000);
+        var expanded = original with
+        {
+            Size = 2_500_000_000,
+            VolumeCapacityBytes = 2_400_000_000,
+            VolumeAvailableBytes = 1_300_000_000
+        };
+        Assert.True(OperationPostconditionVerifier.Verify(operation,
+            State(null, original), State(null, expanded)).Verified);
+        Assert.False(OperationPostconditionVerifier.Verify(operation,
+            State(null, original), State(null, expanded with { VolumeCapacityBytes = 1_900_000_000 })).Verified);
+        Assert.False(OperationPostconditionVerifier.Verify(operation,
+            State(null, original), State(null, expanded with { VolumeCapacityBytes = null })).Verified);
+        Assert.False(OperationPostconditionVerifier.Verify(operation,
+            State(null, original), State(null, expanded with { FileSystem = "exFAT" })).Verified);
+        Assert.False(OperationPostconditionVerifier.Verify(operation,
+            State(null, original), State(null, expanded with { VolumeCapacityBytes = 1_500_000_000 })).Verified);
+        Assert.False(OperationPostconditionVerifier.Verify(operation,
+            State(null, original with { VolumeCapacityBytes = null }),
+            State(null, expanded)).Verified);
     }
 
     [Fact]
