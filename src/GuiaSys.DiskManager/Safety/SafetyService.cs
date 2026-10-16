@@ -130,6 +130,13 @@ public sealed class SafetyService : ISafetyService
             }
         }
 
+        if (operation.Type == StorageOperationType.ResizePartition &&
+            partition is not null && operation.SizeBytes is long newCapacity)
+        {
+            var feasibility = PartitionResizePolicy.Evaluate(currentSnapshot, partition, newCapacity);
+            if (!feasibility.Allowed) return feasibility;
+        }
+
         // Independently enforced schema: reject stale parameters, wrong targets and
         // noncanonical text rather than silently accepting hidden UI inputs.
         var shape = EssentialOperationValidator.Validate(operation);
