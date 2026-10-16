@@ -1,5 +1,6 @@
 using GuiaSys.DiskManager.Models;
 using GuiaSys.DiskManager.Services;
+using GuiaSys.DiskManager.Operations;
 
 namespace GuiaSys.DiskManager.ViewModels;
 
@@ -32,6 +33,18 @@ public static class ContextOperationPolicy
         if (type == StorageOperationType.SetDriveLetter && freeLetter == default)
             return new(type, label, false, "Não há letras de unidade livres.");
 
+        long? suggestedResize = null;
+        if (type == StorageOperationType.ResizePartition)
+        {
+            if (partition is null ||
+                !PartitionResizePolicy.TryResolve(snapshot, partition, out var limits, out var why))
+                return new(type, label, false, partition is null
+                    ? "Selecione uma partição para redimensionar." : why);
+            if (limits?.SuggestedSizeBytes is not long size)
+                return new(type, label, false, "O Windows não oferece alteração de tamanho para esta partição.");
+            suggestedResize = size;
+        }
+
         var probe = new StorageOperation
         {
             Type = type,
@@ -39,7 +52,7 @@ public static class ContextOperationPolicy
             PartitionNumber = partitionTarget ? partition?.PartitionNumber : null,
             ExpectedDiskIdentity = disk.Identity,
             ExpectedPartitionIdentity = partitionTarget ? partition?.Identity : null,
-            SizeBytes = type == StorageOperationType.ResizePartition ? partition?.Size : null,
+            SizeBytes = suggestedResize,
             FileSystem = "NTFS",
             Label = "",
             DriveLetter = type == StorageOperationType.SetDriveLetter ? freeLetter : null
