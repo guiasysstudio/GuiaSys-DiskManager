@@ -182,3 +182,10 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Script `Test-CommercialReleaseGate.ps1` (não destrutivo) produz `commercial-readiness.json` com pendências; o modo `-RequireCommercialGo` falha explicitamente. CI registra e testa essa negação e publica o JSON como artefato.
 - Assinatura Authenticode, instalação/upgrade/desinstalação Windows real, licença GSL real, NVDA/zoom, VHDX elevado, testes controlados de hardware e aprovação humana **ainda pendentes**.
 - C18 **não** modifica `main`, não cria release/tag e não executa writes. Resultado completo: [GDM-C18](GDM-C18.md). CI verde não altera a decisão comercial.
+
+## GDM-H01 — Pré-homologação Windows sem operações em discos (16/10/2026)
+
+- Script `tools/Test-WindowsReadOnlyPreflight.ps1` verifica **somente arquivos dos artefatos** (nomes, SHA-256, versão e assinatura Authenticode) e sistema Windows x64. Não executa software/instalador nem consulta discos/partições.
+- CI valida pacotes e prova recusa de manifesto adulterado em fixture separada; publica `GuiaSys-DiskManager-H01-readonly-preflight` com JSON de evidência **NO-GO**.
+- Testes humanos Windows 10/11, UI em zoom variados, NVDA/Narrator, licença, instalação/upgrade/desinstalação **continuam pendentes**. Veja [GDM-H01](GDM-H01.md).
+- `main` preservada, `StorageWriteGate` fechado, nenhum release comercial.

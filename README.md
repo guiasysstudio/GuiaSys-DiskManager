@@ -104,3 +104,7 @@ O menu **Sobre → Verificar atualização** consulta manualmente releases públ
 ### GDM-C18 — Auditoria de lançamento comercial (NO-GO)
 
 O gate C18 gera um relatório JSON verificável no GitHub Actions com **12 requisitos obrigatórios de liberação**. O código de avaliação consulta o estado compilado do gate de escrita (`false`) e a ausência de fingerprint GSL público fixado no build; testes sintéticos não podem liberar essas barreiras. O script `tools/Test-CommercialReleaseGate.ps1` mede versão/assinatura local quando disponíveis, **não inventa validações externas** e bloqueia `-RequireCommercialGo`. A pipeline publica o artefato `GuiaSys-DiskManager-C18-NO-GO-audit`. O pipeline verde é um resultado de engenharia, **não um lançamento autorizado**. Veja o [relatório GDM-C18](docs/GDM-C18.md).
+
+### GDM-H01 — Pré-homologação Windows (sem tocar discos)
+
+Depois do C18, a etapa H01 acrescenta `tools/Test-WindowsReadOnlyPreflight.ps1`: verifica nomes/versionamento dos pacotes Windows, checksum SHA-256, status Authenticode e arquitetura **sem executar instalador, aplicativo ou comandos de disco**. O CI inclui teste negativo com manifesto SHA-256 adulterado e publica `GuiaSys-DiskManager-H01-readonly-preflight`. O resultado é **NO-GO comercial**: instalação/desinstalação real, UI/teclado/NVDA e Windows 10/11 aguardam ensaios humanos. Instruções e matriz de testes: [GDM-H01](docs/GDM-H01.md).

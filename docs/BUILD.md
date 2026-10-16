@@ -46,3 +46,16 @@ Get-Content .\artifacts\readiness\commercial-readiness.json
 ```
 
 O CI de desenvolvimento registra o relatório como artefato `GuiaSys-DiskManager-C18-NO-GO-audit` e considera correto o `NO-GO`; um `success` no CI não permite publicar uma versão comercial. O modo obrigatório deve integrar um workflow de distribuição **separado**, com assinatura e evidência humana auditada. Não invente dados da licença, não habilite `StorageWriteGate` e não rode testes de escrita em discos físicos. Ver [GDM-C18](GDM-C18.md).
+
+## GDM-H01 — Pré-verificação Windows x64, somente arquivos
+
+Extraia o portátil, instalador e `SHA256SUMS.txt` do **mesmo run/commit** para `artifacts/portable`, `artifacts/setup`, `artifacts/checksums` e execute:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WindowsReadOnlyPreflight.ps1
+Get-Content .\artifacts\smoke\windows-readonly-preflight.json
+```
+
+O script valida hashes, versões e Authenticode **sem executar nenhum pacote, sem solicitar administração e sem alterar discos**. É permitido apontar os caminhos explicitamente com `-PortablePath`, `-InstallerPath`, `-ManifestPath` e `-OutputPath`. Para exigir duas assinaturas Authenticode válidas (atualmente pendentes), use `-RequireValidSignatures` e espere erro neste build de desenvolvimento. SHA256 de arquivo e manifesto baixados do mesmo local **não garante identidade do editor**.
+
+A pipeline usa ainda uma fixture de manifesto adulterado para provar falha explícita e publica `GuiaSys-DiskManager-H01-readonly-preflight`. Instalação e smoke real no Windows 10/11 continuam **fora da execução do CI**. Consulte [GDM-H01](GDM-H01.md).
