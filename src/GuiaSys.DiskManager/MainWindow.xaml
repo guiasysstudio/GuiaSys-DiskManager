@@ -94,6 +94,36 @@
         <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Trigger>
       </Style.Triggers>
     </Style>
+    <Style x:Key="RibbonButton" TargetType="Button">
+      <Setter Property="Background" Value="#0E56A0"/>
+      <Setter Property="Foreground" Value="#FFFFFF"/>
+      <Setter Property="BorderBrush" Value="#4D91CF"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="11,8"/>
+      <Setter Property="MinHeight" Value="36"/>
+      <Setter Property="Margin" Value="3,0"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#2378C4"/></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="White"/><Setter Property="BorderThickness" Value="2"/></Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="ToolbarButton" TargetType="Button">
+      <Setter Property="Foreground" Value="#21588E"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="14,7"/>
+      <Setter Property="Margin" Value="2,0"/>
+      <Setter Property="MinHeight" Value="38"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#DDECFB"/></Trigger>
+        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.48"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="#176AC2"/><Setter Property="BorderThickness" Value="2"/></Trigger>
+      </Style.Triggers>
+    </Style>
     <Style x:Key="PartitionBlock" TargetType="Button">
       <Setter Property="Height" Value="67"/>
       <Setter Property="Background" Value="#E3EFFA"/>
@@ -145,40 +175,63 @@
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <!-- Branding and global read-only commands. -->
-    <Border Grid.Row="0" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource OutlineBrush}"
-            BorderThickness="0,0,0,1" Padding="18,13">
+    <!-- Primary blue ribbon: actions reflect existing VM commands, no fake write capability. -->
+    <Border Grid.Row="0" Background="#1268BA" BorderBrush="#0B549B"
+            BorderThickness="0,0,0,1" Padding="15,11">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
-        <Image Source="Assets/Branding/logo-64.png" Width="48" Height="48" Margin="0,0,13,0"
-               AutomationProperties.Name="Marca GuiaSys Disk Manager"/>
+        <Border Background="#FFFFFF" CornerRadius="8" Padding="5" Margin="0,0,12,0">
+          <Image Source="Assets/Branding/logo-64.png" Width="42" Height="42"
+                 AutomationProperties.Name="Marca GuiaSys Disk Manager"/>
+        </Border>
         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-          <TextBlock Text="GuiaSys Disk Manager" FontSize="23" FontWeight="Bold"/>
-          <TextBlock Text="GERENCIAMENTO DE ARMAZENAMENTO" Foreground="{StaticResource MutedBrush}"
-                     FontSize="10" FontWeight="SemiBold" Margin="1,3,0,0"/>
+          <TextBlock Text="GuiaSys Disk Manager" Foreground="#FFFFFF" FontSize="21" FontWeight="Bold"/>
+          <TextBlock Text="GERENCIAMENTO DE DISCOS E PARTIÇÕES" Foreground="#D8EBFF"
+                     FontSize="10" FontWeight="SemiBold" Margin="0,3,0,0"/>
         </StackPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-          <Border Background="#0F5394" CornerRadius="8" Padding="12,8" Margin="0,0,12,0">
-            <TextBlock Text="{Binding WriteModeLabel}" Foreground="{StaticResource AccentBrush}"
-                       FontSize="12" FontWeight="SemiBold"/>
+          <Border Background="#0B4C88" CornerRadius="7" Padding="10,9" Margin="0,0,10,0"
+                  ToolTip="Nenhuma alteração física está liberada; licença não remove o bloqueio de segurança.">
+            <TextBlock Text="{Binding WriteModeLabel}" Foreground="#FFFFFF"
+                       FontSize="11" FontWeight="SemiBold"/>
           </Border>
-          <Button Content="↻  Atualizar (F5)" Command="{Binding RefreshCommand}"
-                  ToolTip="Reler o inventário do Windows sem alterar discos"
-                  Background="#176AC2" BorderBrush="#105BA9" FontWeight="SemiBold"/>
-          <Button Content="Logs" Command="{Binding OpenLogsCommand}"/>
-          <Button Content="Licença" Click="License_Click"/>
-          <Button Content="Sobre" Click="About_Click"/>
+          <Button Style="{StaticResource RibbonButton}" Content="↻  Atualizar" Command="{Binding RefreshCommand}"
+                  ToolTip="Atualizar inventário do Windows (F5); sem gravar em discos"/>
+          <Button Style="{StaticResource RibbonButton}" Content="Logs" Command="{Binding OpenLogsCommand}"/>
+          <Button Style="{StaticResource RibbonButton}" Content="Licença" Click="License_Click"/>
+          <Button Style="{StaticResource RibbonButton}" Content="Sobre" Click="About_Click"/>
         </StackPanel>
       </Grid>
     </Border>
+    <!-- Quick-access actions comparable to desktop partition managers. -->
+    <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D5E3F2" BorderThickness="0,0,0,1" Padding="12,5">
+      <DockPanel LastChildFill="True">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <Button Style="{StaticResource ToolbarButton}" Content="Desfazer" Command="{Binding UndoCommand}"
+                  ToolTip="Desfazer item da fila em memória"/>
+          <Button Style="{StaticResource ToolbarButton}" Content="Limpar" Command="{Binding ClearCommand}"
+                  ToolTip="Limpar a fila; nenhuma gravação"/>
+          <Button Style="{StaticResource ToolbarButton}" Content="Aplicar" Command="{Binding ApplyCommand}"
+                  ToolTip="Bloqueado até a homologação formal da segurança de escrita"
+                  ToolTipService.ShowOnDisabled="True"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+          <Button Style="{StaticResource ToolbarButton}" Content="▤  Partições" Tag="Partitions" Click="Navigation_Click"/>
+          <Button Style="{StaticResource ToolbarButton}" Content="▣  Mapa" Tag="DiskMap" Click="Navigation_Click"/>
+          <Button Style="{StaticResource ToolbarButton}" Content="◴  Diagnóstico" Tag="Health" Click="Navigation_Click"/>
+          <Button Style="{StaticResource ToolbarButton}" Content="⚙  Operações" Tag="Operations" Click="Navigation_Click"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
 
-    <Grid Grid.Row="1">
+    <Grid Grid.Row="2">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="218" MinWidth="195"/>
         <ColumnDefinition Width="5"/>
@@ -865,7 +918,7 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="2" Background="#EFF5FC" BorderBrush="{StaticResource OutlineBrush}"
+    <Border Grid.Row="3" Background="#EFF5FC" BorderBrush="{StaticResource OutlineBrush}"
             BorderThickness="0,1,0,0" Padding="16,9">
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
