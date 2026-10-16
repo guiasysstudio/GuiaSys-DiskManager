@@ -90,3 +90,12 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - `SafetyService` checa limites de área contígua diretamente no inventário recente, recusa GPT ambíguo e impede criação MBR sem pós-condição independente confiável.
 - Testes sintéticos e de ViewModel foram adicionados; nenhum teste de disco físico/VHDX foi liberado.
 - Gate **NO-GO para gravações**. Ver [GDM-C07](GDM-C07.md).
+
+## GDM-C08 — Redimensionamento com limites do Windows (15/10/2026)
+
+- Campos opcionais de limites `SizeMin/SizeMax` no inventário e consulta conservadora `Get-PartitionSupportedSize` para partições GPT elegíveis.
+- `PartitionResizePolicy` combina faixa Windows, setor lógico, identificação GPT e espaço livre **contíguo imediatamente posterior** à partição. Sem dados confiáveis, nega planejamento.
+- Painel WPF exibe limites e tamanho atual; presets preenchem tamanhos exatos em bytes e permanecem desabilitados quando indisponíveis. Alterações de capacidades após refresh não redirecionam automaticamente o usuário para outra operação.
+- `SafetyService` valida os limites do snapshot de execução e script PowerShell reconsulta faixa suportada imediatamente antes do comando `Resize-Partition`. Nenhuma chamada de escrita foi feita.
+- Cenários de teste sintéticos para extremos, alinhamento, geometry, VHDX simulados e limites desaparecidos. Smoke visual e VHDX real ainda pendentes.
+- Gate de escrita permanece **NO-GO**. Relatório técnico: [GDM-C08](GDM-C08.md).
