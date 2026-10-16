@@ -261,6 +261,62 @@ public sealed class MainViewModelUiTests
         Assert.False(vm.QueueCommand.CanExecute(null));
     }
 
+    [Fact]
+    public async Task Move_preview_is_available_but_never_queued_or_executed()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.MovePartition;
+        Assert.True(vm.PreviewMoveCommand.CanExecute(null));
+        Assert.True(vm.SuggestMoveDestinationCommand.CanExecute(null));
+        Assert.False(vm.QueueCommand.CanExecute(null));
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+        vm.SuggestMoveDestinationCommand.Execute(null);
+        Assert.Contains("SIMULAÇÃO", vm.MovePreviewSummary);
+        Assert.Contains("Sem mecanismo de cópia", vm.MovePreviewSummary);
+        Assert.NotEmpty(vm.MoveDestinationInput);
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.CanApplyWrites);
+    }
+
+    [Fact]
+    public async Task Move_preview_rejects_overlapping_destination_and_invalidates_on_refresh()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.MovePartition;
+        vm.MoveDestinationInput = "1048576 B";
+        vm.PreviewMoveCommand.Execute(null);
+        Assert.Contains("recusada", vm.MovePreviewSummary, StringComparison.OrdinalIgnoreCase);
+        vm.SuggestMoveDestinationCommand.Execute(null);
+        Assert.Contains("SIMULAÇÃO", vm.MovePreviewSummary);
+        await vm.RefreshAsync();
+        Assert.DoesNotContain("SIMULAÇÃO", vm.MovePreviewSummary);
+        Assert.False(vm.QueueCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Move_preview_disappears_when_selection_or_inventory_is_invalid()
+    {
+        var inventory = new SwitchableInventory(Snapshot());
+        var vm = Build(inventory);
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.MovePartition;
+        vm.SuggestMoveDestinationCommand.Execute(null);
+        Assert.Contains("SIMULAÇÃO", vm.MovePreviewSummary);
+        vm.SelectedPartition = null;
+        Assert.False(vm.PreviewMoveCommand.CanExecute(null));
+        Assert.Contains("Alvo alterado", vm.MovePreviewSummary);
+        inventory.Fail = true;
+        await vm.RefreshAsync();
+        Assert.False(vm.PreviewMoveCommand.CanExecute(null));
+        Assert.Null(vm.SelectedDisk);
+        Assert.Empty(vm.PendingOperations);
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);
