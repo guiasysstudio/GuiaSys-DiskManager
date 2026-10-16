@@ -359,7 +359,7 @@
                            Foreground="{StaticResource AccentBrush}" FontSize="12"/>
               </Grid>
               <ProgressBar Height="9" Minimum="0" Maximum="100"
-                           Value="{Binding SelectedAllocatedPercent}" Margin="0,7,0,5"
+                           Value="{Binding SelectedAllocatedPercent, Mode=OneWay}" Margin="0,7,0,5"
                            Background="#28435A" Foreground="{StaticResource AccentBrush}"
                            ToolTip="Porcentagem da capacidade particionada, não corresponde à ocupação de arquivos"/>
               <Grid>
@@ -385,17 +385,18 @@
               </Grid>
               <DataGrid x:Name="PartitionsGrid" ItemsSource="{Binding Partitions}"
                         SelectedItem="{Binding SelectedPartition, Mode=TwoWay}"
+                        IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
                         Height="260" MinHeight="160" AlternationCount="2"
                         AutomationProperties.Name="Tabela de partições">
                 <DataGrid.Columns>
-                  <DataGridTextColumn Header="#" Binding="{Binding PartitionNumber}" Width="38"/>
-                  <DataGridTextColumn Header="Volume" Binding="{Binding DisplayName}" Width="2*"/>
-                  <DataGridTextColumn Header="Tipo" Binding="{Binding Kind}" Width="*"/>
-                  <DataGridTextColumn Header="Sistema" Binding="{Binding FileSystem}" Width="*"/>
-                  <DataGridTextColumn Header="Tamanho" Binding="{Binding SizeLabel}" Width="*"/>
-                  <DataGridTextColumn Header="Livre no volume" Binding="{Binding FreeLabel}" Width="*"/>
-                  <DataGridTextColumn Header="Uso volume" Binding="{Binding UsageLabel}" Width="*"/>
-                  <DataGridTextColumn Header="Saúde" Binding="{Binding HealthStatus}" Width="*"/>
+                  <DataGridTextColumn Header="#" Binding="{Binding PartitionNumber, Mode=OneWay}" Width="38"/>
+                  <DataGridTextColumn Header="Volume" Binding="{Binding DisplayName, Mode=OneWay}" Width="2*"/>
+                  <DataGridTextColumn Header="Tipo" Binding="{Binding Kind, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Sistema" Binding="{Binding FileSystem, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Tamanho" Binding="{Binding SizeLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Livre no volume" Binding="{Binding FreeLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Uso volume" Binding="{Binding UsageLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Saúde" Binding="{Binding HealthStatus, Mode=OneWay}" Width="*"/>
                 </DataGrid.Columns>
               </DataGrid>
             </DockPanel>
@@ -436,7 +437,7 @@
                   <TextBlock Text="{Binding SelectedPartition.UsageHealthLabel}" Style="{StaticResource Caption}" Margin="0,3,0,0"/>
                   <ProgressBar Minimum="0" Maximum="100" Height="8" Margin="0,6,0,3"
                                Background="#28435A" Foreground="{StaticResource AccentBrush}"
-                               Value="{Binding SelectedPartition.UsagePercent}">
+                               Value="{Binding SelectedPartition.UsagePercent, Mode=OneWay}">
                     <ProgressBar.Style>
                       <Style TargetType="ProgressBar">
                         <Style.Triggers>
@@ -869,7 +870,7 @@
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                    AutomationProperties.LiveSetting="Polite" ToolTip="{Binding Status}"/>
-        <ProgressBar Grid.Column="1" Height="5" Margin="10,0,15,0" Value="{Binding Progress}"
+        <ProgressBar Grid.Column="1" Height="5" Margin="10,0,15,0" Value="{Binding Progress, Mode=OneWay}"
                      Background="#26394D" Foreground="{StaticResource AccentBrush}"
                      VerticalAlignment="Center"/>
         <TextBlock Grid.Column="2" Text="{Binding CapturedAtLabel}" Foreground="{StaticResource MutedBrush}"

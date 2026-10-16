@@ -32,12 +32,15 @@ public sealed record DiskInfo
     public bool IsSystem { get; init; }
     public bool IsOffline { get; init; }
     public bool IsReadOnly { get; init; }
+    /// <summary>Windows reported the same nonblank UniqueId for multiple disk numbers.</summary>
+    public bool HasAmbiguousUniqueId { get; init; }
     public string SizeLabel => ByteSize.Format(Size);
     public string DisplayName => $"Disco {Number} · {FriendlyName}";
     public string TemperatureLabel => TemperatureC is int value ? $"{value} °C" : "Não disponível";
-    public bool HasStrongIdentity => !string.IsNullOrWhiteSpace(UniqueId);
+    public bool HasStrongIdentity => !HasAmbiguousUniqueId && !string.IsNullOrWhiteSpace(UniqueId);
     public string Identity => HasStrongIdentity ? $"uid:{UniqueId.Trim()}" : BuildWeakIdentity(Number, SerialNumber, Size);
-    public string IdentityStrengthLabel => HasStrongIdentity ? "Identidade forte" : "Identidade insuficiente para gravação";
+    public string IdentityStrengthLabel => HasAmbiguousUniqueId ? "Identificador repetido — somente leitura" :
+        HasStrongIdentity ? "Identidade forte" : "Identidade insuficiente para gravação";
     public string TechnologyLabel => StorageDisplayLabels.Technology(MediaType, BusType);
     public string ConnectionLabel => StorageDisplayLabels.Bus(BusType);
     public string PhysicalSectorLabel => PhysicalSectorSize is > 0 ? $"{PhysicalSectorSize:N0} bytes" : "Não informado";

@@ -140,6 +140,7 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
             logger.Information("storage.inventory.completed", new
             {
                 disks = snapshot.Disks.Count, partitions = snapshot.Partitions.Count,
+                ambiguousDiskIdentities = snapshot.Disks.Count(d => d.HasAmbiguousUniqueId),
                 durationMs = (DateTimeOffset.UtcNow - started).TotalMilliseconds
             });
             return snapshot;
@@ -156,11 +157,36 @@ public sealed class PowerShellDiskInventoryService(IAppLogger logger) : IDiskInv
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        var disks = ReadRequiredElements(root, "Disks").Select(ParseDisk).OrderBy(x => x.Number).ToArray();
+        // A duplicate Windows UniqueId does not prevent inspection: downgrade every
+        // affected disk to a weak identity and prohibit all mutation on that disk.
+        // Disk numbering and geometry must still be validated independently.
+        var disks = NormalizeAmbiguousDiskIdentities(
+            ReadRequiredElements(root, "Disks").Select(ParseDisk).OrderBy(x => x.Number).ToArray());
         var partitions = ReadRequiredElements(root, "Partitions").Select(ParsePartition)
             .OrderBy(x => x.DiskNumber).ThenBy(x => x.Offset).ToArray();
         ValidateSnapshot(disks, partitions);
         return new StorageSnapshot(disks, partitions, capturedAt);
+    }
+
+    /// <summary>
+    /// Some Windows storage drivers return the same UniqueId for different disks.
+    /// Such IDs are NOT proof of a unique physical disk. Keep all disk numbers
+    /// visible for read-only diagnostics, but explicitly downgrade the entire
+    /// collision group to weak identities before geometry/safety validation.
+    /// </summary>
+    internal static DiskInfo[] NormalizeAmbiguousDiskIdentities(IReadOnlyList<DiskInfo> disks)
+    {
+        ArgumentNullException.ThrowIfNull(disks);
+        var ambiguous = disks.Where(d => !string.IsNullOrWhiteSpace(d.UniqueId))
+            .GroupBy(d => d.UniqueId.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (ambiguous.Count == 0) return disks.ToArray();
+        return disks.Select(d => !string.IsNullOrWhiteSpace(d.UniqueId) &&
+                ambiguous.Contains(d.UniqueId.Trim())
+            ? d with { UniqueId = string.Empty, HasAmbiguousUniqueId = true }
+            : d).ToArray();
     }
 
     private static DiskInfo ParseDisk(JsonElement item) => new()
