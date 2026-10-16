@@ -544,7 +544,7 @@ public sealed class MainViewModelUiTests
         var vm = Build(new StaticInventory(WindowsMigrationFixture()));
         await vm.RefreshAsync();
         vm.SelectedMigrationTargetDisk = vm.Disks.Single(d => d.Number == 9);
-        vm.SelectedPartition = Assert.Single(vm.Partitions.Where(p => p.IsBoot));
+        vm.SelectedPartition = Assert.Single(vm.Partitions, p => p.IsBoot);
         Assert.False(vm.InspectMigrationCommand.CanExecute(null));
         Assert.Null(vm.MigrationReport);
         vm.SelectedPartition = null;
