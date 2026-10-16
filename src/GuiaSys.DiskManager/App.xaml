@@ -3,17 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Application.Resources>
     <!-- C05: semantic colors, consistent depth, visible keyboard focus and disabled actions. -->
-    <SolidColorBrush x:Key="BackgroundBrush" Color="#0B1321"/>
-    <SolidColorBrush x:Key="PanelBrush" Color="#111F30"/>
-    <SolidColorBrush x:Key="PanelAltBrush" Color="#182A40"/>
-    <SolidColorBrush x:Key="SidebarBrush" Color="#0D1929"/>
-    <SolidColorBrush x:Key="TextBrush" Color="#F2F6FB"/>
-    <SolidColorBrush x:Key="MutedBrush" Color="#9FB0C2"/>
-    <SolidColorBrush x:Key="AccentBrush" Color="#2DD4BF"/>
-    <SolidColorBrush x:Key="OutlineBrush" Color="#2B4056"/>
-    <SolidColorBrush x:Key="WarningBrush" Color="#FBBF72"/>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#F4F7FC"/>
+    <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="PanelAltBrush" Color="#F0F5FC"/>
+    <SolidColorBrush x:Key="SidebarBrush" Color="#EAF1F9"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#14283F"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#586D86"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#176AC2"/>
+    <SolidColorBrush x:Key="OutlineBrush" Color="#D7E2EF"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#95570A"/>
     <Style TargetType="Button">
-      <Setter Property="Background" Value="#20364E"/>
+      <Setter Property="Background" Value="#E4EFFB"/>
       <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
       <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
@@ -23,13 +23,13 @@
       <Setter Property="Cursor" Value="Hand"/>
       <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
       <Style.Triggers>
-        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#2B4C66"/></Trigger>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#D2E5FB"/></Trigger>
         <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.52"/><Setter Property="Cursor" Value="Arrow"/></Trigger>
         <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter Property="BorderThickness" Value="2"/></Trigger>
       </Style.Triggers>
     </Style>
     <Style TargetType="TextBox">
-      <Setter Property="Background" Value="#0B1727"/>
+      <Setter Property="Background" Value="#FFFFFF"/>
       <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
       <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
@@ -38,8 +38,8 @@
       <Style.Triggers><Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Trigger></Style.Triggers>
     </Style>
     <Style TargetType="ComboBox">
-      <Setter Property="Background" Value="#ECF4F8"/>
-      <Setter Property="Foreground" Value="#132438"/>
+      <Setter Property="Background" Value="#FFFFFF"/>
+      <Setter Property="Foreground" Value="#14283F"/>
       <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}"/>
       <Setter Property="Padding" Value="9,6"/>
       <Setter Property="MinHeight" Value="34"/>
@@ -58,8 +58,8 @@
       <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
       <Style.Triggers>
         <Trigger Property="IsSelected" Value="True">
-          <Setter Property="Background" Value="#205E5D"/>
-          <Setter Property="Foreground" Value="#FFFFFF"/>
+          <Setter Property="Background" Value="#D2E9FD"/>
+          <Setter Property="Foreground" Value="#17385E"/>
         </Trigger>
       </Style.Triggers>
     </Style>

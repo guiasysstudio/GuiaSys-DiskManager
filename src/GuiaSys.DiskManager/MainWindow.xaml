@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:GuiaSys.DiskManager.ViewModels"
         xmlns:models="clr-namespace:GuiaSys.DiskManager.Models"
         Title="GuiaSys Disk Manager" Width="1500" Height="920" FontFamily="Segoe UI" FontSize="13"
-        MinWidth="1050" MinHeight="690" WindowStartupLocation="CenterScreen"
+        MinWidth="1100" MinHeight="700" WindowStartupLocation="CenterScreen"
         Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource TextBrush}"
         Icon="Assets/Branding/GuiaSys-DiskManager.ico" UseLayoutRounding="True"
         SnapsToDevicePixels="True" PreviewKeyDown="Window_PreviewKeyDown">
@@ -14,12 +14,12 @@
       <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
       <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="12"/>
-      <Setter Property="Padding" Value="16"/>
-      <Setter Property="Margin" Value="0,0,0,14"/>
+      <Setter Property="CornerRadius" Value="9"/>
+      <Setter Property="Padding" Value="14"/>
+      <Setter Property="Margin" Value="0,0,0,11"/>
     </Style>
     <Style x:Key="SectionTitle" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="17"/>
+      <Setter Property="FontSize" Value="16"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
     </Style>
@@ -83,20 +83,21 @@
     </Style>
     <Style x:Key="NavButton" TargetType="Button">
       <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Foreground" Value="#244866"/>
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="13,11"/>
+      <Setter Property="Padding" Value="11,7"/>
       <Setter Property="Margin" Value="0,1"/>
       <Setter Property="FontSize" Value="13"/>
       <Style.Triggers>
-        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#20364E"/></Trigger>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#D8E9FA"/><Setter Property="Foreground" Value="#0B4F9E"/></Trigger>
         <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Trigger>
       </Style.Triggers>
     </Style>
     <Style x:Key="PartitionBlock" TargetType="Button">
-      <Setter Property="Height" Value="84"/>
-      <Setter Property="Background" Value="#334155"/>
-      <Setter Property="BorderBrush" Value="#698198"/>
+      <Setter Property="Height" Value="67"/>
+      <Setter Property="Background" Value="#E3EFFA"/>
+      <Setter Property="BorderBrush" Value="#7FAED8"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
       <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -114,18 +115,18 @@
           </ControlTemplate>
         </Setter.Value>
       </Setter>
-      <Setter Property="Margin" Value="2,0"/>
-      <Setter Property="Padding" Value="10,9"/>
+      <Setter Property="Margin" Value="1,0"/>
+      <Setter Property="Padding" Value="9,7"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Style.Triggers>
-        <DataTrigger Binding="{Binding Kind}" Value="EFI"><Setter Property="Background" Value="#0C766A"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="MSR"><Setter Property="Background" Value="#46566B"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="NTFS"><Setter Property="Background" Value="#1F4E83"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="FAT32"><Setter Property="Background" Value="#0E6478"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="exFAT"><Setter Property="Background" Value="#554284"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="Recovery"><Setter Property="Background" Value="#8A531B"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="RAW"><Setter Property="Background" Value="#893047"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="Unallocated"><Setter Property="Background" Value="#27354A"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="EFI"><Setter Property="Background" Value="#A8E1D6"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="MSR"><Setter Property="Background" Value="#DCE5EF"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="NTFS"><Setter Property="Background" Value="#8EC5F7"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="FAT32"><Setter Property="Background" Value="#95D7E5"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="exFAT"><Setter Property="Background" Value="#D0BEF0"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="Recovery"><Setter Property="Background" Value="#F3C58D"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="RAW"><Setter Property="Background" Value="#EAB7C3"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="Unallocated"><Setter Property="Background" Value="#D9E1EA"/></DataTrigger>
         <DataTrigger Binding="{Binding IsSelected}" Value="True">
           <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
           <Setter Property="BorderThickness" Value="3"/>
@@ -163,13 +164,13 @@
                      FontSize="10" FontWeight="SemiBold" Margin="1,3,0,0"/>
         </StackPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-          <Border Background="#183A38" CornerRadius="8" Padding="12,8" Margin="0,0,12,0">
+          <Border Background="#0F5394" CornerRadius="8" Padding="12,8" Margin="0,0,12,0">
             <TextBlock Text="{Binding WriteModeLabel}" Foreground="{StaticResource AccentBrush}"
                        FontSize="12" FontWeight="SemiBold"/>
           </Border>
           <Button Content="↻  Atualizar (F5)" Command="{Binding RefreshCommand}"
                   ToolTip="Reler o inventário do Windows sem alterar discos"
-                  Background="#175C58" BorderBrush="#247B74" FontWeight="SemiBold"/>
+                  Background="#176AC2" BorderBrush="#105BA9" FontWeight="SemiBold"/>
           <Button Content="Logs" Command="{Binding OpenLogsCommand}"/>
           <Button Content="Licença" Click="License_Click"/>
           <Button Content="Sobre" Click="About_Click"/>
@@ -179,16 +180,16 @@
 
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="240" MinWidth="194"/>
+        <ColumnDefinition Width="218" MinWidth="195"/>
         <ColumnDefinition Width="5"/>
         <ColumnDefinition Width="*" MinWidth="405"/>
         <ColumnDefinition Width="5"/>
-        <ColumnDefinition Width="332" MinWidth="286"/>
+        <ColumnDefinition Width="276" MinWidth="255"/>
       </Grid.ColumnDefinitions>
       <Grid.RowDefinitions>
         <RowDefinition Height="*" MinHeight="300"/>
         <RowDefinition Height="5"/>
-        <RowDefinition Height="200" MinHeight="125"/>
+        <RowDefinition Height="152" MinHeight="110"/>
       </Grid.RowDefinitions>
 
       <!-- Persistent navigation + inventory: spans workspace and queue. -->
@@ -196,7 +197,7 @@
               BorderBrush="{StaticResource OutlineBrush}" BorderThickness="0,0,1,0" Padding="14,20,12,14">
         <DockPanel LastChildFill="True">
           <StackPanel DockPanel.Dock="Top">
-            <TextBlock Text="ÁREA DE TRABALHO" Foreground="{StaticResource MutedBrush}"
+            <TextBlock Text="GERENCIAMENTO" Foreground="{StaticResource MutedBrush}"
                        FontSize="10" FontWeight="Bold" Margin="10,0,0,8"/>
             <Button Style="{StaticResource NavButton}" Content="⌂   Visão geral"
                     Tag="Overview" Click="Navigation_Click"/>
@@ -220,15 +221,15 @@
             <Separator Background="{StaticResource OutlineBrush}" Margin="0,17,0,15"/>
             <Grid Margin="8,0,3,9">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <TextBlock Text="DISCOS DETECTADOS" Foreground="{StaticResource MutedBrush}"
+              <TextBlock Text="DISCOS DISPONÍVEIS" Foreground="{StaticResource MutedBrush}"
                          FontSize="10" FontWeight="Bold"/>
               <TextBlock Grid.Column="1" Text="{Binding Disks.Count}" Foreground="{StaticResource AccentBrush}" FontWeight="Bold"/>
             </Grid>
           </StackPanel>
-          <Border DockPanel.Dock="Bottom" Background="#1B2B3F" CornerRadius="9"
+          <Border DockPanel.Dock="Bottom" Background="#E4F0FC" CornerRadius="9"
                   Padding="12" Margin="2,12,0,0">
             <StackPanel>
-              <TextBlock Text="PROTEÇÃO ATIVA" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="Bold"/>
+              <TextBlock Text="MODO DE CONSULTA" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="Bold"/>
               <TextBlock Text="Você pode consultar discos e planejar operações. Nenhuma gravação está liberada nesta etapa."
                          Style="{StaticResource Caption}" Margin="0,6,0,0"/>
             </StackPanel>
@@ -246,7 +247,7 @@
             </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Border Background="#1B2C43" BorderBrush="#2E455E" BorderThickness="1"
+                <Border Background="#FFFFFF" BorderBrush="#D4E0EF" BorderThickness="1"
                         CornerRadius="9" Padding="10,11" ToolTip="{Binding IdentityStrengthLabel}">
                   <StackPanel>
                     <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold"
@@ -270,12 +271,12 @@
 
       <GridSplitter Grid.Column="1" Grid.RowSpan="3" Width="5" HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch" ResizeDirection="Columns" ShowsPreview="True"
-                    Background="#243A52" ToolTip="Arraste para ajustar a barra lateral"/>
+                    Background="#CDDDEE" ToolTip="Arraste para ajustar a barra lateral"/>
 
       <!-- Scrollable inventory workspace. -->
       <ScrollViewer x:Name="WorkAreaScroll" Grid.Column="2" Grid.Row="0"
                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                    Padding="18,18,16,8">
+                    Padding="14,12,12,8">
         <StackPanel>
           <StackPanel x:Name="OverviewSection" Focusable="True" Margin="0,0,0,16"
                       AutomationProperties.Name="Visão geral do armazenamento">
@@ -340,7 +341,7 @@
                           <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis"/>
                           <TextBlock Text="{Binding Subtitle}" FontSize="11"
-                                     Foreground="#E3EBF6" Margin="0,5,0,0"
+                                     Foreground="#284C74" Margin="0,5,0,0"
                                      TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                       </Button>
@@ -360,7 +361,7 @@
               </Grid>
               <ProgressBar Height="9" Minimum="0" Maximum="100"
                            Value="{Binding SelectedAllocatedPercent, Mode=OneWay}" Margin="0,7,0,5"
-                           Background="#28435A" Foreground="{StaticResource AccentBrush}"
+                           Background="#E3EEF9" Foreground="{StaticResource AccentBrush}"
                            ToolTip="Porcentagem da capacidade particionada, não corresponde à ocupação de arquivos"/>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -436,7 +437,7 @@
                   <TextBlock Text="{Binding SelectedPartition.FreeLabel, StringFormat=Livre no volume: {0}}" Style="{StaticResource Caption}" Margin="0,3,0,0"/>
                   <TextBlock Text="{Binding SelectedPartition.UsageHealthLabel}" Style="{StaticResource Caption}" Margin="0,3,0,0"/>
                   <ProgressBar Minimum="0" Maximum="100" Height="8" Margin="0,6,0,3"
-                               Background="#28435A" Foreground="{StaticResource AccentBrush}"
+                               Background="#E3EEF9" Foreground="{StaticResource AccentBrush}"
                                Value="{Binding SelectedPartition.UsagePercent, Mode=OneWay}">
                     <ProgressBar.Style>
                       <Style TargetType="ProgressBar">
@@ -489,7 +490,7 @@
             </StackPanel>
           </Border>
           <!-- C14: maintenance risk inspector, no processes, writes, repair or wipe. -->
-          <Border x:Name="MaintenanceSection" Focusable="True" AutomationProperties.Name="Manutenção em modo de prévia" Style="{StaticResource Surface}" Background="#203445">
+          <Border x:Name="MaintenanceSection" Focusable="True" AutomationProperties.Name="Manutenção em modo de prévia" Style="{StaticResource Surface}" Background="#F0F5FB">
             <StackPanel>
               <TextBlock Text="C14 · MANUTENÇÃO (SOMENTE PRÉVIA)" Style="{StaticResource SectionTitle}"/>
               <TextBlock Text="Selecione uma unidade ou partição, depois um tipo de manutenção. A análise usa somente o inventário atual."
@@ -537,7 +538,7 @@
             </StackPanel>
           </Border>
           <!-- C15: inventory-only GPT comparison; it is NOT a disk/sector recovery engine. -->
-          <Border x:Name="RecoverySection" Focusable="True" AutomationProperties.Name="Comparação de partições perdidas" Style="{StaticResource Surface}" Background="#203445">
+          <Border x:Name="RecoverySection" Focusable="True" AutomationProperties.Name="Comparação de partições perdidas" Style="{StaticResource Surface}" Background="#F0F5FB">
             <StackPanel>
               <TextBlock Text="C15 · PARTIÇÕES PERDIDAS (ANÁLISE)" Style="{StaticResource SectionTitle}"/>
               <TextBlock Text="Compare uma referência GPT capturada ANTES da perda com outro inventário do MESMO disco."
@@ -597,17 +598,17 @@
 
       <GridSplitter Grid.Column="3" Grid.Row="0" Width="5" HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch" ResizeDirection="Columns" ShowsPreview="True"
-                    Background="#243A52" ToolTip="Arraste para ajustar o painel de operações"/>
+                    Background="#CDDDEE" ToolTip="Arraste para ajustar o painel de operações"/>
 
       <!-- Contextual editor: parameter fields appear only for their operation. -->
       <ScrollViewer x:Name="OperationsSection" Grid.Column="4" Grid.Row="0"
                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                    Padding="13,18,14,8" Background="{StaticResource SidebarBrush}">
+                    Padding="10,12,10,7" Background="{StaticResource SidebarBrush}">
         <StackPanel>
-          <TextBlock Text="Preparar operação" FontSize="21" FontWeight="SemiBold"/>
+          <TextBlock Text="Ações e assistentes" FontSize="19" FontWeight="SemiBold"/>
           <TextBlock Text="Selecione um alvo para ver as ações disponíveis."
                      Style="{StaticResource Caption}" Margin="0,6,0,14"/>
-          <Border Style="{StaticResource Surface}" Background="#183143">
+          <Border Style="{StaticResource Surface}" Background="#EBF4FF">
             <StackPanel>
               <TextBlock Text="ALVO ATUAL" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="Bold"/>
               <TextBlock Text="{Binding SelectedTargetTitle}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,7,0,4"/>
@@ -620,7 +621,7 @@
               <TextBlock Text="Ações inseguras ficam desabilitadas; posicione o cursor para ver o motivo."
                          Style="{StaticResource Caption}" Margin="0,6,0,10"/>
               <ItemsControl ItemsSource="{Binding ContextOperations}">
-                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Button IsEnabled="{Binding IsAvailable}"
@@ -629,7 +630,7 @@
                             Width="125" MinHeight="52" FontSize="11"
                             HorizontalContentAlignment="Center"
                             AutomationProperties.Name="{Binding Display}">
-                      <TextBlock Text="{Binding Display}" TextWrapping="Wrap" TextAlignment="Center"/>
+                      <TextBlock Text="{Binding Display}" TextWrapping="Wrap" TextAlignment="Left"/>
                     </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -637,7 +638,7 @@
             </StackPanel>
           </Border>
           <!-- Conversion feasibility is informational only: no conversion operation is queued. -->
-          <Border Style="{StaticResource Surface}" Background="#183143">
+          <Border Style="{StaticResource Surface}" Background="#EBF4FF">
             <StackPanel>
               <TextBlock Text="C10 · GPT / MBR" Style="{StaticResource SectionTitle}"/>
               <TextBlock Text="Análise de conversão de disco (somente leitura). Selecione o disco inteiro, sem partição."
@@ -659,7 +660,7 @@
             </StackPanel>
           </Border>
           <!-- C11 previews require two independently selected disks and never queue any copy. -->
-          <Border Style="{StaticResource Surface}" Background="#173044">
+          <Border Style="{StaticResource Surface}" Background="#F0F6FC">
             <StackPanel>
               <TextBlock Text="C11 · CLONAGEM (SOMENTE PRÉVIA)" Style="{StaticResource SectionTitle}"/>
               <TextBlock Text="Origem: disco selecionado à esquerda; selecione uma partição para estudar apenas aquela partição."
@@ -682,7 +683,7 @@
             </StackPanel>
           </Border>
           <!-- C12: analyze installed Windows boot chain, never queue a migration. -->
-          <Border Style="{StaticResource Surface}" Background="#203445">
+          <Border Style="{StaticResource Surface}" Background="#F0F5FB">
             <StackPanel>
               <TextBlock Text="C12 · MIGRAR WINDOWS (DIAGNÓSTICO)" Style="{StaticResource SectionTitle}"/>
               <TextBlock Text="Origem: selecione o disco inteiro que contém o Windows. O Disco 0 pode ser analisado somente para leitura."
@@ -734,7 +735,7 @@
                          AutomationProperties.Name="Tamanho de partição"/>
               </StackPanel>
               <StackPanel Style="{StaticResource ResizeField}">
-                <Border Background="#1C354A" CornerRadius="8" BorderBrush="{StaticResource OutlineBrush}"
+                <Border Background="#EEF6FF" CornerRadius="8" BorderBrush="{StaticResource OutlineBrush}"
                         BorderThickness="1" Padding="10">
                   <StackPanel>
                     <TextBlock Text="LIMITES CONFIRMADOS PELO WINDOWS"
@@ -753,7 +754,7 @@
                 </Border>
               </StackPanel>
               <StackPanel Style="{StaticResource MoveField}">
-                <Border Background="#2E2930" BorderBrush="#A27B47" BorderThickness="1"
+                <Border Background="#FFF4E5" BorderBrush="#D2A45E" BorderThickness="1"
                         CornerRadius="8" Padding="11">
                   <StackPanel>
                     <TextBlock Text="C09 · MOVIMENTAÇÃO APENAS SIMULADA"
@@ -799,7 +800,7 @@
               </StackPanel>
               <CheckBox Style="{StaticResource QuickFormatField}" Content="Formatação rápida"
                         IsChecked="{Binding QuickFormat}"/>
-              <Border Background="#2E2930" BorderBrush="#5F4D3A" BorderThickness="1"
+              <Border Background="#FFF4E5" BorderBrush="#EBD0A2" BorderThickness="1"
                       CornerRadius="8" Padding="10" Margin="0,3,0,10">
                 <StackPanel>
                   <TextBlock Text="{Binding SelectedActionStatus}" Foreground="{StaticResource WarningBrush}"
@@ -809,7 +810,7 @@
                 </StackPanel>
               </Border>
               <Button Content="＋  Adicionar à fila" Command="{Binding QueueCommand}"
-                      Background="#175C58" BorderBrush="#247B74"
+                      Background="#176AC2" BorderBrush="#105BA9"
                       FontWeight="SemiBold" Padding="12,12"
                       ToolTip="Somente prepara a operação; não escreve no disco"/>
             </StackPanel>
@@ -821,7 +822,7 @@
       <GridSplitter Grid.Column="2" Grid.ColumnSpan="3" Grid.Row="1"
                     Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                     ResizeDirection="Rows" ShowsPreview="True"
-                    Background="#243A52" ToolTip="Arraste para ajustar a altura da fila"/>
+                    Background="#CDDDEE" ToolTip="Arraste para ajustar a altura da fila"/>
       <Border x:Name="QueueSection" Focusable="True" AutomationProperties.Name="Fila de operações" Grid.Column="2" Grid.ColumnSpan="3" Grid.Row="2"
               Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource OutlineBrush}"
               BorderThickness="0,1,0,0" Padding="16,12">
@@ -829,7 +830,7 @@
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="286"/></Grid.ColumnDefinitions>
           <DockPanel Grid.Column="0" Margin="0,0,16,0">
             <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-              <TextBlock Text="Fila de operações" Style="{StaticResource SectionTitle}"/>
+              <TextBlock Text="Operações pendentes" Style="{StaticResource SectionTitle}"/>
               <TextBlock Text="{Binding QueuePreviewSummary}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
             </StackPanel>
             <ListBox ItemsSource="{Binding PendingOperations}" Background="Transparent"
@@ -838,8 +839,8 @@
                      AutomationProperties.Name="Operações planejadas">
               <ListBox.ItemTemplate>
                 <DataTemplate>
-                  <Border Background="#1B3046" Padding="10,8" Margin="0,2"
-                          CornerRadius="7" BorderBrush="#2B445B" BorderThickness="1">
+                  <Border Background="#F5F9FE" Padding="10,8" Margin="0,2"
+                          CornerRadius="7" BorderBrush="#D5E4F2" BorderThickness="1">
                     <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
                   </Border>
                 </DataTemplate>
@@ -864,14 +865,14 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="2" Background="#0D1929" BorderBrush="{StaticResource OutlineBrush}"
+    <Border Grid.Row="2" Background="#EFF5FC" BorderBrush="{StaticResource OutlineBrush}"
             BorderThickness="0,1,0,0" Padding="16,9">
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                    AutomationProperties.LiveSetting="Polite" ToolTip="{Binding Status}"/>
         <ProgressBar Grid.Column="1" Height="5" Margin="10,0,15,0" Value="{Binding Progress, Mode=OneWay}"
-                     Background="#26394D" Foreground="{StaticResource AccentBrush}"
+                     Background="#DFEBF8" Foreground="{StaticResource AccentBrush}"
                      VerticalAlignment="Center"/>
         <TextBlock Grid.Column="2" Text="{Binding CapturedAtLabel}" Foreground="{StaticResource MutedBrush}"
                    VerticalAlignment="Center"/>
