@@ -121,7 +121,8 @@ public sealed class ReleaseUpdateChecker(HttpClient client)
                 continue;
             if (!asset.TryGetProperty("state", out var state) || state.ValueKind != JsonValueKind.String ||
                 state.GetString() != "uploaded" ||
-                !asset.TryGetProperty("size", out var size) || !size.TryGetInt64(out var length) ||
+                !asset.TryGetProperty("size", out var size) || size.ValueKind != JsonValueKind.Number ||
+                !size.TryGetInt64(out var length) ||
                 length < 1024 * 1024 ||
                 !asset.TryGetProperty("browser_download_url", out var download) ||
                 download.ValueKind != JsonValueKind.String ||
