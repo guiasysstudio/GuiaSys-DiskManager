@@ -38,6 +38,34 @@ jobs:
       - name: Verify published SHA256 checksums
         shell: powershell
         run: .\tools\Test-PackageChecksums.ps1
+      - name: H01 read-only Windows package preflight
+        shell: powershell
+        run: .\tools\Test-WindowsReadOnlyPreflight.ps1
+      - name: H01 negative test rejects tampered checksum manifest
+        shell: powershell
+        run: |
+          $lines = @(Get-Content -LiteralPath artifacts/checksums/SHA256SUMS.txt -Encoding UTF8)
+          if ($lines.Count -ne 2) { throw 'Unexpected SHA256SUMS fixture.' }
+          $replacement = if ($lines[0][0] -eq '0') { '1' } else { '0' }
+          $lines[0] = $replacement + $lines[0].Substring(1)
+          $fixture = 'artifacts/smoke/sha256-tampered-test.txt'
+          [IO.File]::WriteAllLines((Join-Path $PWD $fixture), [string[]]$lines,
+            [Text.UTF8Encoding]::new($false))
+          try {
+            .\tools\Test-WindowsReadOnlyPreflight.ps1 -ManifestPath $fixture
+            throw 'CRITICAL: tampered package manifest accepted.'
+          } catch {
+            if ($_.Exception.Message -notlike 'H01_PACKAGE_CHECKSUM_MISMATCH*') {
+              throw
+            }
+            Write-Host 'PASS: H01 rejects tampered checksum without running any package.'
+          }
+      - name: Upload H01 read-only Windows preflight evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-H01-readonly-preflight
+          path: artifacts/smoke/windows-readonly-preflight.json
+          if-no-files-found: error
       - name: Record C18 commercial release readiness (read-only)
         shell: powershell
         run: .\tools\Test-CommercialReleaseGate.ps1
