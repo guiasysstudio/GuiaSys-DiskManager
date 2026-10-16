@@ -102,6 +102,8 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<DiskInfo> Disks { get; } = [];
     public ObservableCollection<PartitionInfo> Partitions { get; } = [];
     public ObservableCollection<PartitionSegmentViewModel> PartitionSegments { get; } = [];
+    /// <summary>All disks and their validated extents, not only the selected disk.</summary>
+    public ObservableCollection<DiskMapRowViewModel> DiskMapRows { get; } = [];
     public ObservableCollection<StorageOperation> PendingOperations { get; }
     public ObservableCollection<ContextOperationChoice> ContextOperations { get; } = [];
     public IReadOnlyList<OperationChoice> OperationChoices { get; } =
@@ -201,6 +203,7 @@ public sealed class MainViewModel : ObservableObject
             SelectedPartition = null;
             FilterPartitions();
             BuildPartitionMap();
+            UpdateAllDiskMapSelection();
             OnPropertyChanged(nameof(SelectedLayoutSummary));
             NotifyTargetChanged();
         }
@@ -212,6 +215,7 @@ public sealed class MainViewModel : ObservableObject
         {
             if (!SetProperty(ref _selectedPartition, value)) return;
             UpdatePartitionMapSelection();
+            UpdateAllDiskMapSelection();
             NotifyTargetChanged();
         }
     }
@@ -409,6 +413,10 @@ public sealed class MainViewModel : ObservableObject
             try
             {
                 Disks.Clear(); foreach (var disk in snapshot.Disks) Disks.Add(disk);
+                // Build all rows only from the validated snapshot, never cached stale metadata.
+                DiskMapRows.Clear();
+                foreach (var row in DiskMapRowViewModel.Build(snapshot))
+                    DiskMapRows.Add(row);
                 SelectedMigrationTargetDisk = previousMigrationTargetIdentity is null ? null :
                     Disks.FirstOrDefault(d => string.Equals(d.Identity, previousMigrationTargetIdentity, StringComparison.Ordinal));
                 // Never switch to an arbitrary destination if the previous physical identity disappeared.
@@ -422,6 +430,7 @@ public sealed class MainViewModel : ObservableObject
                     ? Partitions.FirstOrDefault(p => string.Equals(p.Identity, previousPartitionIdentity, StringComparison.Ordinal))
                     : null;
                 BuildPartitionMap();
+                UpdateAllDiskMapSelection();
             }
             finally { _loadingSelection = false; }
             NotifyTargetChanged();
@@ -446,6 +455,7 @@ public sealed class MainViewModel : ObservableObject
             SelectedDisk = null;
             Partitions.Clear();
             PartitionSegments.Clear();
+            DiskMapRows.Clear();
             UpdateContextOperations();
             InvalidateConversion("Inventário indisponível; análise de conversão descartada.");
             SelectedCloneTargetDisk = null;
@@ -698,6 +708,12 @@ public sealed class MainViewModel : ObservableObject
             partition?.Kind ?? "Unallocated", size, width,
             partition is not null && SelectedPartition?.PartitionNumber == partition.PartitionNumber,
             offset));
+    }
+
+    private void UpdateAllDiskMapSelection()
+    {
+        foreach (var row in DiskMapRows)
+            row.UpdateSelection(SelectedDisk?.Number, SelectedPartition);
     }
 
     private void UpdatePartitionMapSelection()
