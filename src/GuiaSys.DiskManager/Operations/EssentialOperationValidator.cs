@@ -29,6 +29,14 @@ public static class EssentialOperationValidator
                  !string.IsNullOrWhiteSpace(operation.ExpectedPartitionIdentity))
             return SafetyDecision.Deny("A operação de disco inteiro não pode conter alvo de partição.");
 
+        if (operation.Type == StorageOperationType.MovePartition)
+        {
+            if (operation.TargetOffsetBytes is not >= 0)
+                return SafetyDecision.Deny("Movimentação exige deslocamento de destino explícito em bytes.");
+        }
+        else if (operation.TargetOffsetBytes is not null)
+            return SafetyDecision.Deny("Esta operação não aceita deslocamento de destino.");
+
         var isSizeAction = operation.Type is StorageOperationType.CreatePartition or StorageOperationType.ResizePartition;
         if (isSizeAction)
         {
@@ -81,5 +89,6 @@ public static class EssentialOperationValidator
     public static bool RequiresPartition(StorageOperationType type) =>
         type is StorageOperationType.DeletePartition or StorageOperationType.FormatPartition
             or StorageOperationType.SetDriveLetter or StorageOperationType.RemoveDriveLetter
-            or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel;
+            or StorageOperationType.ResizePartition or StorageOperationType.SetVolumeLabel
+            or StorageOperationType.MovePartition;
 }
