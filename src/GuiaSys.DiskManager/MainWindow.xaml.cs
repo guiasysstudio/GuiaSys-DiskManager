@@ -57,6 +57,9 @@ public partial class MainWindow : Window
             case "Health":
                 HealthSection.BringIntoView();
                 break;
+            case "Maintenance":
+                MaintenanceSection.BringIntoView();
+                break;
             case "Operations":
                 OperationEditor.BringIntoView();
                 OperationTypeSelector.Focus();

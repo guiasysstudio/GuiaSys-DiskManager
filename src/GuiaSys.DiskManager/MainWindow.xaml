@@ -184,6 +184,8 @@
                     Tag="Partitions" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="♡   Saúde e diagnósticos"
                     Tag="Health" Click="Navigation_Click"/>
+            <Button Style="{StaticResource NavButton}" Content="♧   Manutenção (prévia)"
+                    Tag="Maintenance" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="⚙   Preparar operação"
                     Tag="Operations" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="☷   Fila de operações"
@@ -453,6 +455,54 @@
               <TextBlock Text="S.M.A.R.T. COMPLETO NÃO VERIFICADO. Nenhum autoteste, CHKDSK, Repair-Volume ou reparo é executado. Uma condição Windows saudável não garante ausência de falhas."
                          Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" FontSize="11"
                          FontWeight="SemiBold" Margin="0,10,0,0"/>
+            </StackPanel>
+          </Border>
+          <!-- C14: maintenance risk inspector, no processes, writes, repair or wipe. -->
+          <Border x:Name="MaintenanceSection" Style="{StaticResource Surface}" Background="#203445">
+            <StackPanel>
+              <TextBlock Text="C14 · MANUTENÇÃO (SOMENTE PRÉVIA)" Style="{StaticResource SectionTitle}"/>
+              <TextBlock Text="Selecione uma unidade ou partição, depois um tipo de manutenção. A análise usa somente o inventário atual."
+                         Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,5,0,9"/>
+              <TextBlock Text="{Binding SelectedTargetTitle}" Style="{StaticResource Caption}"
+                         Margin="0,0,0,8" TextWrapping="Wrap"/>
+              <ComboBox ItemsSource="{Binding MaintenanceChoices}" DisplayMemberPath="Display"
+                        SelectedValuePath="Task" SelectedValue="{Binding SelectedMaintenanceTask, Mode=TwoWay}"
+                        AutomationProperties.Name="Procedimento de manutenção para avaliação"/>
+              <Button Content="Avaliar riscos · sem executar" Command="{Binding InspectMaintenanceCommand}"
+                      HorizontalAlignment="Left" Margin="0,10,0,7"
+                      ToolTip="Não executa CHKDSK, TRIM, limpeza de arquivos, formatação nem apagamento."/>
+              <TextBlock Text="{Binding MaintenanceReport.RiskLabel, StringFormat=Classificação: {0}}"
+                         Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold" Margin="0,5,0,8"/>
+              <TextBlock Text="{Binding MaintenanceSummary}" TextWrapping="Wrap" FontSize="12"
+                         Margin="0,5,0,8" AutomationProperties.Name="Resumo da avaliação de manutenção"/>
+              <TextBlock Text="IMPEDIMENTOS / SEGURANÇA" Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold"
+                         FontSize="11" Margin="0,6,0,4"/>
+              <ItemsControl ItemsSource="{Binding MaintenanceReport.Blockers}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding StringFormat=• {0}}" TextWrapping="Wrap" Style="{StaticResource Caption}"
+                               Margin="0,2,0,3"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="EVIDÊNCIAS E LIMITAÇÕES" Foreground="{StaticResource AccentBrush}"
+                         FontWeight="SemiBold" FontSize="11" Margin="0,9,0,6"/>
+              <ItemsControl ItemsSource="{Binding MaintenanceReport.Checks}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border BorderBrush="{StaticResource OutlineBrush}" BorderThickness="0,0,0,1" Padding="0,7,0,7">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Component}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource AccentBrush}" FontSize="11"/>
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="ESTA PRÉVIA NÃO APROVA NENHUMA OPERAÇÃO. Gravação, desfragmentação, TRIM, CHKDSK, exclusão de arquivos e apagamento continuam bloqueados."
+                         TextWrapping="Wrap" Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold"
+                         FontSize="11" Margin="0,10,0,2"/>
             </StackPanel>
           </Border>
         </StackPanel>

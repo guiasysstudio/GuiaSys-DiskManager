@@ -662,6 +662,76 @@ public sealed class MainViewModelUiTests
         Assert.Equal(4, vm.HealthReport!.DiskNumber);
     }
 
+    [Fact]
+    public async Task Maintenance_disk_zero_only_previews_even_destructive_tasks()
+    {
+        var vm = Build(new StaticInventory(Snapshot(0)));
+        await vm.RefreshAsync();
+        vm.SelectedMaintenanceTask = MaintenanceTask.EraseEntireDisk;
+        Assert.True(vm.InspectMaintenanceCommand.CanExecute(null));
+        vm.InspectMaintenanceCommand.Execute(null);
+        Assert.False(vm.MaintenanceReport!.CanExecute);
+        Assert.NotEmpty(vm.MaintenanceReport.Blockers);
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Maintenance_preview_is_target_scoped_and_invalidated_on_selection_changes()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.InspectMaintenanceCommand.Execute(null);
+        Assert.Equal(1, vm.MaintenanceReport!.PartitionNumber);
+        vm.SelectedMaintenanceTask = MaintenanceTask.ReviewTemporaryFiles;
+        Assert.Null(vm.MaintenanceReport);
+        vm.InspectMaintenanceCommand.Execute(null);
+        Assert.Equal(MaintenanceTask.ReviewTemporaryFiles, vm.MaintenanceReport!.Task);
+        vm.SelectedPartition = null;
+        Assert.Null(vm.MaintenanceReport);
+        vm.InspectMaintenanceCommand.Execute(null);
+        Assert.NotEmpty(vm.MaintenanceReport!.Blockers);
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Maintenance_refresh_invalidates_report_and_keeps_selection_only_by_identity()
+    {
+        var inv = new SwitchableInventory(Snapshot());
+        var vm = Build(inv);
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.InspectMaintenanceCommand.Execute(null);
+        Assert.NotNull(vm.MaintenanceReport);
+        await vm.RefreshAsync();
+        Assert.Null(vm.MaintenanceReport);
+        Assert.Contains("refaça", vm.MaintenanceSummary);
+        Assert.Equal(1, vm.SelectedPartition?.PartitionNumber);
+        inv.Fail = true;
+        await vm.RefreshAsync();
+        Assert.Null(vm.MaintenanceReport);
+        Assert.False(vm.InspectMaintenanceCommand.CanExecute(null));
+        Assert.Empty(vm.Disks);
+    }
+
+    [Fact]
+    public async Task Maintenance_does_not_call_storage_executor_or_enqueue_anything()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        foreach (var option in vm.MaintenanceChoices)
+        {
+            vm.SelectedMaintenanceTask = option.Task;
+            vm.InspectMaintenanceCommand.Execute(null);
+            Assert.NotNull(vm.MaintenanceReport);
+            Assert.False(vm.MaintenanceReport.CanExecute);
+            Assert.Empty(vm.PendingOperations);
+            Assert.False(vm.ApplyCommand.CanExecute(null));
+        }
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);

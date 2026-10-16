@@ -38,6 +38,9 @@ public sealed class MainViewModel : ObservableObject
     private DiskInfo? _selectedMigrationTargetDisk;
     private WindowsMigrationReport? _migrationReport;
     private DiskHealthReport? _healthReport;
+    private MaintenanceReport? _maintenanceReport;
+    private MaintenanceTask _selectedMaintenanceTask = MaintenanceTask.InspectVolume;
+    private string _maintenanceSummary = "C14 · Selecione disco/volume e procedimento para uma prévia de risco sem execução.";
     private string _healthSummary = "C13 · Selecione um disco e consulte os indicadores do Windows. SMART integral não verificado.";
     private string _migrationSummary = "C12 · Selecione o disco do Windows e outro destino para avaliar a migração. Sem escrita.";
     private string _driveLetterInput = "";
@@ -63,6 +66,8 @@ public sealed class MainViewModel : ObservableObject
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
         InspectMbrConversionCommand = new RelayCommand(() => InspectConversion(DiskPartitionScheme.Mbr),
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
+        InspectMaintenanceCommand = new RelayCommand(InspectMaintenance,
+            () => SelectedDisk is not null && !IsBusy);
         InspectHealthCommand = new RelayCommand(InspectHealth,
             () => SelectedDisk is not null && !IsBusy);
         InspectMigrationCommand = new RelayCommand(InspectMigration,
@@ -100,6 +105,14 @@ public sealed class MainViewModel : ObservableObject
         new(StorageOperationType.MovePartition, "Mover partição · prévia")
     ];
     public string[] FileSystems { get; } = ["NTFS", "FAT32", "exFAT"];
+    public IReadOnlyList<MaintenanceChoice> MaintenanceChoices { get; } =
+    [
+        new(MaintenanceTask.InspectVolume, "Verificação do volume · só metadados"),
+        new(MaintenanceTask.OptimizeVolume, "Otimização (TRIM / desfragmentação) · prévia"),
+        new(MaintenanceTask.ReviewTemporaryFiles, "Limpeza de arquivos temporários · prévia"),
+        new(MaintenanceTask.WipeVolumeFreeSpace, "Apagamento do espaço livre · prévia bloqueada"),
+        new(MaintenanceTask.EraseEntireDisk, "Apagar disco inteiro · prévia bloqueada")
+    ];
     public bool IsAdministrator { get; } = AdministratorService.IsAdministrator();
     public string PrivilegeLabel => IsAdministrator ? "Administrador" : "Somente leitura · sem elevação";
     public string WriteModeLabel => StorageWriteGate.ReleasedAfterSafetyAudit
@@ -228,6 +241,28 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    public MaintenanceTask SelectedMaintenanceTask
+    {
+        get => _selectedMaintenanceTask;
+        set
+        {
+            if (!SetProperty(ref _selectedMaintenanceTask, value)) return;
+            InvalidateMaintenance("Tipo de manutenção alterado; refaça a análise.");
+        }
+    }
+
+    public MaintenanceReport? MaintenanceReport
+    {
+        get => _maintenanceReport;
+        private set => SetProperty(ref _maintenanceReport, value);
+    }
+
+    public string MaintenanceSummary
+    {
+        get => _maintenanceSummary;
+        private set => SetProperty(ref _maintenanceSummary, value);
+    }
+
     public DiskHealthReport? HealthReport
     {
         get => _healthReport;
@@ -302,6 +337,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand UseResizeMinimumCommand { get; }
     public RelayCommand InspectMigrationCommand { get; }
     public RelayCommand InspectHealthCommand { get; }
+    public RelayCommand InspectMaintenanceCommand { get; }
     public RelayCommand InspectCloneCommand { get; }
     public RelayCommand InspectGptConversionCommand { get; }
     public RelayCommand InspectMbrConversionCommand { get; }
@@ -323,6 +359,7 @@ public sealed class MainViewModel : ObservableObject
             InvalidateClone("Inventário atualizado; refaça a prévia de clonagem.");
             InvalidateMigration("Inventário atualizado; refaça o diagnóstico do Windows.");
             InvalidateHealth("Inventário atualizado; refaça a análise de saúde.");
+            InvalidateMaintenance("Inventário atualizado; refaça a prévia de manutenção.");
             // Validate ALL geometry and presentation aggregates before exposing any snapshot.
             var newInsights = InventoryInsights.Build(snapshot);
             _inventoryInsights = newInsights;
@@ -380,6 +417,7 @@ public sealed class MainViewModel : ObservableObject
             SelectedMigrationTargetDisk = null;
             InvalidateMigration("Inventário indisponível; diagnóstico do Windows descartado.");
             InvalidateHealth("Inventário indisponível; análise de saúde descartada.");
+            InvalidateMaintenance("Inventário indisponível; prévia de manutenção descartada.");
             UpdatePreview();
             OnPropertyChanged(nameof(DiskCountLabel));
             OnPropertyChanged(nameof(PartitionCountLabel));
@@ -632,6 +670,7 @@ public sealed class MainViewModel : ObservableObject
         InvalidateClone("Origem alterada; refaça a análise de clonagem.");
         InvalidateMigration("Origem ou partição alterada; refaça a análise do Windows.");
         InvalidateHealth("Seleção alterada; refaça a análise de saúde.");
+        InvalidateMaintenance("Disco/partição alterado; refaça a prévia de manutenção.");
         OnPropertyChanged(nameof(SelectedResizeRange));
         OnPropertyChanged(nameof(ResizeBoundsSummary));
         OnPropertyChanged(nameof(SelectedDiskMetrics));
@@ -669,6 +708,21 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedActionReason));
         OnPropertyChanged(nameof(SelectedActionStatus));
         UpdateCommands();
+    }
+
+    private void InvalidateMaintenance(string reason)
+    {
+        MaintenanceReport = null;
+        MaintenanceSummary = reason + " Nenhuma limpeza, verificação executável ou sanitização está habilitada.";
+    }
+
+    private void InspectMaintenance()
+    {
+        if (SelectedDisk is null || IsBusy) return;
+        MaintenanceReport = MaintenanceAssessment.Analyze(_snapshot,
+            SelectedDisk.Number, SelectedPartition?.PartitionNumber, SelectedMaintenanceTask);
+        MaintenanceSummary = MaintenanceReport.Summary;
+        Status = "C14: riscos de manutenção inspecionados no inventário. Nenhuma operação executada ou enfileirada.";
     }
 
     private void InvalidateHealth(string reason)
@@ -806,7 +860,10 @@ public sealed class MainViewModel : ObservableObject
         InspectCloneCommand.RaiseCanExecuteChanged();
         InspectMigrationCommand.RaiseCanExecuteChanged();
         InspectHealthCommand.RaiseCanExecuteChanged();
+        InspectMaintenanceCommand.RaiseCanExecuteChanged();
     }
 }
 
 public sealed record OperationChoice(StorageOperationType Type, string Display);
+
+public sealed record MaintenanceChoice(MaintenanceTask Task, string Display);
