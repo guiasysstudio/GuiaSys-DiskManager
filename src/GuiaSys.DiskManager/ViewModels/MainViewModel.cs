@@ -32,6 +32,9 @@ public sealed class MainViewModel : ObservableObject
     private string _movePreviewSummary = "Nenhuma prévia calculada. Nenhuma movimentação será executada.";
     private DiskConversionReport? _conversionReport;
     private string _conversionSummary = "Selecione um disco e analise GPT ou MBR. Nenhuma conversão será executada.";
+    private DiskInfo? _selectedCloneTargetDisk;
+    private ClonePreviewReport? _clonePreviewReport;
+    private string _clonePreviewSummary = "C11 · Selecione uma origem e um disco de destino diferente. Somente análise, sem escrita.";
     private string _driveLetterInput = "";
     private string _allocationUnitInput = "";
     private string _selectedFileSystem = "NTFS";
@@ -55,6 +58,8 @@ public sealed class MainViewModel : ObservableObject
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
         InspectMbrConversionCommand = new RelayCommand(() => InspectConversion(DiskPartitionScheme.Mbr),
             () => SelectedDisk is not null && SelectedPartition is null && !IsBusy);
+        InspectCloneCommand = new RelayCommand(InspectClone,
+            () => SelectedDisk is not null && SelectedCloneTargetDisk is not null && !IsBusy);
         PreviewMoveCommand = new RelayCommand(PreviewSelectedMove,
             () => SelectedOperationType == StorageOperationType.MovePartition &&
                   SelectedPartition is not null && !IsBusy);
@@ -203,6 +208,29 @@ public sealed class MainViewModel : ObservableObject
         get => _conversionReport;
         private set => SetProperty(ref _conversionReport, value);
     }
+    public DiskInfo? SelectedCloneTargetDisk
+    {
+        get => _selectedCloneTargetDisk;
+        set
+        {
+            if (!SetProperty(ref _selectedCloneTargetDisk, value)) return;
+            InvalidateClone("Destino alterado; refaça a inspeção.");
+            InspectCloneCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public ClonePreviewReport? ClonePreviewReport
+    {
+        get => _clonePreviewReport;
+        private set => SetProperty(ref _clonePreviewReport, value);
+    }
+
+    public string ClonePreviewSummary
+    {
+        get => _clonePreviewSummary;
+        private set => SetProperty(ref _clonePreviewSummary, value);
+    }
+
     public string ConversionSummary
     {
         get => _conversionSummary;
@@ -227,6 +255,7 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand ApplyCommand { get; }
     public RelayCommand OpenLogsCommand { get; }
     public RelayCommand UseResizeMinimumCommand { get; }
+    public RelayCommand InspectCloneCommand { get; }
     public RelayCommand InspectGptConversionCommand { get; }
     public RelayCommand InspectMbrConversionCommand { get; }
     public RelayCommand PreviewMoveCommand { get; }
@@ -244,6 +273,7 @@ public sealed class MainViewModel : ObservableObject
             var snapshot = await _inventory.ReadAsync(CancellationToken.None);
             MovePreviewSummary = "Inventário atualizado; prévia anterior invalidada. Nenhuma escrita realizada.";
             InvalidateConversion("Inventário atualizado; refaça a análise GPT/MBR.");
+            InvalidateClone("Inventário atualizado; refaça a prévia de clonagem.");
             // Validate ALL geometry and presentation aggregates before exposing any snapshot.
             var newInsights = InventoryInsights.Build(snapshot);
             _inventoryInsights = newInsights;
@@ -251,10 +281,14 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(OverviewMetrics));
             var previousIdentity = SelectedDisk?.Identity;
             var previousPartitionIdentity = SelectedPartition?.Identity;
+            var previousCloneTargetIdentity = SelectedCloneTargetDisk?.Identity;
             _loadingSelection = true;
             try
             {
                 Disks.Clear(); foreach (var disk in snapshot.Disks) Disks.Add(disk);
+                // Never switch to an arbitrary destination if the previous physical identity disappeared.
+                SelectedCloneTargetDisk = previousCloneTargetIdentity is null ? null :
+                    Disks.FirstOrDefault(d => string.Equals(d.Identity, previousCloneTargetIdentity, StringComparison.Ordinal));
                 SelectedDisk = Disks.FirstOrDefault(d => d.Identity == previousIdentity) ?? Disks.FirstOrDefault();
                 // Record value-equality may suppress the setter on an unchanged disk.
                 // Explicitly rebuild dependent projections from the new inventory.
@@ -289,6 +323,8 @@ public sealed class MainViewModel : ObservableObject
             PartitionSegments.Clear();
             UpdateContextOperations();
             InvalidateConversion("Inventário indisponível; análise de conversão descartada.");
+            SelectedCloneTargetDisk = null;
+            InvalidateClone("Inventário indisponível; prévia de clonagem descartada.");
             UpdatePreview();
             OnPropertyChanged(nameof(DiskCountLabel));
             OnPropertyChanged(nameof(PartitionCountLabel));
@@ -538,6 +574,7 @@ public sealed class MainViewModel : ObservableObject
         if (!_loadingSelection) UpdateContextOperations();
         MovePreviewSummary = "Alvo alterado; refaça a prévia antes de avaliar o destino.";
         InvalidateConversion("Seleção alterada; refaça a análise GPT/MBR.");
+        InvalidateClone("Origem alterada; refaça a análise de clonagem.");
         OnPropertyChanged(nameof(SelectedResizeRange));
         OnPropertyChanged(nameof(ResizeBoundsSummary));
         OnPropertyChanged(nameof(SelectedDiskMetrics));
@@ -575,6 +612,22 @@ public sealed class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedActionReason));
         OnPropertyChanged(nameof(SelectedActionStatus));
         UpdateCommands();
+    }
+
+    private void InvalidateClone(string reason)
+    {
+        ClonePreviewReport = null;
+        ClonePreviewSummary = reason + " Nenhuma cópia ou gravação será executada.";
+    }
+
+    private void InspectClone()
+    {
+        if (SelectedDisk is null || SelectedCloneTargetDisk is null || IsBusy) return;
+        ClonePreviewReport = ClonePreviewAssessment.Analyze(_snapshot,
+            SelectedDisk.Number, SelectedCloneTargetDisk.Number,
+            SelectedPartition?.PartitionNumber);
+        ClonePreviewSummary = ClonePreviewReport.Summary;
+        Status = "Prévia de clonagem somente leitura concluída. Nenhum dado copiado.";
     }
 
     private void InvalidateConversion(string reason)
@@ -663,6 +716,7 @@ public sealed class MainViewModel : ObservableObject
         SuggestMoveDestinationCommand.RaiseCanExecuteChanged();
         InspectGptConversionCommand.RaiseCanExecuteChanged();
         InspectMbrConversionCommand.RaiseCanExecuteChanged();
+        InspectCloneCommand.RaiseCanExecuteChanged();
     }
 }
 
