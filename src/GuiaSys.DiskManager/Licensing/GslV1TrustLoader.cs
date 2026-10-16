@@ -16,6 +16,12 @@ public static class GslV1TrustLoader
     // Empty intentionally blocks real activation in this unconfigured development build.
     private const string ApprovedPublicKeyFingerprintHex = "";
 
+    // Non-secret read-only deployment status. A fingerprint is not valid merely
+    // because a file is supplied by the machine running the application.
+    public static bool HasPinnedTrustFingerprint =>
+        ApprovedPublicKeyFingerprintHex.Length == 64 &&
+        ApprovedPublicKeyFingerprintHex.All(Uri.IsHexDigit);
+
     public static GslV1Trust? Load(string? path = null)
     {
         if (ApprovedPublicKeyFingerprintHex.Length != 64) return null;
