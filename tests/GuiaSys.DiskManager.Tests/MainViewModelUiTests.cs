@@ -373,6 +373,128 @@ public sealed class MainViewModelUiTests
         Assert.Contains("indisponível", vm.ConversionSummary, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Clone_preview_requires_explicit_destination_and_never_creates_a_queue_item()
+    {
+        var source = Disk();
+        var target = Disk(4) with { PartitionStyle = "RAW", Size = 12_000_000_000 };
+        var vm = Build(new StaticInventory(new StorageSnapshot(
+            [source, target], [Partition()], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        Assert.False(vm.InspectCloneCommand.CanExecute(null));
+        Assert.Null(vm.ClonePreviewReport);
+        vm.SelectedCloneTargetDisk = vm.Disks.Single(d => d.Number == 4);
+        Assert.True(vm.InspectCloneCommand.CanExecute(null));
+        vm.InspectCloneCommand.Execute(null);
+        Assert.NotNull(vm.ClonePreviewReport);
+        Assert.Equal(ClonePreviewScope.Disk, vm.ClonePreviewReport.Scope);
+        Assert.True(vm.ClonePreviewReport.GeometryLooksCompatible);
+        Assert.False(vm.ClonePreviewReport.CanExecute);
+        Assert.Contains("SEM CÓPIA", vm.ClonePreviewSummary);
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+        Assert.False(vm.CanApplyWrites);
+    }
+
+    [Fact]
+    public async Task Clone_partition_mode_refuses_a_raw_target_and_does_not_silently_initialize_it()
+    {
+        var target = Disk(4) with { PartitionStyle = "RAW", Size = 12_000_000_000 };
+        var vm = Build(new StaticInventory(new StorageSnapshot(
+            [Disk(), target], [Partition()], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        vm.SelectedCloneTargetDisk = vm.Disks.Single(d => d.Number == 4);
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.InspectCloneCommand.Execute(null);
+        Assert.NotNull(vm.ClonePreviewReport);
+        Assert.Equal(ClonePreviewScope.Partition, vm.ClonePreviewReport.Scope);
+        Assert.False(vm.ClonePreviewReport.GeometryLooksCompatible);
+        Assert.Contains("inicializado como GPT", vm.ClonePreviewSummary);
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Clone_partition_mode_identifies_free_gpt_extent_without_copying()
+    {
+        var target = Disk(4);
+        var vm = Build(new StaticInventory(new StorageSnapshot(
+            [Disk(), target], [Partition()], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        vm.SelectedCloneTargetDisk = vm.Disks.Single(d => d.Number == 4);
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.InspectCloneCommand.Execute(null);
+        Assert.True(vm.ClonePreviewReport!.GeometryLooksCompatible);
+        Assert.Equal(ClonePreviewScope.Partition, vm.ClonePreviewReport.Scope);
+        Assert.Equal(1_048_576, vm.ClonePreviewReport.ProposedTargetOffsetBytes);
+        Assert.False(vm.ClonePreviewReport.CanExecute);
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Clone_preview_is_invalidated_when_target_or_source_is_changed()
+    {
+        var vm = Build(new StaticInventory(new StorageSnapshot(
+            [Disk(), Disk(4) with { PartitionStyle = "RAW", Size = 12_000_000_000 }],
+            [Partition()], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        vm.SelectedCloneTargetDisk = vm.Disks.Single(d => d.Number == 4);
+        vm.InspectCloneCommand.Execute(null);
+        Assert.NotNull(vm.ClonePreviewReport);
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        Assert.Null(vm.ClonePreviewReport);
+        Assert.Contains("Origem alterada", vm.ClonePreviewSummary);
+        vm.InspectCloneCommand.Execute(null);
+        Assert.NotNull(vm.ClonePreviewReport);
+        vm.SelectedCloneTargetDisk = null;
+        Assert.Null(vm.ClonePreviewReport);
+        Assert.False(vm.InspectCloneCommand.CanExecute(null));
+        Assert.Contains("Destino alterado", vm.ClonePreviewSummary);
+    }
+
+    [Fact]
+    public async Task Refresh_preserves_target_identity_but_invalidates_clone_evidence()
+    {
+        var inv = new SwitchableInventory(new StorageSnapshot(
+            [Disk(), Disk(4) with { PartitionStyle = "RAW", Size = 12_000_000_000 }],
+            [Partition()], DateTimeOffset.UtcNow));
+        var vm = Build(inv);
+        await vm.RefreshAsync();
+        vm.SelectedCloneTargetDisk = vm.Disks.Single(d => d.Number == 4);
+        vm.InspectCloneCommand.Execute(null);
+        Assert.NotNull(vm.ClonePreviewReport);
+        await vm.RefreshAsync();
+        Assert.Equal(4, vm.SelectedCloneTargetDisk?.Number);
+        Assert.Null(vm.ClonePreviewReport);
+        Assert.Contains("refaça", vm.ClonePreviewSummary);
+        vm.InspectCloneCommand.Execute(null);
+        Assert.NotNull(vm.ClonePreviewReport);
+        inv.Fail = true;
+        await vm.RefreshAsync();
+        Assert.Null(vm.SelectedCloneTargetDisk);
+        Assert.Null(vm.ClonePreviewReport);
+        Assert.False(vm.InspectCloneCommand.CanExecute(null));
+        Assert.Contains("indisponível", vm.ClonePreviewSummary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Missing_original_target_on_refresh_does_not_select_another_disk()
+    {
+        var source = Disk();
+        var target = Disk(4) with { PartitionStyle = "RAW" };
+        var inventory = new SwitchableInventory(new StorageSnapshot(
+            [source, target], [Partition()], DateTimeOffset.UtcNow));
+        var vm = Build(inventory);
+        await vm.RefreshAsync();
+        vm.SelectedCloneTargetDisk = vm.Disks.Single(d => d.Number == 4);
+        inventory.OverrideSnapshot = new StorageSnapshot(
+            [source, Disk(6) with { PartitionStyle = "RAW" }],
+            [Partition()], DateTimeOffset.UtcNow);
+        await vm.RefreshAsync();
+        Assert.Null(vm.SelectedCloneTargetDisk);
+        Assert.Null(vm.ClonePreviewReport);
+        Assert.False(vm.InspectCloneCommand.CanExecute(null));
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);
