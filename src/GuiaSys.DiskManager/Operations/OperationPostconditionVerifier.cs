@@ -93,6 +93,31 @@ public static class OperationPostconditionVerifier
         if (!othersUnchanged)
             return PostconditionDecision.Uncertain("Outra partição mudou durante a operação.");
 
+        if (operation.Type == StorageOperationType.ResizePartition)
+        {
+            if (operation.SizeBytes is not long expectedBytes || expectedBytes <= 0 ||
+                expectedBytes == targetBefore.Size || targetAfter.Size != expectedBytes)
+                return PostconditionDecision.Uncertain("O novo tamanho da partição não corresponde ao pedido.");
+
+            // Resize-Partition also resizes the underlying filesystem. A matching partition
+            // extent alone is not proof that the filesystem was resized safely.
+            if (string.IsNullOrWhiteSpace(targetBefore.FileSystem) ||
+                !targetBefore.FileSystem.Equals(targetAfter.FileSystem, StringComparison.OrdinalIgnoreCase))
+                return PostconditionDecision.Uncertain("Sistema de arquivos ausente ou alterado durante redimensionamento.");
+            if (!targetBefore.HasVolumeUsage || !targetAfter.HasVolumeUsage)
+                return PostconditionDecision.Uncertain("Sem medidas de capacidade do volume antes/depois: verificação indeterminada.");
+
+            var previousCapacity = targetBefore.VolumeCapacityBytes!.Value;
+            var actualCapacity = targetAfter.VolumeCapacityBytes!.Value;
+            var filesystemMovedInSameDirection = expectedBytes > targetBefore.Size
+                ? actualCapacity > previousCapacity
+                : actualCapacity < previousCapacity;
+            if (!filesystemMovedInSameDirection)
+                return PostconditionDecision.Uncertain("A capacidade do sistema de arquivos não acompanhou o redimensionamento.");
+
+            return PostconditionDecision.Confirmed();
+        }
+
         var targetValid = operation.Type switch
         {
             StorageOperationType.FormatPartition =>
@@ -107,8 +132,6 @@ public static class OperationPostconditionVerifier
             StorageOperationType.SetVolumeLabel =>
                 SamePartition(targetBefore, targetAfter) &&
                 targetAfter.Label.Equals(operation.Label, StringComparison.Ordinal),
-            StorageOperationType.ResizePartition =>
-                operation.SizeBytes is > 0 && targetAfter.Size == operation.SizeBytes.Value,
             _ => false
         };
         return targetValid ? PostconditionDecision.Confirmed()
