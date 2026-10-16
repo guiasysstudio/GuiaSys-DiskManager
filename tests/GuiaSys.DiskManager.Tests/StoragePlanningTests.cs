@@ -13,7 +13,7 @@ public sealed class StoragePlanningTests
 
     private static DiskInfo Disk(int number = 2, long size = 1_000 * MB, string style = "GPT") =>
         new() { Number = number, UniqueId = "fixture-disk-" + number, FriendlyName = "Disposable",
-            PartitionStyle = style, Size = size };
+            PartitionStyle = style, Size = size, LogicalSectorSize = 512 };
 
     private static PartitionInfo Part(int disk = 2, int number = 1, long offset = 100 * MB,
         long size = 300 * MB, string letter = "E") =>
@@ -208,12 +208,21 @@ public sealed class StoragePlanningTests
     [Fact]
     public void Planner_rejects_impossible_expand_and_does_not_assume_filesystem_can_shrink()
     {
-        var snapshot = Snapshot(Part(), Part(number: 2, offset: 500 * MB, letter: "F"));
-        Assert.False(Planner().Plan(snapshot, [Op(StorageOperationType.ResizePartition, partition: 1, size: 450 * MB)]).CanApply);
-        var shrinking = Planner().Plan(snapshot, [Op(StorageOperationType.ResizePartition, partition: 1, size: 250 * MB)]);
+        const long MiB = 1_048_576;
+        var first = Part(size: 300 * MiB) with
+        {
+            ResizeMinBytes = 200 * MiB, ResizeMaxBytes = 600 * MiB
+        };
+        var snapshot = Snapshot(first, Part(number: 2, offset: 500 * MB, letter: "F"));
+        var tooLarge = Op(StorageOperationType.ResizePartition, partition: 1, size: 420 * MiB)
+            with { ExpectedPartitionIdentity = first.Identity };
+        Assert.False(Planner().Plan(snapshot, [tooLarge]).CanApply);
+        var valid = Op(StorageOperationType.ResizePartition, partition: 1, size: 250 * MiB)
+            with { ExpectedPartitionIdentity = first.Identity };
+        var shrinking = Planner().Plan(snapshot, [valid]);
         Assert.True(shrinking.CanApply);
         Assert.True(shrinking.Steps[0].RequiresRefreshAfterExecution);
-        Assert.Equal(300 * MB, shrinking.ProjectedSnapshot.FindPartition(2, 1)!.Size);
+        Assert.Equal(first.Size, shrinking.ProjectedSnapshot.FindPartition(2, 1)!.Size);
     }
 
     [Fact]
