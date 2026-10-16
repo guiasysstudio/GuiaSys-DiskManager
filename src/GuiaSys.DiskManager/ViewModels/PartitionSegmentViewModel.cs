@@ -38,6 +38,23 @@ public sealed class PartitionSegmentViewModel : ObservableObject
     public bool HasVolumeUsage => Partition?.HasVolumeUsage ?? false;
     /// <summary>Only a real Get-Volume reading supplies file usage; unknown remains hidden in XAML.</summary>
     public double UsagePercent => Partition?.UsagePercent ?? 0d;
+
+    /// <summary>
+    /// Two concise, legible lines as in traditional partition managers:
+    /// C:(NTFS) / 478 GB; (EFI) / 209 MB; (MSR) / 16 MB.
+    /// Complete Windows labels and byte offsets remain in the tooltip.
+    /// </summary>
+    public string MapTypeLabel => Partition is null ? "Não alocado" :
+        Partition.Kind switch
+        {
+            "Recovery" => "(Recuperação)",
+            "EFI" => "(EFI)",
+            "MSR" => "(MSR)",
+            _ => Partition.DriveLetter.Length > 0
+                ? $"{Partition.DriveLetter.TrimEnd(':')}:({Partition.FileSystem switch { "" => "Outro", var fs => fs }})"
+                : $"({Partition.FileSystem switch { "" => Partition.Kind, var fs => fs }})"
+        };
+    public string MapSizeLabel => ByteSize.Format(Size);
     public bool IsSelected => _isSelected;
 
     public string ToolTip => $"{Title}\n{Subtitle}\nOffset: {Offset:N0} bytes\nTamanho exato: {ByteSize.Format(Size)}";

@@ -124,7 +124,7 @@ public sealed class AllDiskMapTests
         Assert.All(widths, width => Assert.True(width >= 0d && double.IsFinite(width)));
         if (available > 0)
             Assert.All(widths, width =>
-                Assert.True(width >= Math.Min(38d, available / bytes.Length) - 0.001d));
+                Assert.True(width >= Math.Min(ProportionalPartitionPanel.MinimumReadableWidth, available / bytes.Length) - 0.001d));
     }
 
     [Fact]
@@ -134,6 +134,58 @@ public sealed class AllDiskMapTests
             Enumerable.Repeat(1L, 40).ToArray(), 200d);
         Assert.Equal(40, widths.Length);
         Assert.All(widths, w => Assert.InRange(w, 4.999d, 5.001d));
+    }
+
+    [Fact]
+    public void Requested_width_preserves_100px_labels_even_when_the_viewport_is_narrow()
+    {
+        const double viewport = 350d;
+        var sizes = new long[] { 209_720_000, 16_780_000, 478_960_000_000, 911_000_000, 1_790_000 };
+        var display = ProportionalPartitionPanel.RequiredWidth(sizes.Length, viewport);
+        Assert.Equal(500d, display);
+        var widths = ProportionalPartitionPanel.CalculateWidths(sizes, display);
+        Assert.Equal(display, widths.Sum(), 6);
+        Assert.All(widths, w => Assert.True(w >= 100d));
+    }
+
+    [Fact]
+    public void Wide_viewports_fill_available_width_without_horizontal_scrolling()
+    {
+        var sizes = new long[] { 100_000_000, 16_000_000, 111_100_000_000, 556_000_000 };
+        var display = ProportionalPartitionPanel.RequiredWidth(sizes.Length, 1000d);
+        Assert.Equal(1000d, display);
+        var widths = ProportionalPartitionPanel.CalculateWidths(sizes, display);
+        Assert.InRange(widths[0], 100d, 110d);
+        Assert.InRange(widths[1], 100d, 110d);
+        Assert.True(widths[2] > 660d);
+    }
+
+    [Fact]
+    public void MiniTool_style_labels_show_type_and_size_separately()
+    {
+        var efi = Part(1, 1, 0, 209_720_000) with
+        {
+            DriveLetter = "", Type = "System", FileSystem = "FAT32",
+            GptType = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+        };
+        var msr = efi with { PartitionNumber = 2, Type = "Reserved", FileSystem = "",
+            Offset = 209_720_000, Size = 16_780_000,
+            GptType = "e3c9e316-0b5c-4db8-817d-f92df00215ae" };
+        var free = new PartitionSegmentViewModel(null, "Não alocado",
+            "2,84 MB", "Unallocated", 2_840_000, 0);
+        var efiMap = new PartitionSegmentViewModel(efi, "EFI", "FAT32",
+            "EFI", efi.Size, 0);
+        var msrMap = new PartitionSegmentViewModel(msr, "MSR", "MSR",
+            "MSR", msr.Size, 0);
+        Assert.Equal("(EFI)", efiMap.MapTypeLabel);
+        Assert.Equal("(MSR)", msrMap.MapTypeLabel);
+        Assert.Equal("Não alocado", free.MapTypeLabel);
+        Assert.Contains("MB", efiMap.MapSizeLabel);
+        Assert.Contains("MB", msrMap.MapSizeLabel);
+        Assert.Contains("MB", free.MapSizeLabel);
+        var ntfs = new PartitionSegmentViewModel(Part(1, 3, 1_000_000, 10_000_000),
+            "C:", "NTFS", "NTFS", 10_000_000, 0);
+        Assert.Equal("C:(NTFS)", ntfs.MapTypeLabel);
     }
 
     [Fact]

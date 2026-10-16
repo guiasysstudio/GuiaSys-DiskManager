@@ -150,14 +150,14 @@
       <Setter Property="Padding" Value="9,7"/>
       <Setter Property="Cursor" Value="Hand"/>
       <Style.Triggers>
-        <DataTrigger Binding="{Binding Kind}" Value="EFI"><Setter Property="Background" Value="#A8E1D6"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="MSR"><Setter Property="Background" Value="#DCE5EF"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="NTFS"><Setter Property="Background" Value="#8EC5F7"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="FAT32"><Setter Property="Background" Value="#95D7E5"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="EFI"><Setter Property="Background" Value="#E2F6F1"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="MSR"><Setter Property="Background" Value="#F2F4F8"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="NTFS"><Setter Property="Background" Value="#F4F9FF"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="FAT32"><Setter Property="Background" Value="#E7F5FF"/></DataTrigger>
         <DataTrigger Binding="{Binding Kind}" Value="exFAT"><Setter Property="Background" Value="#D0BEF0"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="Recovery"><Setter Property="Background" Value="#F3C58D"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="Recovery"><Setter Property="Background" Value="#FFF3DD"/></DataTrigger>
         <DataTrigger Binding="{Binding Kind}" Value="RAW"><Setter Property="Background" Value="#EAB7C3"/></DataTrigger>
-        <DataTrigger Binding="{Binding Kind}" Value="Unallocated"><Setter Property="Background" Value="#D9E1EA"/></DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="Unallocated"><Setter Property="Background" Value="#F3F5F7"/></DataTrigger>
         <DataTrigger Binding="{Binding IsSelected}" Value="True">
           <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
           <Setter Property="BorderThickness" Value="3"/>
@@ -415,7 +415,7 @@
                           </Style.Triggers>
                         </Style>
                       </Border.Style>
-                      <Grid Margin="4,4,4,4" MinHeight="77">
+                      <Grid Margin="4,4,4,4" MinHeight="90">
                         <Grid.ColumnDefinitions>
                           <ColumnDefinition Width="174"/>
                           <ColumnDefinition Width="1"/>
@@ -441,13 +441,18 @@
                           </StackPanel>
                         </Button>
                         <Border Grid.Column="1" Background="#CFDDEC" Margin="0,5"/>
-                        <ItemsControl Grid.Column="2" ItemsSource="{Binding Segments}"
-                                      Margin="6,2,3,2"
-                                      ClipToBounds="True"
+                        <ScrollViewer Grid.Column="2" Margin="6,2,3,2"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled"
+                                      CanContentScroll="False"
+                                      Focusable="False"
+                                      ToolTip="Arraste a barra inferior para ver todas as partições deste disco.">
+                        <ItemsControl ItemsSource="{Binding Segments}"
                                       AutomationProperties.Name="Partições proporcionais do disco">
                           <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                              <controls:ProportionalPartitionPanel/>
+                              <controls:ProportionalPartitionPanel
+                                ViewportWidth="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}"/>
                             </ItemsPanelTemplate>
                           </ItemsControl.ItemsPanel>
                           <ItemsControl.ItemContainerStyle>
@@ -485,10 +490,10 @@
                                       </Style>
                                     </ProgressBar.Style>
                                   </ProgressBar>
-                                  <TextBlock Grid.Row="1" Text="{Binding Title}"
+                                  <TextBlock Grid.Row="1" Text="{Binding MapTypeLabel}"
                                              FontWeight="SemiBold" FontSize="11"
                                              TextTrimming="CharacterEllipsis" Foreground="#153F6B"/>
-                                  <TextBlock Grid.Row="2" Text="{Binding Subtitle}"
+                                  <TextBlock Grid.Row="2" Text="{Binding MapSizeLabel}"
                                              FontSize="10" Foreground="#315778"
                                              TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                                 </Grid>
@@ -496,6 +501,7 @@
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        </ScrollViewer>
                       </Grid>
                     </Border>
                   </DataTemplate>
