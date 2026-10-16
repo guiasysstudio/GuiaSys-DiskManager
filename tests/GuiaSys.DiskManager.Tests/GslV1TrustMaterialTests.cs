@@ -32,8 +32,8 @@ public sealed class GslV1TrustMaterialTests
         var (document, expected) = Synthetic();
         var parsed = GslV1TrustMaterial.ParseStrict(document);
         Assert.Equal(expected, parsed);
-        Assert.False(GslV1TrustLoader.HasPinnedTrustFingerprint);
-        Assert.Null(GslV1TrustLoader.Load());
+        Assert.True(GslV1TrustLoader.HasPinnedTrustFingerprint);
+        // A valid synthetic test key is not the publisher-pinned official key.
     }
 
     [Fact]

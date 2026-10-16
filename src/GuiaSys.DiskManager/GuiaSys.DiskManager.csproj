@@ -20,6 +20,7 @@
   <ItemGroup>
     <Resource Include="Assets\Branding\*.png" />
     <Resource Include="Assets\Branding\*.ico" />
+    <None Update="Licensing\gsl-v1-trust.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" TargetPath="gsl-v1-trust.json" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="GuiaSys.DiskManager.Tests" />

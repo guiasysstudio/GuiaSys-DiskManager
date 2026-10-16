@@ -8,10 +8,11 @@ namespace GuiaSys.DiskManager.Licensing;
 /// </summary>
 public static class GslV1TrustLoader
 {
-    // This is intentionally empty until out-of-band official project metadata,
-    // publisher review and a new trusted build are available. Never populate
-    // it with a digest copied solely from an untrusted network response.
-    private const string ApprovedPublicKeyFingerprintHex = "";
+    // Derived from the PUBLIC GSL-v1 signing JWK in the official project integration
+    // contract supplied through the authenticated admin panel on 2026-10-16.
+    // Key rotation requires an authenticated review and new reviewed binary;
+    // publishing this public fingerprint does not approve licensing E2E or writes.
+    private const string ApprovedPublicKeyFingerprintHex = "6714ec5a65788f4cc937e0f2abd3656362d70ccd6d3cc09aae7e460566ef8d97";
 
     public static bool HasPinnedTrustFingerprint =>
         ApprovedPublicKeyFingerprintHex.Length == 64 &&

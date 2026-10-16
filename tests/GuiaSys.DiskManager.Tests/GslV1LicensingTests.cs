@@ -241,7 +241,7 @@ public sealed class GslV1LicensingTests
         var seen = new List<string>();
         var api = Client(request =>
         {
-            Assert.Equal("licencas.guiasys.online", request.RequestUri?.Host);
+            Assert.Equal("licencas.guiasys.com.br", request.RequestUri?.Host);
             Assert.Equal(HttpMethod.Post, request.Method);
             seen.Add(request.RequestUri!.AbsolutePath);
             return Json(request.RequestUri.AbsolutePath == GslV1Protocol.ProjectConfig

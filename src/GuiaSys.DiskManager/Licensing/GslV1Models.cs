@@ -6,7 +6,7 @@ public static class GslV1Protocol
 {
     public const string Version = "GSL-v1";
     public const string IntegrationCode = "GSLI-9AFS-LE4Q-3PHZ";
-    public const string ApiBase = "https://licencas.guiasys.online/";
+    public const string ApiBase = "https://licencas.guiasys.com.br/";
     public const string ProjectConfig = "/api/v1/project/config";
     public const string TrialStart = "/api/v1/trial/start";
     public const string TrialValidate = "/api/v1/trial/validate";
@@ -99,7 +99,7 @@ public sealed class GslV1ApiException : Exception
 }
 
 // C01 is a licensing milestone, not approval of the legacy storage executor.
-// The physical write path remains locked until C02-C04 safety gates pass.
+// The physical write path remains locked until independent hardware safety approval.
 public static class StorageWriteGate
 {
     public static bool ReleasedAfterSafetyAudit => false;
