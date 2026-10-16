@@ -10,6 +10,12 @@ AppId={{A388E04F-84F3-41B6-9CA2-8AC047975D46}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
+AppPublisherURL=https://www.guiasys.online/
+AppSupportURL=https://www.guiasys.online/
+UninstallDisplayName={#AppName}
+UninstallFilesDir={app}
+CloseApplications=yes
+RestartApplications=no
 VersionInfoVersion={#AppVersion}
 VersionInfoCompany={#AppPublisher}
 VersionInfoDescription={#AppName}
@@ -30,6 +36,8 @@ DisableProgramGroupPage=yes
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 [Files]
+; Keep the application payload in {app}. User logs/license state live in
+; %LOCALAPPDATA% and are deliberately NOT removed by uninstall/upgrade.
 Source: "..\artifacts\portable\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
 Name: "{group}\GuiaSys Disk Manager"; Filename: "{app}\{#AppExeName}"
