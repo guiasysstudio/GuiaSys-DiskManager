@@ -116,3 +116,7 @@ O cliente GSL-v1 agora rejeita documentos públicos JWK excessivos, duplicados o
 ### GDM-H02.1 — Inspetor offline da chave pública oficial
 
 Foi criada uma ferramenta console para conferir localmente os identificadores públicos e o JSON JWK ES256/P-256 com o mesmo parser utilizado pelo aplicativo, produzindo somente um **fingerprint candidato** (`NO-GO`). Ela não toca no Firebase, não solicita licença real e não altera o fingerprint fixado no executável. O GitHub Actions executa autoteste sintético e comprova a recusa quando não existe o arquivo de chave pública. **O provisionamento real está pendente de dados públicos oficiais verificados independentemente.** Veja [GDM-H02.1](docs/GDM-H02.1.md).
+
+### Atualização H02.1 — domínio oficial e chave pública ES256 do Licensing
+
+O contrato oficial do administrador agora define `https://licencas.guiasys.com.br/` (substituindo `.online`). A chave **pública** ES256 do GuiaSys Disk Manager foi incorporada ao build de desenvolvimento como `gsl-v1-trust.json` mais digest SHA-256 fixado no binário, com testes de correspondência e sem chaves privadas. O GitHub Actions verifica a identidade pública e a presença do arquivo no pacote Windows. Isso resolve a preparação criptográfica estática, **não** a homologação de ativações, revogações e cache em produção: seguem pendentes assinatura digital, testes humanos e liberação comercial. `StorageWriteGate.ReleasedAfterSafetyAudit=false` continua obrigatório. Detalhes: [GDM-H02.1](docs/GDM-H02.1.md).

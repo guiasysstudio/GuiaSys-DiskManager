@@ -85,3 +85,7 @@ dotnet run --project .\tools\GslV1TrustInspector\GslV1TrustInspector.csproj -c R
 ```
 
 O resultado é sempre `decision: NO-GO`, mesmo com hash válido, porque origem e assinatura do editor não podem ser inferidas apenas de um arquivo. O autoteste e recusa de arquivo inexistente são executados no Actions. **O comando não faz pin automático, não altera dados produtivos nem libera licenças.** Veja [GDM-H02.1](GDM-H02.1.md).
+
+## GDM-H02.1 — Novo domínio oficial e âncora pública GSL-v1
+
+`GslV1Protocol.ApiBase` usa agora `https://licencas.guiasys.com.br/`. O `gsl-v1-trust.json` público foi incorporado a `src/GuiaSys.DiskManager/Licensing` e sai ao lado de `GuiaSys.DiskManager.exe` após o `dotnet publish`; também entra no Setup pelo wildcard do Inno. O digest SHA-256 de `GSL-v1\nprojectId\nkeyId\nx\ny` foi conferido e fixado no código, sem chave privada. CI exige que arquivo distribuído, projeto, `kid`, curva e digest correspondam ao valor esperado. `tools/Test-GslV1TrustReadiness.ps1` mantém **NO-GO** mesmo com pin: não é teste da licença real. Ver [GDM-H02.1](GDM-H02.1.md).

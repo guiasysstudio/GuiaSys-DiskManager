@@ -204,3 +204,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - CI: `--self-test` com chave pública efêmera e recusa de caminho para arquivo público ausente; nenhum acesso à API GSL ou ao Firebase e nenhuma configuração de produção.
 - Antes de homologar: obter `projectId`, `keyId`, `x/y` públicos do painel oficial, revisar origem fora da banda e, só após assinatura e testes humanos, planejar pin/empacotamento. Confira [GDM-H02.1](GDM-H02.1.md).
 - **NO-GO comercial e para gravações físicas permanece inalterado.**
+
+## GDM-H02.1 — Atualização do contrato público GSL-v1 (16/10/2026)
+
+- Domínio **oficial informado pelo administrador**: `https://licencas.guiasys.com.br/` (substitui `https://licencas.guiasys.online/`). O código de integração permanece o mesmo.
+- Material de assinatura **público** do Disk Manager, no build de desenvolvimento: `projectId=prj_b41909541f924fe5b837`, `keyId=sig_3828131003da47bda2f7`, ES256/P-256 e arquivo minimalizado `gsl-v1-trust.json` copiado no publish. SHA-256 canônico pinado no binário; validação local com dados oficiais recebidos.
+- Trial informado como desativado **no momento do contrato**, mas o servidor continua autoridade dinâmica. **Sem requisições de produção em H02.1.**
+- Pré-verificação CI de conteúdo + pin + identidade e teste de alteração de chave. Mesmo com pin presente, o relatório comercial permanece `NO-GO`; faltam assinatura, homologação com licença real, Win10/11 e aprovação de escrita em mídia.
+- Ver [GDM-H02.1](GDM-H02.1.md). Nada alterado em `main`, Firebase ou discos físicos.

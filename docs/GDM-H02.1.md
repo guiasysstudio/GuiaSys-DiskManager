@@ -81,3 +81,17 @@ Somente **depois** da verificação administrativa independente, preparar commit
 - **PENDENTE:** `projectId`, `keyId` e coordenadas públicas oficiais do Disk Manager, conferência administrativa fora de banda, teste ponta a ponta e assinatura de código.
 
 **Decisão:** GO apenas para criação da ferramenta de auditoria local e testes sintéticos; **NO-GO para pin de produção, licenciamento real homologado, lançamento comercial e operações físicas**.
+
+## Atualização H02.1 — dados públicos oficiais recebidos em 16/10/2026
+
+A GuiaSys Studio apresentou, no painel administrativo do GuiaSys Licensing, o **contrato público GSL-v1 do GuiaSys Disk Manager**, corrigindo o domínio para `https://licencas.guiasys.com.br/`. O código de integração continua `GSLI-9AFS-LE4Q-3PHZ`; o `projectId` é `prj_b41909541f924fe5b837`; a chave pública é `sig_3828131003da47bda2f7`, EC P-256/ES256. O trial estava **desativado** no contrato apresentado, mas essa é uma regra dinâmica do **servidor** e não deve ser hardcoded no desktop.
+
+A chave **pública** foi validada localmente como ponto P-256. Seu SHA-256 canônico sobre `GSL-v1\n<projectId>\n<keyId>\n<x>\n<y>` (LF, sem LF final) é:
+
+`6714ec5a65788f4cc937e0f2abd3656362d70ccd6d3cc09aae7e460566ef8d97`
+
+O desenvolvimento agora inclui `Licensing/gsl-v1-trust.json` com **somente** os campos públicos mínimos (`projectId`, `keyId`, `kty`, `crv`, `x`, `y`) e esse fingerprint fixado no binário; o arquivo é copiado ao lado do EXE em build/publish Windows, e o Inno inclui a distribuição completa. Os atributos públicos opcionais de JWK `ext`/`key_ops` do contrato foram normalizados para respeitar o parser estrito já aprovado, sem alterar x/y. **Nenhuma chave privada ou licença de cliente foi incorporada.**
+
+O CI executa testes adicionais de identidade oficial, comparação de fingerprint, rejeição de `keyId` adulterado, conferência do JSON ao lado do executável e do domínio novo. O preflight GSL continua gerando **NO-GO** pois **não foram executadas ativações/revogações em ambiente real, verificação independente do artefato assinado nem homologação humana**. O endpoint `POST /api/v1/project/config` pode fazer migração de metadados no servidor; **não foi chamado contra produção durante esta atualização**.
+
+> Esta atualização **substitui** as afirmações históricas acima de que os identificadores públicos, fingerprint ou material JWK estão ausentes. O código já contém uma âncora pública de desenvolvimento conferida contra o contrato entregue pelo administrador; **a confiança de distribuição final e o licenciamento real continuam não homologados**, assim como a assinatura Authenticode e as gravações físicas (`StorageWriteGate=false`). Nenhuma versão foi publicada.

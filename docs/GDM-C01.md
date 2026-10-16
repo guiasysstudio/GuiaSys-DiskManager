@@ -34,3 +34,7 @@ A suíte usa HTTP falso com respostas de contrato e JWS ES256 assinado dinamicam
 - **Não homologado:** ativação e desativação com licença real, instalador em máquina de cliente, estado de licença após reinstalação, revogação efetiva de um token já emitido quando máquina permanece offline (respeita janela autorizada), rotação de chave e tolerância a falhas reais.
 - **Âncora pendente:** o fingerprint de distribuição é SHA-256 dos bytes UTF-8 de `GSL-v1\n<projectId>\n<keyId>\n<x>\n<y>`, sem quebra final. O valor não pode ser escolhido pelo cliente/servidor durante a execução. Ele será fixado em uma build aprovada após conferência fora de banda.
 - **Gate físico:** permanece **NO-GO** até C02–C04 e ensaios isolados VHDX. Nenhuma operação destrutiva em discos físicos foi testada nesta etapa.
+
+## Nota de atualização H02.1 — domínio e chave pública (16/10/2026)
+
+Este documento registra o histórico de C01. O contrato oficial posteriormente entregue pelo administrador do Licensing atualizou o endpoint para `https://licencas.guiasys.com.br/`. Em H02.1 foram recebidos e incorporados no **build de desenvolvimento** o `projectId` e a chave **pública** ES256 do Disk Manager, com SHA-256 canônico conferido, substituindo a pendência histórica de âncora vazia. O arquivo `gsl-v1-trust.json` acompanha o publish/instalador; material **privado** não foi incluído. Isso **não** é evidência de validação ponta a ponta com o servidor, nem autorização para distribuir comercialmente ou manipular discos. Consulte [GDM-H02.1](GDM-H02.1.md).
