@@ -58,7 +58,8 @@ public sealed class DiskMapRowViewModel : ObservableObject
                     string.IsNullOrWhiteSpace(part.DriveLetter) ? part.Kind :
                     part.DriveLetter.TrimEnd(':') + ":";
                 var subtitle = part is null ? ByteSize.Format(extent.Length) :
-                    $"{part.FileSystem switch { "" => part.Kind, var fs => fs }} · {part.SizeLabel}";
+                    (string.IsNullOrWhiteSpace(part.FileSystem) ? part.Kind : part.FileSystem) +
+                    " · " + part.SizeLabel;
                 segments.Add(new PartitionSegmentViewModel(
                     part, title, subtitle, part?.Kind ?? "Unallocated", extent.Length,
                     0d, offset: extent.Offset, diskNumber: disk.Number));

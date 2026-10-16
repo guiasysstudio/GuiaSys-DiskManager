@@ -92,10 +92,28 @@ public partial class MainWindow : Window
         }
     }
 
+    private void DiskRow_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: DiskInfo disk }) return;
+        // Selection only; no disk process or executor is invoked.
+        var current = _viewModel.Disks.FirstOrDefault(d => d.Number == disk.Number);
+        if (current is null) return;
+        _viewModel.SelectedDisk = current;
+        _viewModel.SelectedPartition = null;
+        e.Handled = true;
+    }
+
     private void PartitionSegment_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not PartitionSegmentViewModel segment) return;
-        // An unallocated segment selects the disk, never an invented partition.
+        if (segment.DiskNumber >= 0)
+        {
+            var current = _viewModel.Disks.FirstOrDefault(d => d.Number == segment.DiskNumber);
+            if (current is null) return;
+            // The owning disk must be chosen BEFORE the partition. An unallocated
+            // visual extent is never presented as a real Windows partition.
+            _viewModel.SelectedDisk = current;
+        }
         _viewModel.SelectedPartition = segment.Partition;
         e.Handled = true;
     }
