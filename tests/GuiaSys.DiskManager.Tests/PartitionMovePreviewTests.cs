@@ -56,7 +56,7 @@ public sealed class PartitionMovePreviewTests
     }
 
     [Theory]
-    [InlineData(0L, true)]
+    [InlineData(0L, false)]
     [InlineData(2_147_483_648L, false)]
     [InlineData(1_073_741_824L, false)]
     [InlineData(5_368_709_120L, true)]
