@@ -54,7 +54,7 @@ public sealed class AllDiskMapTests
         var p = Part(1, 1, 100, 4_000, 4_000, 1_000);
         var row = Assert.Single(DiskMapRowViewModel.Build(new StorageSnapshot(
             [Disk(1)], [p], DateTimeOffset.UtcNow)));
-        var part = Assert.Single(row.Segments.Where(s => s.Partition is not null));
+        var part = Assert.Single(row.Segments, s => s.Partition is not null);
         Assert.True(part.HasVolumeUsage);
         Assert.Equal(75d, part.UsagePercent);
         Assert.Equal("C:", part.Title);
@@ -65,7 +65,7 @@ public sealed class AllDiskMapTests
         var noCounters = p with { VolumeAvailableBytes = null };
         var row2 = Assert.Single(DiskMapRowViewModel.Build(new StorageSnapshot(
             [Disk(1)], [noCounters], DateTimeOffset.UtcNow)));
-        var part2 = Assert.Single(row2.Segments.Where(s => s.Partition is not null));
+        var part2 = Assert.Single(row2.Segments, s => s.Partition is not null);
         Assert.False(part2.HasVolumeUsage);
         Assert.Equal(0d, part2.UsagePercent);
     }
@@ -86,7 +86,7 @@ public sealed class AllDiskMapTests
         Assert.False(original.IsSelected);
         Assert.False(rows[0].IsSelected);
         Assert.True(rows[1].IsSelected);
-        Assert.Single(rows[1].Segments.Where(s => s.IsSelected));
+        Assert.Single(rows[1].Segments, s => s.IsSelected);
         Assert.Same(original, rows[0].Segments[1]);
         foreach (var row in rows) row.UpdateSelection(null, null);
         Assert.All(rows, row => Assert.False(row.IsSelected));
