@@ -88,3 +88,7 @@ O painel C13 apresenta estados de saúde Windows dos discos/volumes, temperatura
 ### GDM-C14 — Manutenção (prévia de riscos, sem execução)
 
 O painel **Manutenção (prévia)** analisa cinco categorias: verificação de volume por metadados do Windows, potencial de otimização, revisão de arquivos temporários, apagamento do espaço livre e apagamento integral do disco. O relatório diferencia alterações, risco destrutivo, volumes protegidos, mídia/FS desconhecidos, identidade e uso do volume, mas **não executa CHKDSK, TRIM, varreduras, exclusão, limpeza ou apagamento**. A fila e a allowlist de escrita não incluem ações de manutenção; `CanExecute=false` para todas as prévias e o gate global permanece fechado. Detalhes: [GDM-C14](docs/GDM-C14.md).
+
+### GDM-C15 — Investigação de partições perdidas (comparação somente leitura)
+
+O painel **Partições perdidas (prévia)** permite **capturar explicitamente um baseline de entradas GPT** de um disco íntegro, atualizar o inventário (F5) e comparar o estado posterior do **mesmo dispositivo por UniqueId**. São destacados GUIDs persistentes, alterados ou ausentes; faixas anteriores que agora estão não alocadas são **apenas indícios de alteração da tabela**, nunca prova de dados recuperáveis. Referência e laudo ficam em memória e são invalidados na troca de alvo ou falha. **Não há varredura de setores, recuperação de arquivos, restauração GPT nem gravação.** Leia [GDM-C15](docs/GDM-C15.md).

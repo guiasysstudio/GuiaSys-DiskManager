@@ -148,3 +148,12 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - UI WPF com seleção do tipo, risco, impedimentos e evidências; laudo invalidado em seleção/refresh/falha.
 - Testes sintéticos e MVVM adicionados; resultado definitivo deve ser associado ao CI do commit de fechamento C14.
 - Documentação: [GDM-C14](GDM-C14.md). Gate de escrita **NO-GO** e testes físicos/destrutivos pendentes.
+
+## GDM-C15 — Comparação GPT de partições perdidas (15–16/10/2026)
+
+- Comparação read-only de duas capturas do inventário Windows: referência GPT anterior à perda versus snapshot atualizado do mesmo dispositivo pelo `UniqueId` forte.
+- Classifica entradas preservadas, geometria/tipo mudados, entradas desaparecidas com espaço livre, conflitos com novas partições e partições protegidas.
+- Não varre bytes do disco, não procura assinaturas de filesystems e **não considera faixa não alocada prova de recuperação**.
+- Referência apenas em RAM; comando requer disco inteiro, atualização posterior, geometria consistente. Descarta referência quando troca dispositivo ou há falha de inventário, invalida relatórios no refresh.
+- `RecoveryReport.CanRecover=false` em todas as situações; **nenhum novo escritor/operador na fila**. Disco 0 somente leitura.
+- Testes de avaliação e de ciclo de vida MVVM; o resultado verificável é o CI do HEAD. Ver [GDM-C15](GDM-C15.md). **NO-GO para recuperação executável/gravação física**.
