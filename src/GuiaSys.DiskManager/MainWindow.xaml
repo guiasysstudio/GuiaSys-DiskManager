@@ -331,50 +331,42 @@
                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                     Padding="14,12,12,8">
         <StackPanel>
-          <StackPanel x:Name="OverviewSection" Focusable="True" Margin="0,0,0,16"
-                      AutomationProperties.Name="Visão geral do armazenamento">
-            <TextBlock Text="Visão geral do armazenamento" FontSize="23" FontWeight="SemiBold"/>
-            <TextBlock Text="Inventário do Windows, sem alterações no dispositivo."
-                       Style="{StaticResource Caption}" Margin="0,5,0,16"/>
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <Border Grid.Column="0" Style="{StaticResource Surface}" Margin="0">
+          <Border x:Name="PartitionsSection" Focusable="True" AutomationProperties.Name="Tabela de partições" Style="{StaticResource Surface}">
+            <DockPanel>
+              <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel>
-                  <TextBlock Text="DISCOS" Style="{StaticResource Caption}"/>
-                  <TextBlock Text="{Binding Disks.Count}" FontSize="27" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Discos e partições" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Text="{Binding SelectedTargetTitle}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
                 </StackPanel>
-              </Border>
-              <Border Grid.Column="2" Style="{StaticResource Surface}" Margin="0">
-                <StackPanel>
-                  <TextBlock Text="CAPACIDADE FÍSICA" Style="{StaticResource Caption}"/>
-                  <TextBlock Text="{Binding OverviewMetrics.TotalCapacityLabel}" FontSize="19"
-                             FontWeight="SemiBold" Margin="0,8,0,0"/>
-                  <TextBlock Text="{Binding PartitionCountLabel}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
-                </StackPanel>
-              </Border>
-              <Border Grid.Column="4" Style="{StaticResource Surface}" Margin="0">
-                <StackPanel>
-                  <TextBlock Text="NÃO ALOCADO EM DISCO" Style="{StaticResource Caption}"/>
-                  <TextBlock Text="{Binding OverviewMetrics.UnallocatedLabel}" FontSize="19"
-                             FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" Margin="0,8,0,0"/>
-                  <TextBlock Text="{Binding OverviewMetrics.MonitoredVolumesLabel}"
-                             Style="{StaticResource Caption}" Margin="0,4,0,0"/>
-                </StackPanel>
-              </Border>
-            </Grid>
-            <StackPanel Orientation="Horizontal" Margin="2,10,0,0">
-              <TextBlock Text="{Binding OverviewMetrics.IdentityLabel}" Style="{StaticResource Caption}"
-                         Margin="0,0,12,0"/>
-              <TextBlock Text="{Binding PrivilegeLabel}" Style="{StaticResource Caption}"/>
-            </StackPanel>
-          </StackPanel>
+                <Button Grid.Column="1" Content="Limpar seleção" Click="ClearPartition_Click"
+                        ToolTip="Voltar às ações do disco inteiro"/>
+              </Grid>
+              <DataGrid x:Name="PartitionsGrid" ItemsSource="{Binding Partitions}"
+                        SelectedItem="{Binding SelectedPartition, Mode=TwoWay}"
+                        IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                        Height="238" MinHeight="150" AlternationCount="2"
+                        AutomationProperties.Name="Tabela de partições">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="#" Binding="{Binding PartitionNumber, Mode=OneWay}" Width="38"/>
+                  <DataGridTextColumn Header="Volume" Binding="{Binding DisplayName, Mode=OneWay}" Width="2*"/>
+                  <DataGridTextColumn Header="Tipo" Binding="{Binding Kind, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Sistema" Binding="{Binding FileSystem, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Tamanho" Binding="{Binding SizeLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Livre no volume" Binding="{Binding FreeLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Uso volume" Binding="{Binding UsageLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Saúde" Binding="{Binding HealthStatus, Mode=OneWay}" Width="*"/>
+                </DataGrid.Columns>
+              </DataGrid>
+            </DockPanel>
+          </Border>
 
           <Border x:Name="DiskMapSection" Focusable="True" AutomationProperties.Name="Mapa proporcional do disco" Style="{StaticResource Surface}">
             <StackPanel>
               <Grid Margin="0,0,0,14">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel>
-                  <TextBlock Text="Mapa proporcional do disco" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Text="Mapa visual de partições" Style="{StaticResource SectionTitle}"/>
                   <TextBlock Text="{Binding SelectedTargetTitle}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
                 </StackPanel>
               </Grid>
@@ -402,8 +394,16 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </ScrollViewer>
-              <TextBlock Text="Mapa aproximado: Tab percorre; Enter ou Espaço seleciona. Partições pequenas têm largura mínima; tamanhos e offsets exatos na dica de cada item."
-                         Style="{StaticResource Caption}" Margin="0,8,0,0"/>
+              <WrapPanel Margin="0,8,0,0">
+                <Rectangle Fill="#8EC5F7" Width="12" Height="12" RadiusX="2" RadiusY="2" Margin="0,0,6,0"/>
+                <TextBlock Text="Dados / NTFS" Style="{StaticResource Caption}" Margin="0,0,16,0"/>
+                <Rectangle Fill="#A8E1D6" Width="12" Height="12" RadiusX="2" RadiusY="2" Margin="0,0,6,0"/>
+                <TextBlock Text="EFI / sistema" Style="{StaticResource Caption}" Margin="0,0,16,0"/>
+                <Rectangle Fill="#D9E1EA" Width="12" Height="12" RadiusX="2" RadiusY="2" Margin="0,0,6,0"/>
+                <TextBlock Text="Não alocado" Style="{StaticResource Caption}"/>
+              </WrapPanel>
+              <TextBlock Text="Mapa proporcional de leitura. Tamanhos e offsets exatos aparecem ao posicionar o cursor."
+                         Style="{StaticResource Caption}" Margin="0,7,0,0"/>
               <TextBlock Text="{Binding SelectedLayoutSummary}" Foreground="{StaticResource AccentBrush}"
                          FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,9,0,9"/>
               <Grid>
@@ -426,35 +426,43 @@
             </StackPanel>
           </Border>
 
-          <Border x:Name="PartitionsSection" Focusable="True" AutomationProperties.Name="Tabela de partições" Style="{StaticResource Surface}">
-            <DockPanel>
-              <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel x:Name="OverviewSection" Focusable="True" Margin="0,0,0,16"
+                      AutomationProperties.Name="Visão geral do armazenamento">
+            <TextBlock Text="Resumo do armazenamento" FontSize="17" FontWeight="SemiBold"/>
+            <TextBlock Text="Capacidade reportada pelo Windows · consulta somente leitura"
+                       Style="{StaticResource Caption}" Margin="0,4,0,10"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Border Grid.Column="0" Style="{StaticResource Surface}" Margin="0">
                 <StackPanel>
-                  <TextBlock Text="Partições e volumes" Style="{StaticResource SectionTitle}"/>
-                  <TextBlock Text="Clique ou use o teclado para selecionar a partição. A tabela não modifica discos." Style="{StaticResource Caption}" Margin="0,4,0,0"/>
+                  <TextBlock Text="DISCOS" Style="{StaticResource Caption}"/>
+                  <TextBlock Text="{Binding Disks.Count}" FontSize="22" FontWeight="Bold" Margin="0,4,0,0"/>
                 </StackPanel>
-                <Button Grid.Column="1" Content="Limpar seleção" Click="ClearPartition_Click"
-                        ToolTip="Voltar às ações do disco inteiro"/>
-              </Grid>
-              <DataGrid x:Name="PartitionsGrid" ItemsSource="{Binding Partitions}"
-                        SelectedItem="{Binding SelectedPartition, Mode=TwoWay}"
-                        IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
-                        Height="260" MinHeight="160" AlternationCount="2"
-                        AutomationProperties.Name="Tabela de partições">
-                <DataGrid.Columns>
-                  <DataGridTextColumn Header="#" Binding="{Binding PartitionNumber, Mode=OneWay}" Width="38"/>
-                  <DataGridTextColumn Header="Volume" Binding="{Binding DisplayName, Mode=OneWay}" Width="2*"/>
-                  <DataGridTextColumn Header="Tipo" Binding="{Binding Kind, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Sistema" Binding="{Binding FileSystem, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Tamanho" Binding="{Binding SizeLabel, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Livre no volume" Binding="{Binding FreeLabel, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Uso volume" Binding="{Binding UsageLabel, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Saúde" Binding="{Binding HealthStatus, Mode=OneWay}" Width="*"/>
-                </DataGrid.Columns>
-              </DataGrid>
-            </DockPanel>
-          </Border>
+              </Border>
+              <Border Grid.Column="2" Style="{StaticResource Surface}" Margin="0">
+                <StackPanel>
+                  <TextBlock Text="CAPACIDADE FÍSICA" Style="{StaticResource Caption}"/>
+                  <TextBlock Text="{Binding OverviewMetrics.TotalCapacityLabel}" FontSize="19"
+                             FontWeight="SemiBold" Margin="0,8,0,0"/>
+                  <TextBlock Text="{Binding PartitionCountLabel}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="4" Style="{StaticResource Surface}" Margin="0">
+                <StackPanel>
+                  <TextBlock Text="NÃO ALOCADO EM DISCO" Style="{StaticResource Caption}"/>
+                  <TextBlock Text="{Binding OverviewMetrics.UnallocatedLabel}" FontSize="19"
+                             FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" Margin="0,8,0,0"/>
+                  <TextBlock Text="{Binding OverviewMetrics.MonitoredVolumesLabel}"
+                             Style="{StaticResource Caption}" Margin="0,4,0,0"/>
+                </StackPanel>
+              </Border>
+            </Grid>
+            <StackPanel Orientation="Horizontal" Margin="2,10,0,0">
+              <TextBlock Text="{Binding OverviewMetrics.IdentityLabel}" Style="{StaticResource Caption}"
+                         Margin="0,0,12,0"/>
+              <TextBlock Text="{Binding PrivilegeLabel}" Style="{StaticResource Caption}"/>
+            </StackPanel>
+          </StackPanel>
 
           <Border x:Name="DetailsSection" Style="{StaticResource Surface}">
             <StackPanel>
@@ -659,8 +667,8 @@
                     Padding="10,12,10,7" Background="{StaticResource SidebarBrush}">
         <StackPanel>
           <TextBlock Text="Ações e assistentes" FontSize="19" FontWeight="SemiBold"/>
-          <TextBlock Text="Selecione um alvo para ver as ações disponíveis."
-                     Style="{StaticResource Caption}" Margin="0,6,0,14"/>
+          <TextBlock Text="Selecione um disco ou partição; gravações permanecem bloqueadas."
+                     Style="{StaticResource Caption}" Margin="0,5,0,12"/>
           <Border Style="{StaticResource Surface}" Background="#EBF4FF">
             <StackPanel>
               <TextBlock Text="ALVO ATUAL" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="Bold"/>
