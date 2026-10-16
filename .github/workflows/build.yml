@@ -38,6 +38,27 @@ jobs:
       - name: Verify published SHA256 checksums
         shell: powershell
         run: .\tools\Test-PackageChecksums.ps1
+      - name: Record C18 commercial release readiness (read-only)
+        shell: powershell
+        run: .\tools\Test-CommercialReleaseGate.ps1
+      - name: Verify commercial release gate fails closed for unapproved dev build
+        shell: powershell
+        run: |
+          try {
+            .\tools\Test-CommercialReleaseGate.ps1 -RequireCommercialGo
+            throw 'CRITICAL: commercial gate unexpectedly authorized development build.'
+          } catch {
+            if ($_.Exception.Message -notlike 'Commercial distribution BLOCKED by GDM-C18*') {
+              throw
+            }
+            Write-Host 'PASS: commercial release denied with explicit unmet requirements.'
+          }
+      - name: Upload C18 readiness audit
+        uses: actions/upload-artifact@v7
+        with:
+          name: GuiaSys-DiskManager-C18-NO-GO-audit
+          path: artifacts/readiness/commercial-readiness.json
+          if-no-files-found: error
       - name: Upload checksums
         uses: actions/upload-artifact@v7
         with:
