@@ -116,6 +116,7 @@ public sealed class ContextOperationPolicyTests
         var partition = Part();
         var segment = new PartitionSegmentViewModel(partition, "E:", "NTFS", "NTFS", 2_000_000_000, 170, true);
         Assert.True(segment.IsSelected);
-        Assert.False((segment with { IsSelected = false }).IsSelected);
+        segment.SetSelected(false);
+        Assert.False(segment.IsSelected);
     }
 }
