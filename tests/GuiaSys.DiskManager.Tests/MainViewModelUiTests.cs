@@ -11,7 +11,7 @@ public sealed class MainViewModelUiTests
     private static DiskInfo Disk(int number = 3) => new()
     {
         Number = number, UniqueId = $"c05-test-{number}", FriendlyName = "Temporary VHDX",
-        Size = 8_000_000_000, PartitionStyle = "GPT"
+        Size = 8_000_000_000, PartitionStyle = "GPT", LogicalSectorSize = 512
     };
 
     private static PartitionInfo Partition(int diskNumber = 3) => new()
@@ -20,7 +20,8 @@ public sealed class MainViewModelUiTests
         PartitionGuid = "a911ce1e-d646-4af0-b245-c346c5600c65",
         GptType = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7",
         Type = "Basic", Offset = 1_048_576, Size = 2_000_000_000,
-        DriveLetter = "E", AccessPaths = "", FileSystem = "NTFS"
+        DriveLetter = "E", AccessPaths = "", FileSystem = "NTFS",
+        ResizeMinBytes = 1_000_000_000, ResizeMaxBytes = 6_000_000_000
     };
 
     private static StorageSnapshot Snapshot(int diskNumber = 3) =>
@@ -196,6 +197,70 @@ public sealed class MainViewModelUiTests
         Assert.Empty(vm.PendingOperations);
     }
 
+    [Fact]
+    public async Task Resize_selection_shows_actual_windows_bounds_and_fills_exact_bytes()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.ResizePartition;
+        Assert.Contains(vm.ContextOperations, c =>
+            c.Type == StorageOperationType.ResizePartition && c.IsAvailable);
+        Assert.NotNull(vm.SelectedResizeRange);
+        Assert.True(vm.UseResizeMinimumCommand.CanExecute(null));
+        Assert.True(vm.UseResizeMaximumCommand.CanExecute(null));
+        Assert.Contains("Mínimo", vm.ResizeBoundsSummary);
+        vm.UseResizeMinimumCommand.Execute(null);
+        Assert.Equal("1000000000 B", vm.SizeInput);
+        vm.QueueCommand.Execute(null);
+        Assert.Equal(1_000_000_000, Assert.Single(vm.PendingOperations).SizeBytes);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Resizing_to_windows_maximum_uses_unrounded_bytes()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.ResizePartition;
+        vm.UseResizeMaximumCommand.Execute(null);
+        Assert.Equal("6000000000 B", vm.SizeInput);
+        vm.QueueCommand.Execute(null);
+        Assert.Equal(6_000_000_000, Assert.Single(vm.PendingOperations).SizeBytes);
+    }
+
+    [Fact]
+    public async Task Missing_windows_resize_capabilities_disables_actions_and_presets()
+    {
+        var part = Partition() with { ResizeMinBytes = null, ResizeMaxBytes = null };
+        var vm = Build(new StaticInventory(new StorageSnapshot([Disk()], [part], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.ResizePartition;
+        Assert.Contains("não disponíveis", vm.ResizeBoundsSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.False(vm.QueueCommand.CanExecute(null));
+        Assert.False(vm.UseResizeMinimumCommand.CanExecute(null));
+        Assert.False(vm.UseResizeMaximumCommand.CanExecute(null));
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Refresh_removes_resize_presets_if_windows_capabilities_disappear()
+    {
+        var inventory = new SwitchableInventory(Snapshot());
+        var vm = Build(inventory);
+        await vm.RefreshAsync();
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        vm.SelectedOperationType = StorageOperationType.ResizePartition;
+        Assert.True(vm.UseResizeMaximumCommand.CanExecute(null));
+        inventory.OverrideSnapshot = new StorageSnapshot([Disk()],
+            [Partition() with { ResizeMinBytes = null, ResizeMaxBytes = null }], DateTimeOffset.UtcNow);
+        await vm.RefreshAsync();
+        Assert.False(vm.UseResizeMaximumCommand.CanExecute(null));
+        Assert.False(vm.QueueCommand.CanExecute(null));
+    }
+
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) => Task.FromResult(snapshot);
@@ -204,8 +269,10 @@ public sealed class MainViewModelUiTests
     private sealed class SwitchableInventory(StorageSnapshot snapshot) : IDiskInventoryService
     {
         public bool Fail { get; set; }
+        public StorageSnapshot? OverrideSnapshot { get; set; }
         public Task<StorageSnapshot> ReadAsync(CancellationToken token) =>
-            Fail ? Task.FromException<StorageSnapshot>(new IOException("Fake IO failure")) : Task.FromResult(snapshot);
+            Fail ? Task.FromException<StorageSnapshot>(new IOException("Fake IO failure"))
+                : Task.FromResult(OverrideSnapshot ?? snapshot);
     }
 
     private sealed class RejectingExecutor : IStorageOperationExecutor
