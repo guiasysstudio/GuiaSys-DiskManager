@@ -17,6 +17,9 @@ jobs:
       - name: Parse embedded PowerShell syntax (no disk commands)
         shell: powershell
         run: ./tools/Test-EmbeddedPowerShellSyntax.ps1
+      - name: H03 MiniTool-inspired desktop layout and safety audit (offline)
+        shell: powershell
+        run: .\tools\Test-DesktopUiContract.ps1
       - name: Build Debug
         run: dotnet build GuiaSys.DiskManager.slnx --configuration Debug --no-restore
       - name: Test Debug
