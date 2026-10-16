@@ -1,5 +1,6 @@
 using GuiaSys.DiskManager.Licensing;
 using GuiaSys.DiskManager.Models;
+using GuiaSys.DiskManager.Operations;
 using GuiaSys.DiskManager.Safety;
 using GuiaSys.DiskManager.Services;
 using GuiaSys.DiskManager.ViewModels;
@@ -315,6 +316,61 @@ public sealed class MainViewModelUiTests
         Assert.False(vm.PreviewMoveCommand.CanExecute(null));
         Assert.Null(vm.SelectedDisk);
         Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Conversion_inspector_shows_warnings_but_does_not_offer_or_queue_conversion()
+    {
+        var vm = Build(new StaticInventory(Snapshot()));
+        await vm.RefreshAsync();
+        Assert.True(vm.InspectGptConversionCommand.CanExecute(null));
+        Assert.True(vm.InspectMbrConversionCommand.CanExecute(null));
+        Assert.Null(vm.ConversionReport);
+        vm.InspectMbrConversionCommand.Execute(null);
+        Assert.NotNull(vm.ConversionReport);
+        Assert.Equal(DiskPartitionScheme.Mbr, vm.ConversionReport.DesiredScheme);
+        Assert.False(vm.ConversionReport.DataPreservingConversionSupported);
+        Assert.Contains("CONVERSÃO INDISPONÍVEL", vm.ConversionSummary);
+        Assert.Empty(vm.PendingOperations);
+        Assert.False(vm.ApplyCommand.CanExecute(null));
+        Assert.False(vm.CanApplyWrites);
+    }
+
+    [Fact]
+    public async Task Conversion_inspector_identifies_raw_empty_only_as_initialization_candidate()
+    {
+        var raw = Disk() with { PartitionStyle = "RAW" };
+        var vm = Build(new StaticInventory(new StorageSnapshot([raw], [], DateTimeOffset.UtcNow)));
+        await vm.RefreshAsync();
+        vm.InspectGptConversionCommand.Execute(null);
+        Assert.True(vm.ConversionReport!.IsEmptyRawInitializationCandidate);
+        Assert.Contains("APENAS INICIALIZAÇÃO", vm.ConversionSummary);
+        Assert.Empty(vm.PendingOperations);
+    }
+
+    [Fact]
+    public async Task Conversion_inspection_requires_disk_selection_and_invalidates_on_refresh()
+    {
+        var inventory = new SwitchableInventory(Snapshot());
+        var vm = Build(inventory);
+        await vm.RefreshAsync();
+        vm.InspectMbrConversionCommand.Execute(null);
+        Assert.NotNull(vm.ConversionReport);
+        vm.SelectedPartition = Assert.Single(vm.Partitions);
+        Assert.False(vm.InspectMbrConversionCommand.CanExecute(null));
+        Assert.Null(vm.ConversionReport);
+        vm.SelectedPartition = null;
+        Assert.True(vm.InspectGptConversionCommand.CanExecute(null));
+        vm.InspectGptConversionCommand.Execute(null);
+        Assert.NotNull(vm.ConversionReport);
+        await vm.RefreshAsync();
+        Assert.Null(vm.ConversionReport);
+        Assert.Contains("refaça", vm.ConversionSummary, StringComparison.OrdinalIgnoreCase);
+        inventory.Fail = true;
+        await vm.RefreshAsync();
+        Assert.False(vm.InspectGptConversionCommand.CanExecute(null));
+        Assert.Null(vm.ConversionReport);
+        Assert.Contains("indisponível", vm.ConversionSummary, StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class StaticInventory(StorageSnapshot snapshot) : IDiskInventoryService
