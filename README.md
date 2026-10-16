@@ -96,3 +96,7 @@ O painel **Partições perdidas (prévia)** permite **capturar explicitamente um
 ### GDM-C16 — Acessibilidade e navegação segura da interface WPF
 
 O mapa de partições agora usa **botões acessíveis por teclado** (Tab + Enter/Espaço), com rótulos de automação, tamanhos/offsets explícitos e seleção `INotifyPropertyChanged` que não recria os controles focados. **Ctrl+1…8** navega pelos oito painéis e F5 continua apenas relendo o inventário. A interface permanece somente leitura para análises; o planejamento e o bloqueio de gravações são preservados. Teste interativo de foco, Narrator/NVDA e escalas Windows ainda requer homologação humana. Consulte [GDM-C16](docs/GDM-C16.md).
+
+### GDM-C17 — Instalador, verificações de atualização e pacote Windows
+
+O menu **Sobre → Verificar atualização** consulta manualmente releases públicas estáveis do repositório oficial. URLs, versões e nomes de instalador são validados de modo estrito antes de habilitar **Abrir versão oficial**. **Não há download ou instalação automática.** O Inno Setup mantém o AppId e a pasta de dados pessoais fica fora da desinstalação; o build valida versão de executable/instalador e publica checksums SHA-256, também verificados no CI. Repositório privado não oferece releases públicas anônimas: a checagem do cliente não usa token. A assinatura Authenticode, testes de upgrade/desinstalação e lançamento comercial aguardam C18. Ver [GDM-C17](docs/GDM-C17.md).

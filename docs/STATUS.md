@@ -165,3 +165,12 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Atalhos `Ctrl+1..8` (com numpad) para navegação por área; mapeamento isolado em função pura, sem capturar texto/Alt/Shift.
 - Seções com âncoras de foco e nomes UI Automation; status apresenta texto completo em tooltip e `LiveSetting=Polite` — **comportamento do leitor de tela pendente de smoke real**.
 - Testes MVVM e atalhos adicionados; contar os aprovados somente após CI deste HEAD. **Gravações permanecem bloqueadas**, e ainda faltam ensaios visuais/zoom/contraste/Narrator/NVDA. Relatório [GDM-C16](GDM-C16.md).
+
+## GDM-C17 — Instalador, versão e verificação de atualizações (16/10/2026)
+
+- **Sobre:** checagem manual de `releases/latest` via HTTPS restrito ao GitHub oficial, timeout, corpo limitado, sem redirect/credenciais. Compara `vX.Y.Z` estável e exige instalador x64 com nome, tamanho e URL oficial exatos.
+- Nova versão permite abrir **somente a página oficial da release**; não realiza download, execução silenciosa ou autoatualização. Private/404/401/403, dados suspeitos e falhas de rede não são falsos positivos.
+- **Inno Setup:** AppId preservado; campos de fabricante/site, comportamento de fechamento de aplicativos e preservação de dados fora de `{app}`. Nenhum dado em `%LOCALAPPDATA%` é removido pelos scripts.
+- `Build-Installer.ps1` exige versão `X.Y.Z` e executável Windows com versão correspondente. CI gera e testa `SHA256SUMS.txt` para portable + instalador versionado; terceiro artifact contém checksums. Assinatura de código ainda **pendente**.
+- Testes sintéticos do verificador de versão e validação de artefatos em GitHub Actions. Resultados devem ser confirmados no HEAD. Documentado em [GDM-C17](GDM-C17.md).
+- **NO-GO** para publicar release comercial/auto-instalar/desbloquear gravações físicas antes de C18 e homologação de upgrade, uninstall e assinatura.
