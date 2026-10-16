@@ -184,6 +184,8 @@
                     Tag="Partitions" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="♡   Saúde e diagnósticos"
                     Tag="Health" Click="Navigation_Click"/>
+            <Button Style="{StaticResource NavButton}" Content="◇   Partições perdidas (prévia)"
+                    Tag="Recovery" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="♧   Manutenção (prévia)"
                     Tag="Maintenance" Click="Navigation_Click"/>
             <Button Style="{StaticResource NavButton}" Content="⚙   Preparar operação"
@@ -503,6 +505,62 @@
               <TextBlock Text="ESTA PRÉVIA NÃO APROVA NENHUMA OPERAÇÃO. Gravação, desfragmentação, TRIM, CHKDSK, exclusão de arquivos e apagamento continuam bloqueados."
                          TextWrapping="Wrap" Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold"
                          FontSize="11" Margin="0,10,0,2"/>
+            </StackPanel>
+          </Border>
+          <!-- C15: inventory-only GPT comparison; it is NOT a disk/sector recovery engine. -->
+          <Border x:Name="RecoverySection" Style="{StaticResource Surface}" Background="#203445">
+            <StackPanel>
+              <TextBlock Text="C15 · PARTIÇÕES PERDIDAS (ANÁLISE)" Style="{StaticResource SectionTitle}"/>
+              <TextBlock Text="Compare uma referência GPT capturada ANTES da perda com outro inventário do MESMO disco."
+                         TextWrapping="Wrap" Style="{StaticResource Caption}" Margin="0,5,0,10"/>
+              <TextBlock Text="{Binding SelectedTargetTitle}" Style="{StaticResource Caption}"
+                         TextWrapping="Wrap" Margin="0,0,0,6"/>
+              <TextBlock Text="{Binding RecoveryBaseline.Label}" TextWrapping="Wrap"
+                         Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" Margin="0,4,0,7"/>
+              <WrapPanel>
+                <Button Content="1 · Capturar referência" Command="{Binding CaptureRecoveryBaselineCommand}"
+                        AutomationProperties.Name="Capturar metadados GPT do disco selecionado"
+                        ToolTip="Exige disco inteiro GPT, identidade forte e inventário consistente."/>
+                <Button Content="2 · Comparar após F5" Command="{Binding CompareRecoveryCommand}"
+                        AutomationProperties.Name="Comparar partições com referência anterior"
+                        ToolTip="Ativo somente após um novo inventário do mesmo disco."/>
+                <Button Content="Descartar referência" Command="{Binding ClearRecoveryBaselineCommand}"
+                        AutomationProperties.Name="Descartar metadados GPT salvos em memória"/>
+              </WrapPanel>
+              <TextBlock Text="{Binding RecoverySummary}" TextWrapping="Wrap" Margin="0,11,0,9"
+                         FontWeight="SemiBold" AutomationProperties.Name="Relatório de comparação GPT"/>
+              <ItemsControl ItemsSource="{Binding RecoveryReport.Entries}" Margin="0,3,0,6">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border BorderBrush="{StaticResource OutlineBrush}" BorderThickness="0,0,0,1" Padding="0,7,0,7">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Status}" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"/>
+                        <TextBlock Text="{Binding PositionLabel}" Style="{StaticResource Caption}" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding RecoveryReport.Blockers}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding StringFormat=Impedimento: {0}}" Style="{StaticResource Caption}"
+                               Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,3,0,3"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding RecoveryReport.Warnings}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding StringFormat=Aviso: {0}}" Style="{StaticResource Caption}"
+                               TextWrapping="Wrap" Margin="0,3,0,3"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="NÃO ESCANEIA DADOS APAGADOS. Área não alocada não comprova recuperação. Não cria partições, não restaura GPT, não copia arquivos e não escreve em disco."
+                         TextWrapping="Wrap" FontWeight="SemiBold" FontSize="11"
+                         Foreground="{StaticResource WarningBrush}" Margin="0,9,0,0"/>
             </StackPanel>
           </Border>
         </StackPanel>
