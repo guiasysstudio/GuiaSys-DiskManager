@@ -16,7 +16,7 @@ jobs:
         run: dotnet restore GuiaSys.DiskManager.slnx
       - name: Parse embedded PowerShell syntax (no disk commands)
         shell: powershell
-        run: .\\tools\\Test-EmbeddedPowerShellSyntax.ps1
+        run: ./tools/Test-EmbeddedPowerShellSyntax.ps1
       - name: Build Debug
         run: dotnet build GuiaSys.DiskManager.slnx --configuration Debug --no-restore
       - name: Test Debug
