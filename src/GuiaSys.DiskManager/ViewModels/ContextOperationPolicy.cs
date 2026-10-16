@@ -79,4 +79,10 @@ public static class ContextOperationPolicy
 }
 
 public sealed record ContextOperationChoice(
-    StorageOperationType Type, string Display, bool IsAvailable, string Reason);
+    StorageOperationType Type, string Display, bool IsAvailable, string Reason)
+{
+    // A planning shortcut never authorizes a write.
+    public string PresentationStatus => Type == StorageOperationType.MovePartition
+        ? (IsAvailable ? "PRÉVIA · NÃO EXECUTA" : "PRÉVIA INDISPONÍVEL")
+        : (IsAvailable ? "PLANEJAMENTO · SEM GRAVAÇÃO" : "AÇÃO INDISPONÍVEL");
+}

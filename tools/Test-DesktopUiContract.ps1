@@ -26,7 +26,7 @@ $required = @(
     'x:Name="HealthSection"', 'x:Name="RecoverySection"',
     'x:Name="MaintenanceSection"', 'x:Name="OperationEditor"',
     'x:Name="OperationsSection"', 'x:Name="QueueSection"',
-    'x:Name="PartitionsGrid"', 'x:Name="OperationTypeSelector"'
+    'x:Name="PartitionsGrid"', 'x:Name="OperationTypeSelector"', 'x:Name="ExpandTableToggle"'
 )
 foreach ($anchor in $required) {
     if (-not $xml.Contains($anchor)) { throw "H03_UI_MISSING_ANCHOR: $anchor" }
@@ -59,6 +59,10 @@ $patterns = @(
     'ViewportWidth="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType={x:Type ScrollViewer}}}"',
     'Value="{Binding SelectedAllocatedPercent, Mode=OneWay}"',
     'Value="{Binding Progress, Mode=OneWay}"',
+    'Binding IsChecked, ElementName=ExpandTableToggle',
+    'ScrollViewer.HorizontalScrollBarVisibility="Auto"',
+    'Text="{Binding PresentationStatus}"',
+    'Text="{Binding Reason}"',
     'IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"'
 )
 foreach ($anchor in $patterns) {

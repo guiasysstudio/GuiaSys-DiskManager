@@ -5,7 +5,7 @@
         xmlns:models="clr-namespace:GuiaSys.DiskManager.Models"
         xmlns:controls="clr-namespace:GuiaSys.DiskManager.Controls"
         Title="GuiaSys Disk Manager" Width="1500" Height="920" FontFamily="Segoe UI" FontSize="13"
-        MinWidth="1100" MinHeight="700" WindowStartupLocation="CenterScreen"
+        MinWidth="960" MinHeight="620" WindowStartupLocation="CenterScreen"
         Background="{StaticResource BackgroundBrush}" Foreground="{StaticResource TextBrush}"
         Icon="Assets/Branding/GuiaSys-DiskManager.ico" UseLayoutRounding="True"
         SnapsToDevicePixels="True" PreviewKeyDown="Window_PreviewKeyDown">
@@ -87,7 +87,7 @@
       <Setter Property="Foreground" Value="#244866"/>
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="11,7"/>
+      <Setter Property="Padding" Value="10,5"/>
       <Setter Property="Margin" Value="0,1"/>
       <Setter Property="FontSize" Value="13"/>
       <Style.Triggers>
@@ -223,27 +223,28 @@
                   ToolTip="Bloqueado até a homologação formal da segurança de escrita"
                   ToolTipService.ShowOnDisabled="True"/>
         </StackPanel>
-        <StackPanel Orientation="Horizontal">
-          <Button Style="{StaticResource ToolbarButton}" Content="▤  Partições" Tag="Partitions" Click="Navigation_Click"/>
-          <Button Style="{StaticResource ToolbarButton}" Content="▣  Mapa" Tag="DiskMap" Click="Navigation_Click"/>
-          <Button Style="{StaticResource ToolbarButton}" Content="◴  Diagnóstico" Tag="Health" Click="Navigation_Click"/>
-          <Button Style="{StaticResource ToolbarButton}" Content="⚙  Operações" Tag="Operations" Click="Navigation_Click"/>
+        <!-- Sidebar owns navigation; the second menu was redundant. -->
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="INVENTÁRIO · SOMENTE LEITURA" Foreground="{StaticResource AccentBrush}"
+                     FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock Text="   F5: atualizar · Ctrl+1…8: navegar" Foreground="{StaticResource MutedBrush}"
+                     Margin="10,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
       </DockPanel>
     </Border>
 
     <Grid Grid.Row="2">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="218" MinWidth="195"/>
+        <ColumnDefinition Width="206" MinWidth="170"/>
         <ColumnDefinition Width="5"/>
-        <ColumnDefinition Width="*" MinWidth="405"/>
+        <ColumnDefinition Width="*" MinWidth="320"/>
         <ColumnDefinition Width="5"/>
-        <ColumnDefinition Width="276" MinWidth="255"/>
+        <ColumnDefinition Width="258" MinWidth="222"/>
       </Grid.ColumnDefinitions>
       <Grid.RowDefinitions>
-        <RowDefinition Height="*" MinHeight="300"/>
+        <RowDefinition Height="*" MinHeight="250"/>
         <RowDefinition Height="5"/>
-        <RowDefinition Height="152" MinHeight="110"/>
+        <RowDefinition Height="132" MinHeight="92"/>
       </Grid.RowDefinitions>
 
       <!-- Persistent navigation + inventory: spans workspace and queue. -->
@@ -357,23 +358,50 @@
                   <TextBlock Text="Discos e partições" Style="{StaticResource SectionTitle}"/>
                   <TextBlock Text="{Binding SelectedTargetTitle}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
                 </StackPanel>
-                <Button Grid.Column="1" Content="Limpar seleção" Click="ClearPartition_Click"
-                        ToolTip="Voltar às ações do disco inteiro"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <ToggleButton x:Name="ExpandTableToggle" Margin="3" Padding="10,8"
+                                AutomationProperties.Name="Alternar altura da tabela"
+                                ToolTip="Mostrar mais linhas mantendo a tabela rolável">
+                    <ToggleButton.Style>
+                      <Style TargetType="ToggleButton">
+                        <Setter Property="Content" Value="Mais linhas"/>
+                        <Style.Triggers>
+                          <Trigger Property="IsChecked" Value="True"><Setter Property="Content" Value="Menos linhas"/></Trigger>
+                        </Style.Triggers>
+                      </Style>
+                    </ToggleButton.Style>
+                  </ToggleButton>
+                  <Button Content="Limpar seleção" Click="ClearPartition_Click"
+                          ToolTip="Voltar às ações do disco inteiro"/>
+                </StackPanel>
               </Grid>
               <DataGrid x:Name="PartitionsGrid" ItemsSource="{Binding Partitions}"
                         SelectedItem="{Binding SelectedPartition, Mode=TwoWay}"
                         IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
-                        Height="227" MinHeight="150" AlternationCount="2"
+                        MinHeight="148" AlternationCount="2"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         CanUserResizeColumns="True"
                         AutomationProperties.Name="Tabela de partições">
+                <DataGrid.Style>
+                  <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+                    <Setter Property="Height" Value="172"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsChecked, ElementName=ExpandTableToggle}" Value="True">
+                        <Setter Property="Height" Value="320"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </DataGrid.Style>
                 <DataGrid.Columns>
-                  <DataGridTextColumn Header="#" Binding="{Binding PartitionNumber, Mode=OneWay}" Width="38"/>
-                  <DataGridTextColumn Header="Volume" Binding="{Binding DisplayName, Mode=OneWay}" Width="2*"/>
-                  <DataGridTextColumn Header="Tipo" Binding="{Binding Kind, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Sistema" Binding="{Binding FileSystem, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Tamanho" Binding="{Binding SizeLabel, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Livre no volume" Binding="{Binding FreeLabel, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Uso volume" Binding="{Binding UsageLabel, Mode=OneWay}" Width="*"/>
-                  <DataGridTextColumn Header="Saúde" Binding="{Binding HealthStatus, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="#" MinWidth="38" Binding="{Binding PartitionNumber, Mode=OneWay}" Width="38"/>
+                  <DataGridTextColumn Header="Volume" MinWidth="145" Binding="{Binding DisplayName, Mode=OneWay}" Width="2*"/>
+                  <DataGridTextColumn Header="Tipo" MinWidth="88" Binding="{Binding Kind, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Sistema" MinWidth="90" Binding="{Binding FileSystem, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Tamanho" MinWidth="94" Binding="{Binding SizeLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Livre no volume" MinWidth="115" Binding="{Binding FreeLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Uso volume" MinWidth="98" Binding="{Binding UsageLabel, Mode=OneWay}" Width="*"/>
+                  <DataGridTextColumn Header="Saúde" MinWidth="95" Binding="{Binding HealthStatus, Mode=OneWay}" Width="*"/>
                 </DataGrid.Columns>
               </DataGrid>
             </DockPanel>
@@ -788,20 +816,31 @@
           <Border Style="{StaticResource Surface}">
             <StackPanel>
               <TextBlock Text="Ações contextuais" Style="{StaticResource SectionTitle}"/>
-              <TextBlock Text="Ações inseguras ficam desabilitadas; posicione o cursor para ver o motivo."
+              <TextBlock Text="O status e o motivo aparecem em cada ação, mesmo se ela estiver desabilitada."
                          Style="{StaticResource Caption}" Margin="0,6,0,10"/>
               <ItemsControl ItemsSource="{Binding ContextOperations}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <Button IsEnabled="{Binding IsAvailable}"
-                            ToolTip="{Binding Reason}" ToolTipService.ShowOnDisabled="True"
-                            Tag="{Binding Type}" Click="ContextAction_Click"
-                            Width="125" MinHeight="52" FontSize="11"
-                            HorizontalContentAlignment="Center"
-                            AutomationProperties.Name="{Binding Display}">
-                      <TextBlock Text="{Binding Display}" TextWrapping="Wrap" TextAlignment="Left"/>
-                    </Button>
+                    <Border Background="#F7FAFE" BorderBrush="{StaticResource OutlineBrush}"
+                             BorderThickness="1" CornerRadius="6" Padding="6" Margin="0,0,0,7">
+                       <StackPanel>
+                         <Button IsEnabled="{Binding IsAvailable}"
+                                 ToolTip="{Binding Reason}" ToolTipService.ShowOnDisabled="True"
+                                 Tag="{Binding Type}" Click="ContextAction_Click"
+                                 MinHeight="34" Padding="9,7" HorizontalAlignment="Stretch"
+                                 HorizontalContentAlignment="Left"
+                                 AutomationProperties.Name="{Binding Display}">
+                           <TextBlock Text="{Binding Display}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                         </Button>
+                         <TextBlock Text="{Binding PresentationStatus}" FontSize="10"
+                                    FontWeight="Bold" Foreground="{StaticResource AccentBrush}"
+                                    Margin="7,3,7,0" TextWrapping="Wrap"/>
+                         <TextBlock Text="{Binding Reason}" FontSize="11"
+                                    Foreground="{StaticResource MutedBrush}"
+                                    Margin="7,3,7,4" TextWrapping="Wrap"/>
+                       </StackPanel>
+                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -1020,16 +1059,8 @@
           <StackPanel Grid.Column="1" VerticalAlignment="Center">
             <TextBlock Text="APLICAÇÃO BLOQUEADA" Foreground="{StaticResource WarningBrush}"
                        FontWeight="SemiBold" FontSize="11"/>
-            <TextBlock Text="O planejamento não executa alterações. A gravação depende de homologação."
-                       Style="{StaticResource Caption}" Margin="0,6,0,10"/>
-            <WrapPanel>
-              <Button Content="Desfazer" Command="{Binding UndoCommand}"/>
-              <Button Content="Limpar" Command="{Binding ClearCommand}"/>
-              <Button Content="Aplicar" Command="{Binding ApplyCommand}"
-                      ToolTip="Gravações bloqueadas até a homologação formal"
-                      ToolTipService.ShowOnDisabled="True"
-                      Background="#A45A28" FontWeight="SemiBold"/>
-            </WrapPanel>
+            <TextBlock Text="A fila é apenas um plano em memória. Use Desfazer ou Limpar na barra superior."
+                        Style="{StaticResource Caption}" Margin="0,6,0,0" TextWrapping="Wrap"/>
           </StackPanel>
         </Grid>
       </Border>

@@ -110,6 +110,19 @@ public sealed class ContextOperationPolicyTests
         Assert.Contains("identidade", result.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(StorageOperationType.MovePartition, true, "PRÉVIA · NÃO EXECUTA")]
+    [InlineData(StorageOperationType.MovePartition, false, "PRÉVIA INDISPONÍVEL")]
+    [InlineData(StorageOperationType.CreatePartition, true, "PLANEJAMENTO · SEM GRAVAÇÃO")]
+    [InlineData(StorageOperationType.FormatPartition, false, "AÇÃO INDISPONÍVEL")]
+    public void Context_buttons_distinguish_preview_planning_and_unavailable(
+        StorageOperationType type, bool available, string expected)
+    {
+        var choice = new ContextOperationChoice(type, "Ação", available, "Motivo visível");
+        Assert.Equal(expected, choice.PresentationStatus);
+        Assert.Equal("Motivo visível", choice.Reason);
+    }
+
     [Fact]
     public void Extent_segments_expose_selection_without_changing_storage_models()
     {
