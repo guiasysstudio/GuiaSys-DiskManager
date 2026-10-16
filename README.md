@@ -72,3 +72,7 @@ A interface permite escolher uma partição GPT, informar uma posição absoluta
 ### GDM-C10 — Diagnóstico GPT / MBR (somente leitura)
 
 O painel analisa o esquema atual e o destino GPT ou MBR, verifica tamanho do setor, limite LBA de 32 bits do MBR, quantidade de partições, identidade, proteção e geometria, e apresenta alertas de perda de dados/boot. Distingue **inicializar RAW vazio** de **converter discos com partições**. Não usa `Clear-Disk`, `MBR2GPT`, troca de GUID ou exclusão/recriação de partições. **Conversão com preservação de dados não implementada**; nenhum diagnóstico gera operação de escrita. O gate de gravação permanece fechado. Detalhes: [GDM-C10](docs/GDM-C10.md).
+
+### GDM-C11 — Clonagem de discos e partições (prévia somente leitura)
+
+Um novo painel permite escolher **origem** (disco ou partição) e **disco de destino** distintos e estudar a geometria da clonagem. Para discos inteiros, a origem GPT/MBR particionada exige destino RAW vazio e capacidade igual/superior a todos os bytes do disco original. Para partição GPT básica, o diagnóstico procura extensão **inteiramente não alocada**, contígua e alinhada em um destino GPT. Disco 0, inicialização/EFI/MSR/Recovery, IDs ambíguos, sobreposição e incompatibilidade dos setores são tratados conservadoramente. A análise invalida resultados em refresh ou mudança da seleção. **Nenhum dado é copiado**, não existe `CloneDisk`/`ClonePartition` na fila/allowlist, e `StorageWriteGate` continua fechado. Detalhes em [GDM-C11](docs/GDM-C11.md).
