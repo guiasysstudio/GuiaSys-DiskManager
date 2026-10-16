@@ -2,6 +2,7 @@ using GuiaSys.DiskManager.Licensing;
 using GuiaSys.DiskManager.Models;
 using GuiaSys.DiskManager.Operations;
 using GuiaSys.DiskManager.Safety;
+using GuiaSys.DiskManager.Services;
 
 namespace GuiaSys.DiskManager.Tests;
 
@@ -182,6 +183,48 @@ public sealed class PartitionMovePreviewTests
         Assert.False(EssentialOperationValidator.Validate(op with { DriveLetter = 'G' }).Allowed);
         var other = op with { Type = StorageOperationType.ResizePartition, SizeBytes = GiB };
         Assert.False(EssentialOperationValidator.Validate(other).Allowed);
+    }
+
+    [Fact]
+    public async Task Safe_execution_coordinator_rejects_move_without_running_delegate_or_touching_journal()
+    {
+        var source = Part();
+        var called = false;
+        var path = Path.Combine(Path.GetTempPath(), $"c09-fake-{Guid.NewGuid():N}.jsonl");
+        try
+        {
+            var journal = new OperationJournal(path);
+            var coordinator = new SafeExecutionCoordinator(
+                new NoopLogger(), null, null, null, journal,
+                (_, _) =>
+                {
+                    called = true;
+                    throw new InvalidOperationException("No block-copy implementation may run.");
+                });
+            var outcome = await coordinator.ExecuteAsync(Intent(source, 4 * GiB), CancellationToken.None);
+            Assert.False(outcome.Succeeded);
+            Assert.Equal(StorageExecutionOutcome.Rejected, outcome.Outcome);
+            Assert.False(called);
+            Assert.False(File.Exists(path));
+        }
+        finally { if (File.Exists(path)) File.Delete(path); }
+    }
+
+    [Fact]
+    public async Task Powershell_storage_executor_rejects_move_without_inventory_or_shell()
+    {
+        var executor = new PowerShellStorageOperationExecutor(new NoopLogger());
+        var outcome = await executor.ExecuteAsync(Intent(Part(), 4 * GiB), CancellationToken.None);
+        Assert.False(outcome.Succeeded);
+        Assert.Equal(StorageExecutionOutcome.Rejected, outcome.Outcome);
+        Assert.Contains("sem mecanismo", outcome.Message);
+    }
+
+    private sealed class NoopLogger : IAppLogger
+    {
+        public string LogDirectory => "";
+        public void Information(string eventName, object? data = null) { }
+        public void Error(string eventName, Exception exception, object? data = null) { }
     }
 
     [Fact]
