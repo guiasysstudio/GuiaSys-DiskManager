@@ -66,6 +66,15 @@ jobs:
           name: GuiaSys-DiskManager-H01-readonly-preflight
           path: artifacts/smoke/windows-readonly-preflight.json
           if-no-files-found: error
+      - name: H02.1 public JWK inspector isolated synthetic self-test (offline)
+        shell: powershell
+        run: dotnet run --project tools/GslV1TrustInspector/GslV1TrustInspector.csproj --configuration Release -- --self-test
+      - name: H02.1 refuse absent external trust input (offline)
+        shell: powershell
+        run: |
+          dotnet run --project tools/GslV1TrustInspector/GslV1TrustInspector.csproj --configuration Release -- --file artifacts/licensing/missing-official-trust.json --expected-project-id prj_0123456789abcdefabcd --expected-key-id sig_synthetic
+          if ($LASTEXITCODE -eq 0) { throw 'H02.1 incorrectly accepted a missing trust file.' }
+          Write-Host 'PASS: H02.1 rejects missing unverified public-key material.'
       - name: H02 inspect pinned public GSL-v1 licensing readiness (offline)
         shell: powershell
         run: .\tools\Test-GslV1TrustReadiness.ps1
