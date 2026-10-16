@@ -12,7 +12,7 @@ public sealed class PartitionSegmentViewModel : ObservableObject
     private bool _isSelected;
 
     public PartitionSegmentViewModel(PartitionInfo? partition, string title, string subtitle,
-        string kind, long size, double width, bool isSelected = false, long offset = 0)
+        string kind, long size, double width, bool isSelected = false, long offset = 0, int diskNumber = -1)
     {
         Partition = partition;
         Title = title;
@@ -21,6 +21,7 @@ public sealed class PartitionSegmentViewModel : ObservableObject
         Size = size;
         Width = width;
         Offset = offset;
+        DiskNumber = diskNumber;
         _isSelected = isSelected;
     }
 
@@ -32,6 +33,11 @@ public sealed class PartitionSegmentViewModel : ObservableObject
     public long Offset { get; }
     public double Width { get; }
     public bool IsUnallocated => Partition is null;
+    /// <summary>The owning disk in the multi-disk visual map; -1 for the legacy selected-disk map.</summary>
+    public int DiskNumber { get; }
+    public bool HasVolumeUsage => Partition?.HasVolumeUsage ?? false;
+    /// <summary>Only a real Get-Volume reading supplies file usage; unknown remains hidden in XAML.</summary>
+    public double UsagePercent => Partition?.UsagePercent ?? 0d;
     public bool IsSelected => _isSelected;
 
     public string ToolTip => $"{Title}\n{Subtitle}\nOffset: {Offset:N0} bytes\nTamanho exato: {ByteSize.Format(Size)}";
