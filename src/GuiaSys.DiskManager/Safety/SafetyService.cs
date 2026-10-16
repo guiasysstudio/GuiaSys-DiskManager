@@ -70,6 +70,14 @@ public sealed class SafetyService : ISafetyService
                 return SafetyDecision.Deny("O disco precisa estar online e com gravação liberada para ser inicializado.");
             if (!string.Equals(disk.PartitionStyle, "RAW", StringComparison.OrdinalIgnoreCase) || diskPartitions.Length > 0)
                 return SafetyDecision.Deny("Somente discos RAW sem partições podem ser inicializados. A conversão com dados exige limpeza e não é oferecida.");
+            // C10: a classic MBR cannot address a disk beyond 2^32 logical sectors.
+            // Require a known sector size before allowing even a draft initialization.
+            var desiredScheme = operation.Type == StorageOperationType.InitializeMbr
+                ? DiskPartitionScheme.Mbr : DiskPartitionScheme.Gpt;
+            var assessment = DiskConversionAssessment.Analyze(currentSnapshot, disk.Number, desiredScheme);
+            if (!assessment.IsEmptyRawInitializationCandidate)
+                return SafetyDecision.Deny("Inicialização RAW sem condições verificáveis: " +
+                    string.Join("; ", assessment.Blockers));
         }
 
         if (operation.Type == StorageOperationType.CreatePartition)
