@@ -123,3 +123,11 @@ Execução com journal JSONL durável, pós-condições verificadas e distinçã
 - Proteções: Disco 0, sistema/boot, EFI/MSR/Recovery, setores lógicos incompatíveis, ID duplicado, disco offline/destino somente leitura, espaço insuficiente, geometria sobreposta e incertezas de setor físico.
 - Interface WPF: seleção explícita de destino, relatório de bloqueios/avisos; invalidação ao mudar origem/destino/inventário; nenhuma ação de fila ou executor adicionada.
 - **Clonagem real e preservação de boot não implementadas**. Testes sintéticos de geometria/seleção; VHDX real e smoke WPF pendentes. Gate **NO-GO**. Detalhes: [GDM-C11](GDM-C11.md).
+
+## GDM-C12 — Migração Windows: somente diagnóstico (15–16/10/2026)
+
+- `WindowsMigrationAssessment`: estudo somente leitura de fonte/target com GUIDs GPT, Windows NTFS, ESP FAT32, MSR, WinRE, boot distribuído e capacidade integral.
+- Disco 0 permitido **apenas como origem de inspeção**; destino requer outro disco, nunca Disco 0, RAW vazio, online, capacidade suficiente, setor lógico compatível e identidade forte.
+- Checklist de evidência separa **Presente, Ausente e Não verificado**; BitLocker/TPM/BCD/UEFI/VSS/boot real permanecem desconhecidos. Windows Legacy/MBR sem protocolo homologado.
+- Painel WPF com seletor de destino específico e relatório; dados invalidados em mudança de seleção, refresh ou falha; não enfileira nenhuma migração.
+- `WindowsMigrationReport.CanExecute` fixo em `false`; motor real de migração e testes VHDX/boot não implementados. Gate global de escrita **NO-GO**. Relatório: [GDM-C12](GDM-C12.md).
