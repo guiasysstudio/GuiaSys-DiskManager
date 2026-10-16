@@ -47,6 +47,10 @@ public sealed class MainViewModel : ObservableObject
         ClearCommand = new RelayCommand(() => { _queue.Clear(); UpdateCommands(); Status = "Fila limpa."; }, () => PendingOperations.Count > 0 && !IsBusy);
         ApplyCommand = new AsyncRelayCommand(() => ApplyAsync(false), () => PendingOperations.Count > 0 && !IsBusy && StorageWriteGate.ReleasedAfterSafetyAudit);
         OpenLogsCommand = new RelayCommand(OpenLogs);
+        UseResizeMinimumCommand = new RelayCommand(() => SetResizeSize(useMaximum: false),
+            () => SelectedOperationType == StorageOperationType.ResizePartition && SelectedResizeRange?.CanShrink == true && !IsBusy);
+        UseResizeMaximumCommand = new RelayCommand(() => SetResizeSize(useMaximum: true),
+            () => SelectedOperationType == StorageOperationType.ResizePartition && SelectedResizeRange?.CanExpand == true && !IsBusy);
         PendingOperations.CollectionChanged += (_, _) => { UpdatePreview(); UpdateCommands(); };
         UpdateContextOperations();
     }
@@ -77,6 +81,27 @@ public sealed class MainViewModel : ObservableObject
     public StorageOverviewMetrics OverviewMetrics => _inventoryInsights.Overview;
     public DiskSpaceMetrics? SelectedDiskMetrics =>
         SelectedDisk is null ? null : _inventoryInsights.FindDisk(SelectedDisk.Number);
+    public SupportedResizeRange? SelectedResizeRange
+    {
+        get
+        {
+            if (SelectedPartition is null) return null;
+            return PartitionResizePolicy.TryResolve(_snapshot, SelectedPartition, out var limits, out _)
+                ? limits : null;
+        }
+    }
+    public string ResizeBoundsSummary
+    {
+        get
+        {
+            if (SelectedPartition is null) return "Selecione uma partição para consultar os limites.";
+            if (!PartitionResizePolicy.TryResolve(_snapshot, SelectedPartition, out var range, out var reason))
+                return reason;
+            return range is null ? "Limites indisponíveis." :
+                $"Atual: {range.CurrentLabel} · Mínimo: {range.MinimumLabel} · Máximo: {range.MaximumLabel}." +
+                $" Setor lógico: {range.LogicalSectorBytes:N0} B. {range.DirectionLabel}.";
+        }
+    }
     public string SelectedUsageSummary => SelectedDiskMetrics?.UtilizationLabel ?? "Selecione um disco.";
     public string SelectedAllocatedLabel => SelectedDiskMetrics?.AllocatedLabel ?? "—";
     public string SelectedUnallocatedLabel => SelectedDiskMetrics?.UnallocatedLabel ?? "—";
@@ -144,6 +169,7 @@ public sealed class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(SelectedOperationAvailability));
             OnPropertyChanged(nameof(SelectedActionReason));
             OnPropertyChanged(nameof(SelectedActionStatus));
+            OnPropertyChanged(nameof(ResizeBoundsSummary));
             UpdateCommands();
         }
     }
@@ -162,6 +188,8 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ClearCommand { get; }
     public AsyncRelayCommand ApplyCommand { get; }
     public RelayCommand OpenLogsCommand { get; }
+    public RelayCommand UseResizeMinimumCommand { get; }
+    public RelayCommand UseResizeMaximumCommand { get; }
 
     public Func<IReadOnlyList<StorageOperation>, bool, Task<bool>>? ConfirmOperationsAsync { get; set; }
     public Action<string, string>? ShowError { get; set; }
@@ -456,6 +484,8 @@ public sealed class MainViewModel : ObservableObject
     private void NotifyTargetChanged()
     {
         if (!_loadingSelection) UpdateContextOperations();
+        OnPropertyChanged(nameof(SelectedResizeRange));
+        OnPropertyChanged(nameof(ResizeBoundsSummary));
         OnPropertyChanged(nameof(SelectedDiskMetrics));
         OnPropertyChanged(nameof(SelectedUsageSummary));
         OnPropertyChanged(nameof(SelectedAllocatedLabel));
@@ -490,6 +520,15 @@ public sealed class MainViewModel : ObservableObject
         UpdateCommands();
     }
 
+    private void SetResizeSize(bool useMaximum)
+    {
+        var limits = SelectedResizeRange;
+        if (SelectedOperationType != StorageOperationType.ResizePartition || limits is null) return;
+        if (useMaximum && !limits.CanExpand || !useMaximum && !limits.CanShrink) return;
+        // Exact integer bytes, not rounded GB display values.
+        SizeInput = $"{(useMaximum ? limits.MaximumBytes : limits.MinimumBytes)} B";
+    }
+
     private void OpenLogs()
     {
         try { Process.Start(new ProcessStartInfo { FileName = _logger.LogDirectory, UseShellExecute = true }); }
@@ -514,6 +553,8 @@ public sealed class MainViewModel : ObservableObject
     private void UpdateCommands()
     {
         QueueCommand.RaiseCanExecuteChanged(); UndoCommand.RaiseCanExecuteChanged(); ClearCommand.RaiseCanExecuteChanged(); ApplyCommand.RaiseCanExecuteChanged(); RefreshCommand.RaiseCanExecuteChanged();
+        UseResizeMinimumCommand.RaiseCanExecuteChanged();
+        UseResizeMaximumCommand.RaiseCanExecuteChanged();
     }
 }
 
