@@ -26,7 +26,7 @@
       <PasswordBox x:Name="KeyInput" Margin="0,7,0,9" Padding="10,8"
                    ToolTip="A chave não será exibida nem registrada nos logs."/>
       <WrapPanel>
-        <Button x:Name="ActivateButton" Content="Ativar licença" Click="Activate_Click" Background="{StaticResource AccentBrush}" Foreground="#052E2B"/>
+        <Button x:Name="ActivateButton" Content="Ativar licença" Click="Activate_Click" Background="{StaticResource AccentBrush}" Foreground="#FFFFFF"/>
         <Button x:Name="TrialButton" Content="Iniciar avaliação" Click="Trial_Click"/>
         <Button x:Name="ValidateButton" Content="Validar agora" Click="Validate_Click"/>
       </WrapPanel>
@@ -35,7 +35,7 @@
       <TextBlock Text="Gerenciamento" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,5"/>
       <TextBlock Text="O primeiro uso exige internet. Autorizações offline só são aceitas após verificação criptográfica ES256 e dentro do prazo definido pelo servidor." TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}"/>
       <Button x:Name="DeactivateButton" Content="Desativar licença neste dispositivo" HorizontalAlignment="Left" Margin="0,14,0,0" Click="Deactivate_Click"/>
-      <TextBlock Text="Alterações em discos físicos permanecem bloqueadas até os módulos de segurança C02–C04." Foreground="#FB923C" TextWrapping="Wrap" Margin="0,12,0,0"/>
+      <TextBlock Text="Alterações em discos físicos permanecem bloqueadas até os módulos de segurança C02–C04." Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,12,0,0"/>
     </StackPanel>
     <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
       <TextBlock x:Name="BusyText" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="{StaticResource MutedBrush}"/>
